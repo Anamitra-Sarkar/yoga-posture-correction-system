@@ -1,4 +1,11 @@
 ---
+title: Yoga Posture Correction System
+emoji: 🧘
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
 model-index:
   - name: Yoga-Posture-Correction-System
     results:
