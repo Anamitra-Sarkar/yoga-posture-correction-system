@@ -8,7 +8,7 @@ class Settings:
     
     # Hugging Face Settings
     HF_REPO: str = "Arko007/yoga-posture-models"
-    HF_TOKEN: str = os.environ.get("HF_TOKEN", "")
+    HF_TOKEN: str = os.environ.get("HF_TOKEN") or None
     
     # Device mapping (CPU optimization for low-resource environments like 4GB RAM)
     DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -21,7 +21,7 @@ app = FastAPI(
 
 # Hugging Face Repository Settings
 HF_REPO = "Arko007/yoga-posture-models"
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_TOKEN = os.environ.get("HF_TOKEN") or None
 
 # Global model pointers
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
