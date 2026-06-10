@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Environment variables / secret keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Python environment
+venv/
+.venv/
+env/
+*.venv
+
+# Next.js build and dependencies
+.next/
+out/
+node_modules/
+
+# Local tests / outputs
+session_summary_*.json
+tmp/
+temp/
