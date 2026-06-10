@@ -943,27 +943,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Group 5: Config Gateway */}
-          <div className="sidebar-group">
-            <div className="sidebar-group-header" onClick={() => setOpenGroupConfig(!openGroupConfig)}>
-              <span>Config Gateway</span>
-              <ChevronDown size={16} className={`chevron-icon ${!openGroupConfig ? "collapsed" : ""}`} />
-            </div>
-            {openGroupConfig && (
-              <div className="sidebar-group-body">
-                <div className="input-group">
-                  <label className="input-label">FastAPI Backend</label>
-                  <input 
-                    type="text" 
-                    className="groq-config-input" 
-                    value={apiURL} 
-                    onChange={(e) => setApiURL(e.target.value)}
-                    placeholder="http://localhost:7860/api" 
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+
 
         </aside>
 
