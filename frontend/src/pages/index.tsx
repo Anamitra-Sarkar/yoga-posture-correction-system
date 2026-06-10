@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import Script from "next/script";
 import { 
-  Activity, 
   Volume2, 
   VolumeX, 
   Settings, 
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
-import { extractAnglesFromLandmarks, calculateAngle3D } from "../utils/geometry";
+import { extractAnglesFromLandmarks } from "../utils/geometry";
 
 // Preset poses for the simulation mode fallback
 const PRESET_POSES = {
@@ -82,6 +81,50 @@ const PRESET_POSES = {
     ]
   }
 };
+
+interface ScoreRingProps {
+  correctness: number;
+}
+
+function ScoreRing({ correctness }: ScoreRingProps) {
+  const percentage = Math.round(correctness * 100);
+  const isSuccess = correctness >= 0.75;
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="gauge-circle">
+      <svg width="80" height="80" style={{ transform: "rotate(-90deg)" }}>
+        {/* Track */}
+        <circle
+          cx="40"
+          cy="40"
+          r={radius}
+          fill="transparent"
+          stroke={isSuccess ? "var(--color-success-muted)" : "var(--color-warning-muted)"}
+          strokeWidth="6"
+        />
+        {/* Fill */}
+        <circle
+          cx="40"
+          cy="40"
+          r={radius}
+          fill="transparent"
+          stroke={isSuccess ? "var(--color-success)" : "var(--color-warning)"}
+          strokeWidth="6"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.35s" }}
+        />
+      </svg>
+      <div className={`gauge-percentage-center ${isSuccess ? "success" : "warning"}`}>
+        {percentage}%
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
@@ -278,7 +321,7 @@ export default function Dashboard() {
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
     if (results.poseLandmarks) {
-      // 1. Draw joints skeleton overlay (with premium glowing aesthetics)
+      // 1. Draw joints skeleton overlay (with clinical palette aesthetics)
       drawSkeletonOverlay(canvasCtx, results.poseLandmarks);
 
       // 2. Format landmarks for API pipeline: [33 joints, [x, y, z, visibility]]
@@ -320,7 +363,7 @@ export default function Dashboard() {
 
   // Drawing method for Canvas Overlay
   const drawSkeletonOverlay = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
-    const drawLine = (idx1: number, idx2: number, color = "#f8fafc", width = 3) => {
+    const drawLine = (idx1: number, idx2: number, color = "#edecea", width = 3) => {
       const pt1 = landmarks[idx1];
       const pt2 = landmarks[idx2];
       if (pt1 && pt2) {
@@ -336,32 +379,32 @@ export default function Dashboard() {
 
     // Connections:
     // Shoulders
-    drawLine(11, 12, "#3b82f6", 4);
+    drawLine(11, 12, "#01696f", 4);
     // Left Arm
-    drawLine(11, 13, "#f8fafc", 3);
-    drawLine(13, 15, "#f8fafc", 3);
+    drawLine(11, 13, "#edecea", 3);
+    drawLine(13, 15, "#edecea", 3);
     // Right Arm
-    drawLine(12, 14, "#f8fafc", 3);
-    drawLine(14, 16, "#f8fafc", 3);
+    drawLine(12, 14, "#edecea", 3);
+    drawLine(14, 16, "#edecea", 3);
     // Hips
-    drawLine(23, 24, "#3b82f6", 4);
-    drawLine(11, 23, "#f8fafc", 3);
-    drawLine(12, 24, "#f8fafc", 3);
+    drawLine(23, 24, "#01696f", 4);
+    drawLine(11, 23, "#edecea", 3);
+    drawLine(12, 24, "#edecea", 3);
     // Left Leg
-    drawLine(23, 25, "#f8fafc", 3);
+    drawLine(23, 25, "#edecea", 3);
     // Color code left knee connection if alert triggered
     const isKneeDeviating = Math.abs(currentKneeAngle - 90) > 15 && activePose === "warrior_2";
-    drawLine(25, 27, isKneeDeviating ? "#ef4444" : "#f8fafc", isKneeDeviating ? 5 : 3);
+    drawLine(25, 27, isKneeDeviating ? "#b03060" : "#edecea", isKneeDeviating ? 5 : 3);
     // Right Leg
-    drawLine(24, 26, "#f8fafc", 3);
-    drawLine(26, 28, "#f8fafc", 3);
+    drawLine(24, 26, "#edecea", 3);
+    drawLine(26, 28, "#edecea", 3);
 
-    // Draw joints glow and circle
+    // Draw joints and circle
     landmarks.forEach((pt: any, i: number) => {
       if (pt.visibility > 0.5 && [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].includes(i)) {
         ctx.beginPath();
         ctx.arc(pt.x * 640, pt.y * 480, i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
-        ctx.fillStyle = i === 25 && isKneeDeviating ? "#ef4444" : "#10b981";
+        ctx.fillStyle = i === 25 && isKneeDeviating ? "#b03060" : "#437a22";
         ctx.fill();
       }
     });
@@ -405,7 +448,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ minHeight: "100vh" }}>
+    <div className="app-container">
       <Head>
         <title>Smart Yoga Posture Correction System</title>
       </Head>
@@ -425,10 +468,22 @@ export default function Dashboard() {
       {/* Navbar Header */}
       <header className="app-header">
         <div className="app-logo">
-          <Activity className="status-dot active" style={{ color: "#10b981" }} />
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M2 22C2 22 10 18 14 12C18 6 22 2 22 2C22 2 18 6 12 10C6 14 2 22 2 22Z" />
+            <path d="M2 22L17 7" />
+          </svg>
           <span>SmartYoga.AI</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+        <div className="header-actions">
           <div className="status-pill">
             <div className={`status-dot ${cameraActive ? "active" : ""}`} />
             <span>{appMode === "live" ? (cameraActive ? "Live Webcam" : "Cam Off") : "Simulation Mode"}</span>
@@ -446,12 +501,12 @@ export default function Dashboard() {
       <main className="dashboard-grid">
         
         {/* LEFT COLUMN: CONTROL & SETTINGS */}
-        <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <section className="grid-column">
           
           {/* Mode Switcher */}
           <div className="glass-panel">
             <h2 className="section-title">
-              <Compass size={20} style={{ color: "#3b82f6" }} />
+              <Compass size={20} />
               <span>Operation Mode</span>
             </h2>
             <div className="btn-row">
@@ -474,7 +529,7 @@ export default function Dashboard() {
           {appMode === "simulate" && (
             <div className="glass-panel">
               <h2 className="section-title">
-                <Sliders size={20} style={{ color: "#3b82f6" }} />
+                <Sliders size={20} />
                 <span>Simulate Joint Angles</span>
               </h2>
               
@@ -537,7 +592,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="input-group" style={{ marginTop: "15px" }}>
+              <div className="input-group mt-4">
                 <label className="input-label">Simulate occlusion block</label>
                 <div className="btn-row">
                   <button 
@@ -566,24 +621,22 @@ export default function Dashboard() {
           {/* User Digital Twin calibration profile */}
           <div className="glass-panel">
             <h2 className="section-title">
-              <ShieldCheck size={20} style={{ color: "#10b981" }} />
+              <ShieldCheck size={20} />
               <span>Digital Twin Limits Calibration</span>
             </h2>
             <div className="input-group">
               <label className="input-label">Left Knee Min/Max Limits</label>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <div className="limits-row">
                 <input 
                   type="number" 
-                  className="groq-config-input" 
-                  style={{ width: "80px", padding: "8px" }}
+                  className="groq-config-input limits-input" 
                   value={calibKneeMin}
                   onChange={(e) => setCalibKneeMin(Number(e.target.value))}
                 />
                 <span className="text-muted">to</span>
                 <input 
                   type="number" 
-                  className="groq-config-input" 
-                  style={{ width: "80px", padding: "8px" }}
+                  className="groq-config-input limits-input" 
                   value={calibKneeMax}
                   onChange={(e) => setCalibKneeMax(Number(e.target.value))}
                 />
@@ -592,19 +645,17 @@ export default function Dashboard() {
 
             <div className="input-group">
               <label className="input-label">Left Shoulder Min/Max Limits</label>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <div className="limits-row">
                 <input 
                   type="number" 
-                  className="groq-config-input" 
-                  style={{ width: "80px", padding: "8px" }}
+                  className="groq-config-input limits-input" 
                   value={calibShoulderMin}
                   onChange={(e) => setCalibShoulderMin(Number(e.target.value))}
                 />
                 <span className="text-muted">to</span>
                 <input 
                   type="number" 
-                  className="groq-config-input" 
-                  style={{ width: "80px", padding: "8px" }}
+                  className="groq-config-input limits-input" 
                   value={calibShoulderMax}
                   onChange={(e) => setCalibShoulderMax(Number(e.target.value))}
                 />
@@ -615,7 +666,7 @@ export default function Dashboard() {
           {/* Configuration Settings */}
           <div className="glass-panel">
             <h2 className="section-title">
-              <Settings size={20} style={{ color: "#94a3b8" }} />
+              <Settings size={20} />
               <span>Config Gateway</span>
             </h2>
             <div className="input-group">
@@ -628,7 +679,6 @@ export default function Dashboard() {
                 placeholder="http://localhost:7860/api" 
               />
             </div>
-
 
             <div className="input-group">
               <label className="input-label">Guidance Language</label>
@@ -648,30 +698,21 @@ export default function Dashboard() {
         </section>
 
         {/* RIGHT COLUMN: REAL VIDEO AND METRICS */}
-        <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <section className="grid-column">
           
           {/* Real-time Video Render block */}
-          <div className="glass-panel" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className="section-title" style={{ marginBottom: 0 }}>
-                <CameraIcon size={20} style={{ color: "#10b981" }} />
+          <div className="glass-panel camera-panel">
+            <div className="camera-header">
+              <h2 className="section-title mb-0">
+                <CameraIcon size={20} />
                 <span>Camera Stream</span>
               </h2>
 
               {appMode === "live" ? (
                 <button 
-                  className={`btn-primary ${cameraActive ? "btn-error" : ""}`}
+                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
                   onClick={cameraActive ? stopCamera : startCamera}
                   disabled={!mediaPipeLoaded || isInitializingCamera}
-                  style={{ 
-                    padding: "8px 18px", 
-                    fontSize: "0.85rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    background: cameraActive ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" : undefined,
-                    boxShadow: cameraActive ? "0 4px 15px rgba(239, 68, 68, 0.3)" : undefined
-                  }}
                 >
                   {isInitializingCamera ? (
                     <RefreshCw className="animate-spin" size={16} />
@@ -689,10 +730,9 @@ export default function Dashboard() {
                 </button>
               ) : (
                 <button 
-                  className="btn-primary" 
+                  className="btn-primary btn-sm" 
                   onClick={triggerSimulationStep}
                   disabled={isLoading}
-                  style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 18px", fontSize: "0.85rem" }}
                 >
                   {isLoading ? <RefreshCw className="animate-spin" size={16} /> : <Sparkles size={16} />}
                   <span>Evaluate step</span>
@@ -701,12 +741,12 @@ export default function Dashboard() {
             </div>
 
             {/* Video + Canvas Frame setup */}
-            <div style={{ position: "relative", width: "100%", height: "480px", background: "#090d16", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="camera-frame">
               {appMode === "live" ? (
                 <>
                   <video 
                     ref={videoRef} 
-                    style={{ display: "none" }} 
+                    className="camera-video-element"
                     width="640" 
                     height="480" 
                     playsInline 
@@ -716,17 +756,17 @@ export default function Dashboard() {
                     ref={canvasRef} 
                     width="640" 
                     height="480" 
-                    style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} 
+                    className="camera-canvas"
                   />
                   {!cameraActive && (
-                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", color: "var(--text-muted)" }}>
+                    <div className="camera-placeholder">
                       <VideoOff size={48} />
                       <span>Camera is inactive. Click "Start Video" to begin.</span>
                     </div>
                   )}
                 </>
               ) : (
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                <div className="camera-placeholder">
                   <span>Switching to Simulation mode... Sliders are active.</span>
                 </div>
               )}
@@ -736,37 +776,33 @@ export default function Dashboard() {
           {/* Real-time status Metrics */}
           <div className="glass-panel">
             <h2 className="section-title">
-              <Gauge size={20} style={{ color: "#3b82f6" }} />
+              <Gauge size={20} />
               <span>Real-Time Feedback Hub</span>
             </h2>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              <div className="gauge-container glass-panel" style={{ background: "rgba(0,0,0,0.2)" }}>
-                <div className={`gauge-circle ${correctness >= 0.75 ? "success" : "warning"}`}>
-                  <span className="gauge-percentage">
-                    {Math.round(correctness * 100)}%
-                  </span>
-                </div>
+            <div className="feedback-grid">
+              <div className="gauge-container glass-panel">
+                <ScoreRing correctness={correctness} />
                 <span className="gauge-label">Correctness Score</span>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", justifyContent: "center" }}>
-                <div className="deviation-item" style={{ margin: 0 }}>
-                  <span className="text-muted">Detected Pose</span>
-                  <span style={{ fontWeight: 600, color: "#60a5fa" }}>
+              <div className="metrics-list">
+                <div className="deviation-item m-0">
+                  <span className="deviation-name">Detected Pose</span>
+                  <span className="metric-value primary">
                     {activePose === "transition/unknown" ? "Transition/Unknown" : activePose.toUpperCase()}
                   </span>
                 </div>
-                <div className="deviation-item" style={{ margin: 0 }}>
-                  <span className="text-muted">Sequence Flow</span>
-                  <span style={{ fontWeight: 600 }}>
+                <div className="deviation-item m-0">
+                  <span className="deviation-name">Sequence Flow</span>
+                  <span className="metric-value">
                     {flowPose === "transition/unknown" ? "Static Check" : flowPose.toUpperCase()}
                   </span>
                 </div>
-                <div className="deviation-item" style={{ margin: 0 }}>
-                  <span className="text-muted">Occlusion Fusing</span>
-                  <span style={{ fontWeight: 600, color: recoveredJoints.length > 0 ? "#f59e0b" : "#10b981" }}>
-                    {recoveredJoints.length > 0 ? `Active (${recoveredJoints.length} joints)` : "Inactive"}
+                <div className="deviation-item m-0">
+                  <span className="deviation-name">Occlusion Fusing</span>
+                  <span className={`metric-value ${recoveredJoints.length > 0 ? "warning" : "success"}`}>
+                    {recoveredJoints.length > 0 ? `Active (${recoveredJoints.length})` : "Inactive"}
                   </span>
                 </div>
               </div>
@@ -774,8 +810,8 @@ export default function Dashboard() {
 
             {/* Occlusion recovery logs */}
             {recoveredJoints.length > 0 && (
-              <div style={{ marginTop: "16px", padding: "10px", background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "8px" }}>
-                <p style={{ fontSize: "0.85rem", color: "#f59e0b", display: "flex", alignItems: "center", gap: "6px" }}>
+              <div className="occlusion-alert">
+                <p className="occlusion-alert-text">
                   <ShieldAlert size={14} />
                   <span><strong>Fusing Occluded landmarks:</strong> {recoveredJoints.join(", ")} (Coordinate mirrored dynamically from twin joint)</span>
                 </p>
@@ -785,20 +821,20 @@ export default function Dashboard() {
             {/* Generated correction text */}
             {correctionText && (
               <div className="guidance-box">
-                <Volume2 size={24} className="text-warning" style={{ color: "#f59e0b" }} />
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Safety Correction Voice Guidance</span>
+                <Volume2 size={24} />
+                <div className="guidance-content">
+                  <span className="guidance-label-text">Safety Correction Voice Guidance</span>
                   <span className="guidance-text">{correctionText}</span>
                 </div>
               </div>
             )}
             
             {activePose !== "transition/unknown" && !correctionText && (
-              <div className="guidance-box" style={{ background: "rgba(16, 185, 129, 0.05)", borderColor: "var(--color-success)" }}>
-                <CheckCircle2 size={24} style={{ color: "var(--color-success)" }} />
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Pose Alignment Correct</span>
-                  <span className="guidance-text" style={{ color: "#d1fae5" }}>Joint angle alignment is correct. Keep breathing steadily.</span>
+              <div className="guidance-box success">
+                <CheckCircle2 size={24} />
+                <div className="guidance-content">
+                  <span className="guidance-label-text">Pose Alignment Correct</span>
+                  <span className="guidance-text">Joint angle alignment is correct. Keep breathing steadily.</span>
                 </div>
               </div>
             )}
@@ -808,19 +844,18 @@ export default function Dashboard() {
           {activePose !== "transition/unknown" && (
             <div className="glass-panel">
               <h2 className="section-title">
-                <HelpCircle size={20} style={{ color: "#ef4444" }} />
+                <HelpCircle size={20} />
                 <span>Angle Alignment Details</span>
               </h2>
               
               <div className="deviation-item">
                 <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
-                <div style={{ display: "flex", alignItems: "center" }}>
+                <div className="deviation-row-detail">
                   <div className="deviation-bar-bg">
                     <div 
-                      className="deviation-bar-fill" 
+                      className={`deviation-bar-fill ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}
                       style={{ 
-                        width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%`,
-                        background: Math.abs(currentKneeAngle - 90) > 15 ? "var(--color-error)" : "var(--color-success)"
+                        width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%` 
                       }} 
                     />
                   </div>
@@ -832,13 +867,12 @@ export default function Dashboard() {
 
               <div className="deviation-item">
                 <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
-                <div style={{ display: "flex", alignItems: "center" }}>
+                <div className="deviation-row-detail">
                   <div className="deviation-bar-bg">
                     <div 
-                      className="deviation-bar-fill" 
+                      className={`deviation-bar-fill ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}
                       style={{ 
-                        width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%`,
-                        background: Math.abs(currentShoulderAngle - 90) > 15 ? "var(--color-error)" : "var(--color-success)"
+                        width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%` 
                       }} 
                     />
                   </div>
