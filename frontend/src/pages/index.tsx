@@ -168,18 +168,7 @@ function ScoreRing({ correctness }: ScoreRingProps) {
 export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
-  
-  // Modes: "live" (Webcam) or "simulate" (Sliders)
-  const [appMode, setAppMode] = useState<"live" | "simulate">("live");
   const [activePreset, setActivePreset] = useState<"warrior_2" | "plank" | "tree_pose">("warrior_2");
-  
-  // Simulated Slider Angles (for simulation mode)
-  const [simKneeL, setSimKneeL] = useState(120);
-  const [simShoulderL, setSimShoulderL] = useState(90);
-  const [simElbowL, setSimElbowL] = useState(165);
-  
-  // Occlusion Simulation Settings (for simulation mode)
-  const [occlusionType, setOcclusionType] = useState<"none" | "left_elbow" | "right_knee">("none");
   const [speechEnabled, setSpeechEnabled] = useState(true);
   
   // Digital Twin User Calibration Profile
@@ -211,9 +200,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Collapsible Groups states
-  const [openGroupMode, setOpenGroupMode] = useState(true);
   const [openGroupPose, setOpenGroupPose] = useState(true);
-  const [openGroupSim, setOpenGroupSim] = useState(true);
   const [openGroupTwin, setOpenGroupTwin] = useState(true);
   const [openGroupConfig, setOpenGroupConfig] = useState(true);
 
@@ -359,18 +346,6 @@ export default function Dashboard() {
     }
   }, [correctionText, speechEnabled, lang]);
 
-  // Sync sliders to preset values in simulation mode
-  useEffect(() => {
-    if (appMode === "simulate") {
-      const preset = PRESET_POSES[activePreset];
-      setSimKneeL(preset.angles[6]);
-      setSimShoulderL(preset.angles[2]);
-      setSimElbowL(preset.angles[0]);
-      setCurrentKneeAngle(preset.angles[6]);
-      setCurrentShoulderAngle(preset.angles[2]);
-      resetPipeline();
-    }
-  }, [activePreset, appMode]);
 
   // Handle checking scripts loading
   const handleScriptLoad = () => {
@@ -415,11 +390,10 @@ export default function Dashboard() {
   // Start Live Webcam Video Loop
   const startCamera = async () => {
     if (!navigator.onLine) {
-      alert("No internet connection. MediaPipe requires internet on first load. Switch to Simulation Mode to practice offline.");
+      alert("No internet connection. MediaPipe requires internet on first load.");
       return;
     }
 
-    if (appMode !== "live") return;
     initMediaPipe();
     
     setIsInitializingCamera(true);
@@ -459,15 +433,12 @@ export default function Dashboard() {
     resetPipeline();
   };
 
-  // Cleanup camera on unmount or mode switch
+  // Cleanup camera on unmount
   useEffect(() => {
-    if (appMode === "simulate") {
-      stopCamera();
-    }
     return () => {
       stopCamera();
     };
-  }, [appMode]);
+  }, []);
 
   // MediaPipe Result processing callback
   const onPoseResults = (results: any) => {
@@ -584,43 +555,6 @@ export default function Dashboard() {
     });
   };
 
-  // Pipeline simulation evaluation button (used in Simulation Mode)
-  const triggerSimulationStep = () => {
-    const preset = PRESET_POSES[activePreset];
-    const angles = [...preset.angles];
-    angles[6] = simKneeL;
-    angles[2] = simShoulderL;
-    angles[0] = simElbowL;
-
-    setCurrentKneeAngle(simKneeL);
-    setCurrentShoulderAngle(simShoulderL);
-
-    const landmarks = preset.landmarks.map(pt => [...pt]);
-    if (occlusionType === "left_elbow") {
-      if (landmarks[3]) {
-        landmarks[3][3] = 0.1;
-        landmarks[3][0] = 0.0;
-        landmarks[3][1] = 0.0;
-        landmarks[3][2] = 0.0;
-      }
-    } else if (occlusionType === "right_knee") {
-      if (landmarks[10]) {
-        landmarks[10][3] = 0.1;
-        landmarks[10][0] = 0.0;
-        landmarks[10][1] = 0.0;
-        landmarks[10][2] = 0.0;
-      }
-    }
-
-    if (typeof window !== "undefined") {
-      (window as any).process = {
-        env: { NEXT_PUBLIC_YOGA_API_URL: apiURL }
-      };
-    }
-
-    processFrame(landmarks, angles);
-  };
-
   return (
     <>
       {/* Load MediaPipe SDK from CDN */}
@@ -639,7 +573,7 @@ export default function Dashboard() {
       {!isOnline && (
         <div className="offline-toast">
           <span className="offline-dot" />
-          You're offline — simulation mode works without internet
+          You're offline — please check your internet connection.
         </div>
       )}
 
@@ -736,37 +670,7 @@ export default function Dashboard() {
         {/* LEFT COLUMN: SIDEBAR CONTROLS */}
         <aside className={`app-sidebar ${sidebarOpen ? "mobile-open" : ""}`}>
           
-          {/* Group 1: Operation Mode */}
-          <div className="sidebar-group">
-            <div className="sidebar-group-header" onClick={() => setOpenGroupMode(!openGroupMode)}>
-              <span>Operation Mode</span>
-              <ChevronDown size={16} className={`chevron-icon ${!openGroupMode ? "collapsed" : ""}`} />
-            </div>
-            {openGroupMode && (
-              <div className="sidebar-group-body">
-                <div className="btn-row">
-                  <button 
-                    className={`btn-toggle ${appMode === "live" ? "active" : ""}`}
-                    onClick={() => {
-                      setAppMode("live");
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    Webcam Feed
-                  </button>
-                  <button 
-                    className={`btn-toggle ${appMode === "simulate" ? "active" : ""}`}
-                    onClick={() => {
-                      setAppMode("simulate");
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    Simulation Sliders
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+
 
           {/* Group 2: Target Pose Cards Selector */}
           <div className="sidebar-group">
@@ -812,87 +716,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Group 3: Simulation Sliders */}
-          {appMode === "simulate" && (
-            <div className="sidebar-group">
-              <div className="sidebar-group-header" onClick={() => setOpenGroupSim(!openGroupSim)}>
-                <span>Simulate Angles</span>
-                <ChevronDown size={16} className={`chevron-icon ${!openGroupSim ? "collapsed" : ""}`} />
-              </div>
-              {openGroupSim && (
-                <div className="sidebar-group-body">
-                  <div className="input-group">
-                    <label className="input-label">Left Knee Angle</label>
-                    <div className="slider-container">
-                      <input 
-                        type="range" 
-                        min="40" 
-                        max="180" 
-                        value={simKneeL} 
-                        onChange={(e) => setSimKneeL(Number(e.target.value))}
-                        className="slider-input" 
-                      />
-                      <span className="slider-value">{simKneeL}°</span>
-                    </div>
-                  </div>
-
-                  <div className="input-group">
-                    <label className="input-label">Left Shoulder Angle</label>
-                    <div className="slider-container">
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="180" 
-                        value={simShoulderL} 
-                        onChange={(e) => setSimShoulderL(Number(e.target.value))}
-                        className="slider-input" 
-                      />
-                      <span className="slider-value">{simShoulderL}°</span>
-                    </div>
-                  </div>
-
-                  <div className="input-group">
-                    <label className="input-label">Left Elbow Angle</label>
-                    <div className="slider-container">
-                      <input 
-                        type="range" 
-                        min="40" 
-                        max="180" 
-                        value={simElbowL} 
-                        onChange={(e) => setSimElbowL(Number(e.target.value))}
-                        className="slider-input" 
-                      />
-                      <span className="slider-value">{simElbowL}°</span>
-                    </div>
-                  </div>
-
-                  <div className="input-group mt-4">
-                    <label className="input-label">occlusion block</label>
-                    <div className="btn-row">
-                      <button 
-                        className={`btn-toggle ${occlusionType === "none" ? "active" : ""}`}
-                        onClick={() => setOcclusionType("none")}
-                      >
-                        None
-                      </button>
-                      <button 
-                        className={`btn-toggle ${occlusionType === "left_elbow" ? "active" : ""}`}
-                        onClick={() => setOcclusionType("left_elbow")}
-                      >
-                        Left Elbow
-                      </button>
-                      <button 
-                        className={`btn-toggle ${occlusionType === "right_knee" ? "active" : ""}`}
-                        onClick={() => setOcclusionType("right_knee")}
-                      >
-                        Right Knee
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Group 4: Digital Twin Limits Calibration */}
           <div className="sidebar-group">
@@ -999,71 +822,52 @@ export default function Dashboard() {
                 <span>Camera Stream</span>
               </div>
 
-              {appMode === "live" ? (
-                <button 
-                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
-                  onClick={cameraActive ? stopCamera : startCamera}
-                  disabled={!mediaPipeLoaded || isInitializingCamera}
-                >
-                  {isInitializingCamera ? (
-                    <RefreshCw className="animate-spin" size={16} />
-                  ) : cameraActive ? (
-                    <>
-                      <VideoOff size={16} />
-                      <span>Stop Video</span>
-                    </>
-                  ) : (
-                    <>
-                      <CameraIcon size={16} />
-                      <span>Start Video</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button 
-                  className="btn-primary btn-sm" 
-                  onClick={triggerSimulationStep}
-                  disabled={isLoading}
-                >
-                  {isLoading ? <RefreshCw className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                  <span>Evaluate step</span>
-                </button>
-              )}
+              <button 
+                className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
+                onClick={cameraActive ? stopCamera : startCamera}
+                disabled={!mediaPipeLoaded || isInitializingCamera}
+              >
+                {isInitializingCamera ? (
+                  <RefreshCw className="animate-spin" size={16} />
+                ) : cameraActive ? (
+                  <>
+                    <VideoOff size={16} />
+                    <span>Stop Video</span>
+                  </>
+                ) : (
+                  <>
+                    <CameraIcon size={16} />
+                    <span>Start Video</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="camera-frame">
-              {appMode === "live" ? (
-                <>
-                  <video 
-                    ref={videoRef} 
-                    className="camera-video-element"
-                    playsInline 
-                    muted 
-                  />
-                  <canvas 
-                    ref={canvasRef} 
-                    width={640} 
-                    height={480} 
-                    className="camera-canvas"
-                  />
-                  {cameraActive && (
-                    <div className="camera-live-badge">
-                      <div className="live-dot" />
-                      <span>LIVE</span>
-                    </div>
-                  )}
-                  {!cameraActive && (
-                    <div className="camera-placeholder">
-                      <div className="camera-empty-icon">
-                        <VideoOff size={32} />
-                      </div>
-                      <p>Camera is inactive. Click "Start Video" to begin.</p>
-                    </div>
-                  )}
-                </>
-              ) : (
+              <video 
+                ref={videoRef} 
+                className="camera-video-element"
+                playsInline 
+                muted 
+              />
+              <canvas 
+                ref={canvasRef} 
+                width={640} 
+                height={480} 
+                className="camera-canvas"
+              />
+              {cameraActive && (
+                <div className="camera-live-badge">
+                  <div className="live-dot" />
+                  <span>LIVE</span>
+                </div>
+              )}
+              {!cameraActive && (
                 <div className="camera-placeholder">
-                  <span>Switching to Simulation mode... Sliders are active.</span>
+                  <div className="camera-empty-icon">
+                    <VideoOff size={32} />
+                  </div>
+                  <p>Camera is inactive. Click "Start Video" to begin.</p>
                 </div>
               )}
             </div>
