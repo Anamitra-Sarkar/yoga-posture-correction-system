@@ -9,13 +9,17 @@ import {
   ShieldCheck, 
   ShieldAlert, 
   Sliders, 
-  Gauge, 
   Compass, 
   CheckCircle2, 
   HelpCircle,
   Sparkles,
   Camera as CameraIcon,
-  VideoOff
+  VideoOff,
+  Menu,
+  X,
+  ChevronDown,
+  Globe,
+  Gauge
 } from "lucide-react";
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
@@ -88,6 +92,40 @@ interface ScoreRingProps {
 
 function ScoreRing({ correctness }: ScoreRingProps) {
   const percentage = Math.round(correctness * 100);
+  const [displayPercentage, setDisplayPercentage] = useState(percentage);
+  
+  useEffect(() => {
+    let start = displayPercentage;
+    const end = percentage;
+    if (start === end) return;
+    
+    const duration = 400; // ms
+    const startTime = performance.now();
+    
+    let animationFrameId: number;
+    
+    const updateCount = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function (easeOutQuad)
+      const ease = progress * (2 - progress);
+      const current = Math.round(start + (end - start) * ease);
+      
+      setDisplayPercentage(current);
+      
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(updateCount);
+      }
+    };
+    
+    animationFrameId = requestAnimationFrame(updateCount);
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [percentage]);
+
   const isSuccess = correctness >= 0.75;
   const radius = 34;
   const circumference = 2 * Math.PI * radius;
@@ -116,11 +154,11 @@ function ScoreRing({ correctness }: ScoreRingProps) {
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.35s" }}
+          style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.16, 1, 0.3, 1)" }}
         />
       </svg>
       <div className={`gauge-percentage-center ${isSuccess ? "success" : "warning"}`}>
-        {percentage}%
+        {displayPercentage}%
       </div>
     </div>
   );
@@ -164,6 +202,41 @@ export default function Dashboard() {
   // Dynamic metrics computed in real-time
   const [currentKneeAngle, setCurrentKneeAngle] = useState(180);
   const [currentShoulderAngle, setCurrentShoulderAngle] = useState(0);
+
+  // App Shell Sidebar Drawer Toggle (Mobile)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Collapsible Groups states
+  const [openGroupMode, setOpenGroupMode] = useState(true);
+  const [openGroupPose, setOpenGroupPose] = useState(true);
+  const [openGroupSim, setOpenGroupSim] = useState(true);
+  const [openGroupTwin, setOpenGroupTwin] = useState(true);
+  const [openGroupConfig, setOpenGroupConfig] = useState(true);
+
+  // Session timer hook
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (cameraActive) {
+      setSessionSeconds(0);
+      timerRef.current = setInterval(() => {
+        setSessionSeconds(s => s + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [cameraActive]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  };
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_YOGA_API_URL) {
@@ -448,9 +521,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-container">
+    <div className="app-shell">
       <Head>
-        <title>Smart Yoga Posture Correction System</title>
+        <title>AsanaAI — Smart Yoga Posture Correction System</title>
       </Head>
 
       {/* Load MediaPipe SDK from CDN */}
@@ -467,424 +540,534 @@ export default function Dashboard() {
 
       {/* Navbar Header */}
       <header className="app-header">
-        <div className="app-logo">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M2 22C2 22 10 18 14 12C18 6 22 2 22 2C22 2 18 6 12 10C6 14 2 22 2 22Z" />
-            <path d="M2 22L17 7" />
-          </svg>
-          <span>SmartYoga.AI</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="app-logo">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-primary)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="logo-mark"
+            >
+              <path d="M12 2C12 2 15 7 15 11C15 15 12 22 12 22C12 22 9 15 9 11C9 7 12 2 12 2Z" />
+              <path d="M12 11C15 9 20 9 21 11C22 13 19 16 12 22" />
+              <path d="M12 11C9 9 4 9 3 11C2 13 5 16 12 22" />
+            </svg>
+            <span>AsanaAI</span>
+          </div>
         </div>
+
         <div className="header-actions">
+          <div className={`session-timer ${cameraActive ? "active" : ""}`}>
+            {formatTime(sessionSeconds)}
+          </div>
           <div className="status-pill">
             <div className={`status-dot ${cameraActive ? "active" : ""}`} />
-            <span>{appMode === "live" ? (cameraActive ? "Live Webcam" : "Cam Off") : "Simulation Mode"}</span>
+            <span>{cameraActive ? "Live" : "Ready"}</span>
           </div>
+          
+          <div className="language-selector-wrapper">
+            <Globe size={16} />
+            <select 
+              value={lang} 
+              onChange={(e) => setLang(e.target.value as any)}
+              className="language-select-native"
+            >
+              <option value="en">EN</option>
+              <option value="hi">HI</option>
+              <option value="bn">BN</option>
+            </select>
+          </div>
+
           <button 
             className="btn-toggle" 
             onClick={() => setSpeechEnabled(!speechEnabled)}
           >
             {speechEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
+
+          <button className="btn-primary btn-sm" onClick={resetPipeline}>
+            New Session
+          </button>
         </div>
       </header>
 
-      {/* Main Grid */}
-      <main className="dashboard-grid">
+      {/* LEFT COLUMN: SIDEBAR CONTROLS */}
+      <aside className={`app-sidebar ${sidebarOpen ? "open" : ""}`}>
         
-        {/* LEFT COLUMN: CONTROL & SETTINGS */}
-        <section className="grid-column">
-          
-          {/* Mode Switcher */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <Compass size={20} />
-              <span>Operation Mode</span>
-            </h2>
-            <div className="btn-row">
-              <button 
-                className={`btn-toggle ${appMode === "live" ? "active" : ""}`}
-                onClick={() => setAppMode("live")}
-              >
-                Webcam Feed
-              </button>
-              <button 
-                className={`btn-toggle ${appMode === "simulate" ? "active" : ""}`}
-                onClick={() => setAppMode("simulate")}
-              >
-                Simulation Sliders
-              </button>
-            </div>
+        {/* Group 1: Operation Mode */}
+        <div className="sidebar-group">
+          <div className="sidebar-group-header" onClick={() => setOpenGroupMode(!openGroupMode)}>
+            <span>Operation Mode</span>
+            <ChevronDown size={16} className={`chevron-icon ${!openGroupMode ? "collapsed" : ""}`} />
           </div>
-
-          {/* Simulation mode configurations */}
-          {appMode === "simulate" && (
-            <div className="glass-panel">
-              <h2 className="section-title">
-                <Sliders size={20} />
-                <span>Simulate Joint Angles</span>
-              </h2>
-              
-              <div className="input-group">
-                <label className="input-label">Select Base Pose Target</label>
-                <select 
-                  className="groq-config-input"
-                  value={activePreset}
-                  onChange={(e) => setActivePreset(e.target.value as any)}
-                  style={{ appearance: "auto" }}
+          {openGroupMode && (
+            <div className="sidebar-group-body">
+              <div className="btn-row">
+                <button 
+                  className={`btn-toggle ${appMode === "live" ? "active" : ""}`}
+                  onClick={() => {
+                    setAppMode("live");
+                    setSidebarOpen(false);
+                  }}
                 >
-                  <option value="warrior_2">Warrior II</option>
-                  <option value="plank">Plank</option>
-                  <option value="tree_pose">Tree Pose</option>
-                </select>
+                  Webcam Feed
+                </button>
+                <button 
+                  className={`btn-toggle ${appMode === "simulate" ? "active" : ""}`}
+                  onClick={() => {
+                    setAppMode("simulate");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  Simulation Sliders
+                </button>
               </div>
+            </div>
+          )}
+        </div>
 
-              <div className="input-group">
-                <label className="input-label">Simulate Left Knee Angle</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    min="40" 
-                    max="180" 
-                    value={simKneeL} 
-                    onChange={(e) => setSimKneeL(Number(e.target.value))}
-                    className="slider-input" 
-                  />
-                  <span className="slider-value">{simKneeL}°</span>
+        {/* Group 2: Target Pose Cards Selector */}
+        <div className="sidebar-group">
+          <div className="sidebar-group-header" onClick={() => setOpenGroupPose(!openGroupPose)}>
+            <span>Target Pose</span>
+            <ChevronDown size={16} className={`chevron-icon ${!openGroupPose ? "collapsed" : ""}`} />
+          </div>
+          {openGroupPose && (
+            <div className="sidebar-group-body">
+              <div className="pose-card-grid">
+                <div 
+                  className={`pose-card ${activePreset === "warrior_2" ? "active" : ""}`}
+                  onClick={() => {
+                    setActivePreset("warrior_2");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <span className="pose-card-icon">🧘</span>
+                  <span className="pose-card-label">Warrior II</span>
                 </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Simulate Left Shoulder Angle</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="180" 
-                    value={simShoulderL} 
-                    onChange={(e) => setSimShoulderL(Number(e.target.value))}
-                    className="slider-input" 
-                  />
-                  <span className="slider-value">{simShoulderL}°</span>
+                <div 
+                  className={`pose-card ${activePreset === "plank" ? "active" : ""}`}
+                  onClick={() => {
+                    setActivePreset("plank");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <span className="pose-card-icon">🏋️</span>
+                  <span className="pose-card-label">Plank</span>
                 </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Simulate Left Elbow Angle</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    min="40" 
-                    max="180" 
-                    value={simElbowL} 
-                    onChange={(e) => setSimElbowL(Number(e.target.value))}
-                    className="slider-input" 
-                  />
-                  <span className="slider-value">{simElbowL}°</span>
-                </div>
-              </div>
-
-              <div className="input-group mt-4">
-                <label className="input-label">Simulate occlusion block</label>
-                <div className="btn-row">
-                  <button 
-                    className={`btn-toggle ${occlusionType === "none" ? "active" : ""}`}
-                    onClick={() => setOcclusionType("none")}
-                  >
-                    None
-                  </button>
-                  <button 
-                    className={`btn-toggle ${occlusionType === "left_elbow" ? "active" : ""}`}
-                    onClick={() => setOcclusionType("left_elbow")}
-                  >
-                    Left Elbow
-                  </button>
-                  <button 
-                    className={`btn-toggle ${occlusionType === "right_knee" ? "active" : ""}`}
-                    onClick={() => setOcclusionType("right_knee")}
-                  >
-                    Right Knee
-                  </button>
+                <div 
+                  className={`pose-card ${activePreset === "tree_pose" ? "active" : ""}`}
+                  onClick={() => {
+                    setActivePreset("tree_pose");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <span className="pose-card-icon">🌲</span>
+                  <span className="pose-card-label">Tree Pose</span>
                 </div>
               </div>
             </div>
           )}
+        </div>
 
-          {/* User Digital Twin calibration profile */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <ShieldCheck size={20} />
-              <span>Digital Twin Limits Calibration</span>
-            </h2>
-            <div className="input-group">
-              <label className="input-label">Left Knee Min/Max Limits</label>
-              <div className="limits-row">
-                <input 
-                  type="number" 
-                  className="groq-config-input limits-input" 
-                  value={calibKneeMin}
-                  onChange={(e) => setCalibKneeMin(Number(e.target.value))}
-                />
-                <span className="text-muted">to</span>
-                <input 
-                  type="number" 
-                  className="groq-config-input limits-input" 
-                  value={calibKneeMax}
-                  onChange={(e) => setCalibKneeMax(Number(e.target.value))}
-                />
-              </div>
+        {/* Group 3: Simulation Sliders */}
+        {appMode === "simulate" && (
+          <div className="sidebar-group">
+            <div className="sidebar-group-header" onClick={() => setOpenGroupSim(!openGroupSim)}>
+              <span>Simulate Angles</span>
+              <ChevronDown size={16} className={`chevron-icon ${!openGroupSim ? "collapsed" : ""}`} />
             </div>
+            {openGroupSim && (
+              <div className="sidebar-group-body">
+                <div className="input-group">
+                  <label className="input-label">Left Knee Angle</label>
+                  <div className="slider-container">
+                    <input 
+                      type="range" 
+                      min="40" 
+                      max="180" 
+                      value={simKneeL} 
+                      onChange={(e) => setSimKneeL(Number(e.target.value))}
+                      className="slider-input" 
+                    />
+                    <span className="slider-value">{simKneeL}°</span>
+                  </div>
+                </div>
 
-            <div className="input-group">
-              <label className="input-label">Left Shoulder Min/Max Limits</label>
-              <div className="limits-row">
-                <input 
-                  type="number" 
-                  className="groq-config-input limits-input" 
-                  value={calibShoulderMin}
-                  onChange={(e) => setCalibShoulderMin(Number(e.target.value))}
-                />
-                <span className="text-muted">to</span>
-                <input 
-                  type="number" 
-                  className="groq-config-input limits-input" 
-                  value={calibShoulderMax}
-                  onChange={(e) => setCalibShoulderMax(Number(e.target.value))}
-                />
+                <div className="input-group">
+                  <label className="input-label">Left Shoulder Angle</label>
+                  <div className="slider-container">
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="180" 
+                      value={simShoulderL} 
+                      onChange={(e) => setSimShoulderL(Number(e.target.value))}
+                      className="slider-input" 
+                    />
+                    <span className="slider-value">{simShoulderL}°</span>
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Left Elbow Angle</label>
+                  <div className="slider-container">
+                    <input 
+                      type="range" 
+                      min="40" 
+                      max="180" 
+                      value={simElbowL} 
+                      onChange={(e) => setSimElbowL(Number(e.target.value))}
+                      className="slider-input" 
+                    />
+                    <span className="slider-value">{simElbowL}°</span>
+                  </div>
+                </div>
+
+                <div className="input-group mt-4">
+                  <label className="input-label">occlusion block</label>
+                  <div className="btn-row">
+                    <button 
+                      className={`btn-toggle ${occlusionType === "none" ? "active" : ""}`}
+                      onClick={() => setOcclusionType("none")}
+                    >
+                      None
+                    </button>
+                    <button 
+                      className={`btn-toggle ${occlusionType === "left_elbow" ? "active" : ""}`}
+                      onClick={() => setOcclusionType("left_elbow")}
+                    >
+                      Left Elbow
+                    </button>
+                    <button 
+                      className={`btn-toggle ${occlusionType === "right_knee" ? "active" : ""}`}
+                      onClick={() => setOcclusionType("right_knee")}
+                    >
+                      Right Knee
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
+        )}
 
-          {/* Configuration Settings */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <Settings size={20} />
-              <span>Config Gateway</span>
-            </h2>
-            <div className="input-group">
-              <label className="input-label">FastAPI Backend Endpoint</label>
-              <input 
-                type="text" 
-                className="groq-config-input" 
-                value={apiURL} 
-                onChange={(e) => setApiURL(e.target.value)}
-                placeholder="http://localhost:7860/api" 
-              />
+        {/* Group 4: Digital Twin Limits Calibration */}
+        <div className="sidebar-group">
+          <div className="sidebar-group-header" onClick={() => setOpenGroupTwin(!openGroupTwin)}>
+            <span>Calibration Limits</span>
+            <ChevronDown size={16} className={`chevron-icon ${!openGroupTwin ? "collapsed" : ""}`} />
+          </div>
+          {openGroupTwin && (
+            <div className="sidebar-group-body">
+              <div className="input-group">
+                <label className="input-label">Left Knee Limits</label>
+                <div className="limits-row">
+                  <input 
+                    type="number" 
+                    className="groq-config-input limits-input" 
+                    value={calibKneeMin}
+                    onChange={(e) => setCalibKneeMin(Number(e.target.value))}
+                  />
+                  <span className="text-muted">to</span>
+                  <input 
+                    type="number" 
+                    className="groq-config-input limits-input" 
+                    value={calibKneeMax}
+                    onChange={(e) => setCalibKneeMax(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Left Shoulder Limits</label>
+                <div className="limits-row">
+                  <input 
+                    type="number" 
+                    className="groq-config-input limits-input" 
+                    value={calibShoulderMin}
+                    onChange={(e) => setCalibShoulderMin(Number(e.target.value))}
+                  />
+                  <span className="text-muted">to</span>
+                  <input 
+                    type="number" 
+                    className="groq-config-input limits-input" 
+                    value={calibShoulderMax}
+                    onChange={(e) => setCalibShoulderMax(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Group 5: Config Gateway */}
+        <div className="sidebar-group">
+          <div className="sidebar-group-header" onClick={() => setOpenGroupConfig(!openGroupConfig)}>
+            <span>Config Gateway</span>
+            <ChevronDown size={16} className={`chevron-icon ${!openGroupConfig ? "collapsed" : ""}`} />
+          </div>
+          {openGroupConfig && (
+            <div className="sidebar-group-body">
+              <div className="input-group">
+                <label className="input-label">FastAPI Backend</label>
+                <input 
+                  type="text" 
+                  className="groq-config-input" 
+                  value={apiURL} 
+                  onChange={(e) => setApiURL(e.target.value)}
+                  placeholder="http://localhost:7860/api" 
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+      </aside>
+
+      {/* RIGHT COLUMN: MAIN CONTENT */}
+      <main className="app-content">
+        
+        {/* KPI Cards Row */}
+        <div className="kpi-row">
+          {isLoading ? (
+            <>
+              <div className="kpi-card skeleton">
+                <div className="kpi-label skeleton-text" />
+                <div className="kpi-value skeleton-heading" />
+                <div className="kpi-sub skeleton-text" />
+              </div>
+              <div className="kpi-card skeleton">
+                <div className="kpi-label skeleton-text" />
+                <div className="kpi-value skeleton-heading" />
+                <div className="kpi-sub skeleton-text" />
+              </div>
+              <div className="kpi-card skeleton">
+                <div className="kpi-label skeleton-text" />
+                <div className="kpi-value skeleton-heading" />
+                <div className="kpi-sub skeleton-text" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="kpi-card">
+                <span className="kpi-label">Posture Score</span>
+                <span className="kpi-value">{Math.round(correctness * 100)}%</span>
+                <span className="kpi-sub">{correctness >= 0.75 ? "✓ On target" : "Needs adjustment"}</span>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-label">Detected Pose</span>
+                <span className="kpi-value">{activePose === "transition/unknown" ? "—" : activePose.split('/').pop()?.toUpperCase()}</span>
+                <span className="kpi-sub">{flowPose === "transition/unknown" ? "Static" : "Flow mode"}</span>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-label">Fusing</span>
+                <span className="kpi-value">{recoveredJoints.length > 0 ? recoveredJoints.length : "—"}</span>
+                <span className="kpi-sub">{recoveredJoints.length > 0 ? "Occlusion active" : "All visible"}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Camera stream block */}
+        <div className="camera-panel">
+          <div className="camera-panel-header">
+            <div className="camera-panel-title">
+              <CameraIcon size={18} />
+              <span>Camera Stream</span>
             </div>
 
-            <div className="input-group">
-              <label className="input-label">Guidance Language</label>
-              <select 
-                className="groq-config-input"
-                value={lang}
-                onChange={(e) => setLang(e.target.value as any)}
-                style={{ appearance: "auto" }}
+            {appMode === "live" ? (
+              <button 
+                className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
+                onClick={cameraActive ? stopCamera : startCamera}
+                disabled={!mediaPipeLoaded || isInitializingCamera}
               >
-                <option value="en">English (default)</option>
-                <option value="hi">Hindi (हिंदी)</option>
-                <option value="bn">Bengali (বাংলা)</option>
-              </select>
-            </div>
+                {isInitializingCamera ? (
+                  <RefreshCw className="animate-spin" size={16} />
+                ) : cameraActive ? (
+                  <>
+                    <VideoOff size={16} />
+                    <span>Stop Video</span>
+                  </>
+                ) : (
+                  <>
+                    <CameraIcon size={16} />
+                    <span>Start Video</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button 
+                className="btn-primary btn-sm" 
+                onClick={triggerSimulationStep}
+                disabled={isLoading}
+              >
+                {isLoading ? <RefreshCw className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                <span>Evaluate step</span>
+              </button>
+            )}
           </div>
 
-        </section>
-
-        {/* RIGHT COLUMN: REAL VIDEO AND METRICS */}
-        <section className="grid-column">
-          
-          {/* Real-time Video Render block */}
-          <div className="glass-panel camera-panel">
-            <div className="camera-header">
-              <h2 className="section-title mb-0">
-                <CameraIcon size={20} />
-                <span>Camera Stream</span>
-              </h2>
-
-              {appMode === "live" ? (
-                <button 
-                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
-                  onClick={cameraActive ? stopCamera : startCamera}
-                  disabled={!mediaPipeLoaded || isInitializingCamera}
-                >
-                  {isInitializingCamera ? (
-                    <RefreshCw className="animate-spin" size={16} />
-                  ) : cameraActive ? (
-                    <>
-                      <VideoOff size={16} />
-                      <span>Stop Video</span>
-                    </>
-                  ) : (
-                    <>
-                      <CameraIcon size={16} />
-                      <span>Start Video</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button 
-                  className="btn-primary btn-sm" 
-                  onClick={triggerSimulationStep}
-                  disabled={isLoading}
-                >
-                  {isLoading ? <RefreshCw className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                  <span>Evaluate step</span>
-                </button>
-              )}
-            </div>
-
-            {/* Video + Canvas Frame setup */}
-            <div className="camera-frame">
-              {appMode === "live" ? (
-                <>
-                  <video 
-                    ref={videoRef} 
-                    className="camera-video-element"
-                    width="640" 
-                    height="480" 
-                    playsInline 
-                    muted 
-                  />
-                  <canvas 
-                    ref={canvasRef} 
-                    width="640" 
-                    height="480" 
-                    className="camera-canvas"
-                  />
-                  {!cameraActive && (
-                    <div className="camera-placeholder">
-                      <VideoOff size={48} />
-                      <span>Camera is inactive. Click "Start Video" to begin.</span>
+          <div className="camera-frame">
+            {appMode === "live" ? (
+              <>
+                <video 
+                  ref={videoRef} 
+                  className="camera-video-element"
+                  width="640" 
+                  height="480" 
+                  playsInline 
+                  muted 
+                />
+                <canvas 
+                  ref={canvasRef} 
+                  width="640" 
+                  height="480" 
+                  className="camera-canvas"
+                />
+                {cameraActive && (
+                  <div className="camera-live-badge">
+                    <div className="live-dot" />
+                    <span>LIVE</span>
+                  </div>
+                )}
+                {!cameraActive && (
+                  <div className="camera-placeholder">
+                    <div className="camera-empty-icon">
+                      <VideoOff size={32} />
                     </div>
-                  )}
-                </>
-              ) : (
-                <div className="camera-placeholder">
-                  <span>Switching to Simulation mode... Sliders are active.</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Real-time status Metrics */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <Gauge size={20} />
-              <span>Real-Time Feedback Hub</span>
-            </h2>
-
-            <div className="feedback-grid">
-              <div className="gauge-container glass-panel">
-                <ScoreRing correctness={correctness} />
-                <span className="gauge-label">Correctness Score</span>
-              </div>
-
-              <div className="metrics-list">
-                <div className="deviation-item m-0">
-                  <span className="deviation-name">Detected Pose</span>
-                  <span className="metric-value primary">
-                    {activePose === "transition/unknown" ? "Transition/Unknown" : activePose.toUpperCase()}
-                  </span>
-                </div>
-                <div className="deviation-item m-0">
-                  <span className="deviation-name">Sequence Flow</span>
-                  <span className="metric-value">
-                    {flowPose === "transition/unknown" ? "Static Check" : flowPose.toUpperCase()}
-                  </span>
-                </div>
-                <div className="deviation-item m-0">
-                  <span className="deviation-name">Occlusion Fusing</span>
-                  <span className={`metric-value ${recoveredJoints.length > 0 ? "warning" : "success"}`}>
-                    {recoveredJoints.length > 0 ? `Active (${recoveredJoints.length})` : "Inactive"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Occlusion recovery logs */}
-            {recoveredJoints.length > 0 && (
-              <div className="occlusion-alert">
-                <p className="occlusion-alert-text">
-                  <ShieldAlert size={14} />
-                  <span><strong>Fusing Occluded landmarks:</strong> {recoveredJoints.join(", ")} (Coordinate mirrored dynamically from twin joint)</span>
-                </p>
-              </div>
-            )}
-
-            {/* Generated correction text */}
-            {correctionText && (
-              <div className="guidance-box">
-                <Volume2 size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">Safety Correction Voice Guidance</span>
-                  <span className="guidance-text">{correctionText}</span>
-                </div>
-              </div>
-            )}
-            
-            {activePose !== "transition/unknown" && !correctionText && (
-              <div className="guidance-box success">
-                <CheckCircle2 size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">Pose Alignment Correct</span>
-                  <span className="guidance-text">Joint angle alignment is correct. Keep breathing steadily.</span>
-                </div>
+                    <p>Camera is inactive. Click "Start Video" to begin.</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="camera-placeholder">
+                <span>Switching to Simulation mode... Sliders are active.</span>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Real angles comparison list */}
-          {activePose !== "transition/unknown" && (
-            <div className="glass-panel">
-              <h2 className="section-title">
-                <HelpCircle size={20} />
-                <span>Angle Alignment Details</span>
-              </h2>
-              
-              <div className="deviation-item">
-                <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
-                <div className="deviation-row-detail">
-                  <div className="deviation-bar-bg">
-                    <div 
-                      className={`deviation-bar-fill ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}
-                      style={{ 
-                        width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%` 
-                      }} 
-                    />
-                  </div>
-                  <span className={`deviation-value ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}>
-                    {currentKneeAngle}° (Diff: {Math.round(currentKneeAngle - 90)}°)
-                  </span>
-                </div>
-              </div>
+        {/* Real-time Feedback & Guidance */}
+        <div className="glass-panel">
+          <h2 className="section-title">
+            <Gauge size={20} />
+            <span>Real-Time Feedback Hub</span>
+          </h2>
 
-              <div className="deviation-item">
-                <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
-                <div className="deviation-row-detail">
-                  <div className="deviation-bar-bg">
-                    <div 
-                      className={`deviation-bar-fill ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}
-                      style={{ 
-                        width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%` 
-                      }} 
-                    />
-                  </div>
-                  <span className={`deviation-value ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}>
-                    {currentShoulderAngle}° (Diff: {Math.round(currentShoulderAngle - 90)}°)
-                  </span>
-                </div>
+          <div className="feedback-grid">
+            <div className="gauge-container glass-panel">
+              <ScoreRing correctness={correctness} />
+              <span className="gauge-label">Correctness Score</span>
+            </div>
+
+            <div className="metrics-list">
+              <div className="deviation-item m-0">
+                <span className="deviation-name">Detected Pose</span>
+                <span className="metric-value primary">
+                  {activePose === "transition/unknown" ? "Transition/Unknown" : activePose.toUpperCase()}
+                </span>
               </div>
+              <div className="deviation-item m-0">
+                <span className="deviation-name">Sequence Flow</span>
+                <span className="metric-value">
+                  {flowPose === "transition/unknown" ? "Static Check" : flowPose.toUpperCase()}
+                </span>
+              </div>
+              <div className="deviation-item m-0">
+                <span className="deviation-name">Occlusion Fusing</span>
+                <span className={`metric-value ${recoveredJoints.length > 0 ? "warning" : "success"}`}>
+                  {recoveredJoints.length > 0 ? `Active (${recoveredJoints.length})` : "Inactive"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Occlusion recovery logs */}
+          {recoveredJoints.length > 0 && (
+            <div className="occlusion-alert">
+              <p className="occlusion-alert-text">
+                <ShieldAlert size={14} />
+                <span><strong>Fusing Occluded landmarks:</strong> {recoveredJoints.join(", ")} (Coordinate mirrored dynamically from twin joint)</span>
+              </p>
             </div>
           )}
 
-        </section>
+          {/* Generated correction text */}
+          {correctionText && (
+            <div className="guidance-box" key={correctionText}>
+              <Volume2 size={24} />
+              <div className="guidance-content">
+                <span className="guidance-label-text">Safety Correction Voice Guidance</span>
+                <span className="guidance-text">{correctionText}</span>
+              </div>
+            </div>
+          )}
+          
+          {activePose !== "transition/unknown" && !correctionText && (
+            <div className="guidance-box success" key="alignment-correct">
+              <CheckCircle2 size={24} />
+              <div className="guidance-content">
+                <span className="guidance-label-text">Pose Alignment Correct</span>
+                <span className="guidance-text">Joint angle alignment is correct. Keep breathing steadily.</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Angle details */}
+        {activePose !== "transition/unknown" && (
+          <div className="glass-panel">
+            <h2 className="section-title">
+              <HelpCircle size={20} />
+              <span>Angle Alignment Details</span>
+            </h2>
+            
+            <div className="deviation-item">
+              <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
+              <div className="deviation-row-detail">
+                <div className="deviation-bar-bg">
+                  <div 
+                    className={`deviation-bar-fill ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}
+                    style={{ 
+                      width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%` 
+                    }} 
+                  />
+                </div>
+                <span className={`deviation-value ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}>
+                  {currentKneeAngle}° (Diff: {Math.round(currentKneeAngle - 90)}°)
+                </span>
+              </div>
+            </div>
+
+            <div className="deviation-item">
+              <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
+              <div className="deviation-row-detail">
+                <div className="deviation-bar-bg">
+                  <div 
+                    className={`deviation-bar-fill ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}
+                    style={{ 
+                      width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%` 
+                    }} 
+                  />
+                </div>
+                <span className={`deviation-value ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}>
+                  {currentShoulderAngle}° (Diff: {Math.round(currentShoulderAngle - 90)}°)
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
