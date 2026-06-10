@@ -343,6 +343,13 @@ export default function Dashboard() {
   // Check on mount if scripts are already in window
   useEffect(() => {
     handleScriptLoad();
+    if (typeof window !== "undefined") {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    }
   }, []);
 
   // Initialize MediaPipe Pose Model
@@ -601,7 +608,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="app-shell">
+      <div className={`app-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
         <Head>
           <title>AsanaAI — Smart Yoga Coach</title>
         </Head>
@@ -998,15 +1005,13 @@ export default function Dashboard() {
                   <video 
                     ref={videoRef} 
                     className="camera-video-element"
-                    width="640" 
-                    height="480" 
                     playsInline 
                     muted 
                   />
                   <canvas 
                     ref={canvasRef} 
-                    width="640" 
-                    height="480" 
+                    width={640} 
+                    height={480} 
                     className="camera-canvas"
                   />
                   {cameraActive && (
