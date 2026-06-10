@@ -642,9 +642,11 @@ export default function Dashboard() {
               </select>
             </div>
 
-            <button 
-              className="btn-toggle" 
+            <button
+              className={`btn-toggle${speechEnabled ? " active" : ""}`}
               onClick={() => setSpeechEnabled(!speechEnabled)}
+              aria-pressed={speechEnabled}
+              title={speechEnabled ? "Mute voice guidance" : "Enable voice guidance"}
             >
               {speechEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             </button>
