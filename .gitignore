@@ -30,3 +30,9 @@ node_modules/
 session_summary_*.json
 tmp/
 temp/
+
+# PWA service workers
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/sw.js.map

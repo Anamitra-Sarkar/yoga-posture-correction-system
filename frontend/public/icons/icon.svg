@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#f5f4f0"/>
+  <!-- Stylized lotus: 3 petals pointing up, base arc -->
+  <g fill="none" stroke="#01696f" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Center petal -->
+    <path d="M256 340 C256 280 220 220 200 160 C230 200 256 240 256 240 C256 240 282 200 312 160 C292 220 256 280 256 340Z" fill="#01696f" opacity="0.15"/>
+    <path d="M256 340 C256 280 220 220 200 160 C230 200 256 240 256 240 C256 240 282 200 312 160 C292 220 256 340Z"/>
+    <!-- Left petal -->
+    <path d="M256 320 C220 300 170 290 130 260 C175 270 215 290 240 310"/>
+    <!-- Right petal -->
+    <path d="M256 320 C292 300 342 290 382 260 C337 270 297 290 272 310"/>
+    <!-- Base -->
+    <path d="M196 360 Q256 340 316 360" stroke-width="18"/>
+    <!-- Water line -->
+    <path d="M160 390 Q256 370 352 390" stroke-width="14" opacity="0.5"/>
+  </g>
+</svg>
