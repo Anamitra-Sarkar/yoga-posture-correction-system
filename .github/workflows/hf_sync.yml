@@ -6,6 +6,7 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/hf_sync.yml'
+      - 'README.md'
 
 jobs:
   deploy:
@@ -35,6 +36,7 @@ jobs:
           
           # Copy backend files to HF Space repo root directory
           cp -r ../backend/* .
+          cp ../README.md .
           
           # Add, commit and push changes
           git add -A
