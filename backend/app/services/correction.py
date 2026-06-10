@@ -84,10 +84,11 @@ def generate_safe_correction(
     is_safe = True
     
     # Stage 2: Paraphrase using LLM if Groq API key is available
-    if groq_api_key:
+    api_key = groq_api_key or os.environ.get("GROQ_API_KEY")
+    if api_key:
         try:
             headers = {
-                "Authorization": f"Bearer {groq_api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
             payload = {

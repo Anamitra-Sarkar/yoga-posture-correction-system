@@ -400,12 +400,13 @@ def generate_correction(data: CorrectionInput):
         correction_text = defaults.get(data.language, "Adjust your alignment.")
         is_safe = True
         
-    # Stage 2: Optional Groq API wrapper if key is provided and safe bounds are respected
-    if data.groq_api_key:
+    # Stage 2: Optional Groq API wrapper if key is provided or set in environment variables
+    api_key = data.groq_api_key or os.environ.get("GROQ_API_KEY")
+    if api_key:
         try:
             import requests
             headers = {
-                "Authorization": f"Bearer {data.groq_api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
             # Strictly bounding the LLM prompt to prevent hallucinations/injury recommendation

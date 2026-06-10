@@ -85,7 +85,6 @@ const PRESET_POSES = {
 
 export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
-  const [groqKey, setGroqKey] = useState("");
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
   
   // Modes: "live" (Webcam) or "simulate" (Sliders)
@@ -146,7 +145,7 @@ export default function Dashboard() {
     resetPipeline
   } = useYogaPipeline({
     language: lang,
-    groqApiKey: groqKey || undefined,
+    groqApiKey: undefined,
     calibrationProfile,
     correctnessThreshold: 0.75
   });
@@ -629,17 +628,7 @@ export default function Dashboard() {
                 placeholder="http://localhost:7860/api" 
               />
             </div>
-            
-            <div className="input-group">
-              <label className="input-label">Groq API Key (LLM Guidance)</label>
-              <input 
-                type="password" 
-                className="groq-config-input" 
-                value={groqKey} 
-                onChange={(e) => setGroqKey(e.target.value)}
-                placeholder="gsk_..." 
-              />
-            </div>
+
 
             <div className="input-group">
               <label className="input-label">Guidance Language</label>
