@@ -51,16 +51,16 @@ An advanced, production-grade dual-model system for real-time yoga pose classifi
 
 ```mermaid
 graph TD
-    A[Video/Camera Input] --> B[MediaPipe Landmarker]
-    B --> C{Occlusion Check}
-    C -->|Yes: Visibility < 0.5| D[Skeletal Mirroring & Fusion]
-    C -->|No| E[15 Biomechanical Angles]
+    A["Video/Camera Input"] --> B["MediaPipe Landmarker"]
+    B --> C{"Occlusion Check"}
+    C -->|"Yes: Visibility < 0.5"| D["Skeletal Mirroring and Fusion"]
+    C -->|"No"| E["15 Biomechanical Angles"]
     D --> E
-    E --> F[3-Head ResMLP Classifier]
-    F --> G[Pose ID, Correctness Score, Joint Deviations]
-    G --> H[Digital Twin Validation]
-    H --> I[Groq LLM Safe Correction Engine]
-    I --> J[Audio/Visual Correction Feedback]
+    E --> F["3-Head ResMLP Classifier"]
+    F --> G["Pose ID, Correctness Score, Joint Deviations"]
+    G --> H["Digital Twin Validation"]
+    H --> I["Groq LLM Safe Correction Engine"]
+    I --> J["Audio/Visual Correction Feedback"]
 ```
 
 ---
