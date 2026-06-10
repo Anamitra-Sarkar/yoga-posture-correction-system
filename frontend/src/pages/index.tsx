@@ -564,6 +564,18 @@ export default function Dashboard() {
 
   return (
     <>
+      {/* Load MediaPipe SDK from CDN */}
+      <Script 
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" 
+        strategy="lazyOnload"
+        onLoad={handleScriptLoad}
+      />
+      <Script 
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" 
+        strategy="lazyOnload"
+        onLoad={handleScriptLoad}
+      />
+
       {/* Offline Toast Notification */}
       {!isOnline && (
         <div className="offline-toast">
