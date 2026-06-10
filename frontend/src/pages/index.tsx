@@ -10,6 +10,7 @@ import {
   ShieldAlert, 
   Sliders, 
   Compass, 
+  Activity,
   CheckCircle2, 
   HelpCircle,
   Sparkles,
@@ -198,6 +199,9 @@ export default function Dashboard() {
   const cameraRef = useRef<any>(null);
   const poseRef = useRef<any>(null);
   const lastSpokenText = useRef("");
+  const lastApiCallTime = useRef<number>(0);
+  const API_THROTTLE_MS = 500;
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Dynamic metrics computed in real-time
   const [currentKneeAngle, setCurrentKneeAngle] = useState(180);
@@ -244,6 +248,41 @@ export default function Dashboard() {
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  // Intercept window.fetch to support request cancellation (AbortController)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const originalFetch = window.fetch;
+      window.fetch = async (input, init) => {
+        const urlStr = typeof input === "string" ? input : (input as any).url || "";
+        if (
+          urlStr.includes("/analyse_frame") ||
+          urlStr.includes("/analyse_sequence") ||
+          urlStr.includes("/generate_correction") ||
+          urlStr.includes("/occlusion_recovery")
+        ) {
+          if (abortControllerRef.current) {
+            init = {
+              ...init,
+              signal: abortControllerRef.current.signal
+            };
+          }
+        }
+        try {
+          return await originalFetch(input, init);
+        } catch (err: any) {
+          if (err.name === "AbortError") {
+            // Return a promise that never resolves/rejects to silently ignore aborted requests
+            return new Promise(() => {});
+          }
+          throw err;
+        }
+      };
+      return () => {
+        window.fetch = originalFetch;
+      };
+    }
   }, []);
 
   const handleInstall = async () => {
@@ -473,7 +512,20 @@ export default function Dashboard() {
         };
       }
 
-      // 5. Invoke 13-stage pipeline processing step
+      // 5. Invoke 13-stage pipeline processing step with 500ms (2fps) throttling
+      const now = Date.now();
+      if (now - lastApiCallTime.current < API_THROTTLE_MS) {
+        canvasCtx.restore();
+        return; // skip calling backend — too soon since last call
+      }
+      lastApiCallTime.current = now;
+
+      // Abort any pending in-flight requests before starting new ones
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
       processFrame(rawLandmarks, angles);
     } else {
       // Clear angles when body is out of frame
@@ -1082,8 +1134,16 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Generated correction text */}
-            {correctionText && (
+            {/* Stable height status/guidance box */}
+            {activePose === "transition/unknown" ? (
+              <div className="guidance-box info" key="waiting-pose">
+                <Activity size={24} />
+                <div className="guidance-content">
+                  <span className="guidance-label-text">System Status</span>
+                  <span className="guidance-text">Detecting pose... Align your body with the camera.</span>
+                </div>
+              </div>
+            ) : correctionText ? (
               <div className="guidance-box" key={correctionText}>
                 <Volume2 size={24} />
                 <div className="guidance-content">
@@ -1091,9 +1151,7 @@ export default function Dashboard() {
                   <span className="guidance-text">{correctionText}</span>
                 </div>
               </div>
-            )}
-            
-            {activePose !== "transition/unknown" && !correctionText && (
+            ) : (
               <div className="guidance-box success" key="alignment-correct">
                 <CheckCircle2 size={24} />
                 <div className="guidance-content">
@@ -1105,48 +1163,54 @@ export default function Dashboard() {
           </div>
 
           {/* Angle details */}
-          {activePose !== "transition/unknown" && (
-            <div className="glass-panel">
-              <h2 className="section-title">
-                <HelpCircle size={20} />
-                <span>Angle Alignment Details</span>
-              </h2>
-              
-              <div className="deviation-item">
-                <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
-                <div className="deviation-row-detail">
-                  <div className="deviation-bar-bg">
-                    <div 
-                      className={`deviation-bar-fill ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}
-                      style={{ 
-                        width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%` 
-                      }} 
-                    />
-                  </div>
-                  <span className={`deviation-value ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}>
-                    {currentKneeAngle}° (Diff: {Math.round(currentKneeAngle - 90)}°)
-                  </span>
-                </div>
+          <div className="glass-panel">
+            <h2 className="section-title">
+              <HelpCircle size={20} />
+              <span>Angle Alignment Details</span>
+            </h2>
+            
+            {activePose === "transition/unknown" ? (
+              <div className="angle-placeholder-text">
+                <p>Assume a target yoga pose to view real-time joint angle alignments and corrections.</p>
               </div>
+            ) : (
+              <>
+                <div className="deviation-item">
+                  <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
+                  <div className="deviation-row-detail">
+                    <div className="deviation-bar-bg">
+                      <div 
+                        className={`deviation-bar-fill ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}
+                        style={{ 
+                          width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%` 
+                        }} 
+                      />
+                    </div>
+                    <span className={`deviation-value ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}>
+                      {currentKneeAngle}° (Diff: {Math.round(currentKneeAngle - 90)}°)
+                    </span>
+                  </div>
+                </div>
 
-              <div className="deviation-item">
-                <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
-                <div className="deviation-row-detail">
-                  <div className="deviation-bar-bg">
-                    <div 
-                      className={`deviation-bar-fill ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}
-                      style={{ 
-                        width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%` 
-                      }} 
-                    />
+                <div className="deviation-item">
+                  <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
+                  <div className="deviation-row-detail">
+                    <div className="deviation-bar-bg">
+                      <div 
+                        className={`deviation-bar-fill ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}
+                        style={{ 
+                          width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%` 
+                        }} 
+                      />
+                    </div>
+                    <span className={`deviation-value ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}>
+                      {currentShoulderAngle}° (Diff: {Math.round(currentShoulderAngle - 90)}°)
+                    </span>
                   </div>
-                  <span className={`deviation-value ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}>
-                    {currentShoulderAngle}° (Diff: {Math.round(currentShoulderAngle - 90)}°)
-                  </span>
                 </div>
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
 
         </main>
       </div>

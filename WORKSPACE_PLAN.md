@@ -92,3 +92,32 @@ Below is the verification guide explaining how our codebase addresses the 12 fee
 
 ### 12. Why is our project more cost-efficient compared to recent research approaches?
 *   **Response**: Recent research increases accuracy by 5% at the cost of deploying huge transformer models requiring continuous GPU cloud servers. Our hybrid architecture extracts lightweight keypoints on the client, and uses **a single-CPU-threaded PyTorch backend** with under 300KB model weight footprints, allowing near-zero server hosting costs.
+
+---
+
+## 5. Updates - June 10, 2026
+
+We executed visual design enhancements, device-adaptive layouts, critical bug fixes, API optimization, PWA improvements, and documentation completion:
+
+### Visual Enhancements & Type Scale Capping
+*   Implemented **conditional state class active styles** and **accessibility attributes** (`aria-pressed`, `title` attributes) on the speech voice toggle button inside [index.tsx](file:///home/anamitra/yoga_posture_workspace/frontend/src/pages/index.tsx).
+*   Enforced a **device-adaptive typography system** inside [globals.css](file:///home/anamitra/yoga_posture_workspace/frontend/src/styles/globals.css) with hard scaling overrides for large screens (`min-width: 1280px`) and optimized mobile viewport scaling overrides (`max-width: 480px`) to prevent visual layouts from breaking on ultra-wide screens.
+*   Recalibrated size limits on gauge percentage text (`.gauge-percentage-center`), logo headers (`.app-logo`), and KPI values (`.kpi-value`).
+
+### Marketing Landing Page Route
+*   Created a fully responsive standalone marketing page [landing.tsx](file:///home/anamitra/yoga_posture_workspace/frontend/src/pages/landing.tsx) mapped to `/landing`.
+*   Includes interactive hamburger toggle navigation, a hero display featuring an abstract warrior II skeletal pose SVG backdrop, a white-surface borderless capability feature matrix grid, workflow timeline steps, tech stack badges, and footer blocks.
+
+### Stable Height Layout & Shaking Elimination
+*   Added `scrollbar-gutter: stable;` to scrollable main content (`.app-content`) and sidebar drawers (`.app-sidebar`) inside `globals.css` to completely eliminate layout shifts caused by scrollbars dynamically popping in and out.
+*   Enforced stable-height components by always rendering a system status placeholder guidance box and deviation detail container even when no active pose has been assumed (`activePose === "transition/unknown"`), preventing 30fps layout shifts when pose detection flickers.
+
+### Throttled API pipeline & Request AbortController
+*   Throttled the per-frame MediaPipe pipeline trigger callback using a `lastApiCallTime` ref and `API_THROTTLE_MS = 500` gate. This limits API traffic to at most 2 requests per second (down from ~30 req/s) to avoid server rate-limiting (`429 Too Many Requests`) on free tier backend space environments.
+*   Integrated an `AbortController` request interception framework inside `index.tsx` using `window.fetch` wrapping. This cancels previous, stale in-flight backend requests when a new pose evaluation frame is fired.
+
+### Backend CORS Configuration
+*   Added `CORSMiddleware` inside [main.py](file:///home/anamitra/yoga_posture_workspace/backend/app/main.py) to enable cross-origin browser fetch queries from the production frontend origin domain (`https://yoga-posture-correction-system.vercel.app`) and local development ports.
+
+### License Completion
+*   Retrieved and expanded the incomplete Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license terms inside the [LICENSE](file:///home/anamitra/yoga_posture_workspace/LICENSE) file to fully document authorship rights.

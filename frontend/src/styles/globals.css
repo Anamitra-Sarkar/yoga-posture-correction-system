@@ -240,6 +240,7 @@ p, li {
   background: var(--color-surface-2);
   border-right: 1px solid var(--color-divider);
   overflow-y: auto;
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
   z-index: 50;
   padding: var(--space-4);
@@ -305,6 +306,7 @@ p, li {
   flex-direction: column;
   gap: var(--space-4);
   overflow-y: auto;
+  scrollbar-gutter: stable;
   max-width: var(--content-max);
   padding-bottom: max(var(--space-8), env(safe-area-inset-bottom));
 }
@@ -614,13 +616,13 @@ p, li {
 
 /* The raw video feed should be invisible — canvas handles display */
 .camera-video-element {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 1px;
-  height: 1px;
-  top: 0;
-  left: 0;
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 1px !important;
+  height: 1px !important;
+  top: 0 !important;
+  left: 0 !important;
 }
 
 /* Canvas fills the entire camera-frame and renders the processed output */
@@ -1149,6 +1151,15 @@ button, [role="button"] {
   color: var(--color-success);
 }
 
+.guidance-box.info {
+  background: var(--color-primary-muted);
+  border-left-color: var(--color-primary);
+}
+
+.guidance-box.info svg {
+  color: var(--color-primary);
+}
+
 .guidance-content {
   display: flex;
   flex-direction: column;
@@ -1342,4 +1353,15 @@ button, [role="button"] {
 
 .mt-4 {
   margin-top: var(--space-4) !important;
+}
+
+.angle-placeholder-text {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
 }
