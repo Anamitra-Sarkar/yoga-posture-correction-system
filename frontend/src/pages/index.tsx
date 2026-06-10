@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import Head from "next/head";
+import Script from "next/script";
 import { 
   Activity, 
   Volume2, 
@@ -12,16 +14,19 @@ import {
   Compass, 
   CheckCircle2, 
   HelpCircle,
-  Sparkles
+  Sparkles,
+  Camera as CameraIcon,
+  VideoOff
 } from "lucide-react";
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
+import { extractAnglesFromLandmarks, calculateAngle3D } from "../utils/geometry";
 
-// Predefined mock pose defaults for testing
+// Preset poses for the simulation mode fallback
 const PRESET_POSES = {
   warrior_2: {
     name: "Warrior II (Virabhadrasana II)",
-    angles: [165, 160, 90, 95, 95, 105, 120, 175, 90, 88, 85, 87, 180, 85, 88], // knee_l = 120 (incorrect, should be ~90)
+    angles: [165, 160, 90, 95, 95, 105, 120, 175, 90, 88, 85, 87, 180, 85, 88],
     landmarks: [
       [0.0, -0.6, 0.0, 0.95],   // Nose
       [0.18, -0.4, -0.05, 0.9], // Shoulder L
@@ -70,10 +75,10 @@ const PRESET_POSES = {
       [-0.18, -0.1, 0.05, 0.9],
       [0.12, -0.05, -0.05, 0.9],
       [-0.12, -0.05, 0.05, 0.9],
-      [0.28, -0.15, -0.05, 0.9],  // Knee L bent out
-      [-0.12, 0.3, 0.05, 0.9],   // Knee R straight
-      [0.12, 0.2, -0.05, 0.9],   // Ankle L resting on thigh
-      [-0.12, 0.65, 0.05, 0.9]   // Ankle R standing
+      [0.28, -0.15, -0.05, 0.9],
+      [-0.12, 0.3, 0.05, 0.9],
+      [0.12, 0.2, -0.05, 0.9],
+      [-0.12, 0.65, 0.05, 0.9]
     ]
   }
 };
@@ -82,14 +87,17 @@ export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
   const [groqKey, setGroqKey] = useState("");
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
+  
+  // Modes: "live" (Webcam) or "simulate" (Sliders)
+  const [appMode, setAppMode] = useState<"live" | "simulate">("live");
   const [activePreset, setActivePreset] = useState<"warrior_2" | "plank" | "tree_pose">("warrior_2");
   
-  // Simulated Slider Angles
+  // Simulated Slider Angles (for simulation mode)
   const [simKneeL, setSimKneeL] = useState(120);
   const [simShoulderL, setSimShoulderL] = useState(90);
   const [simElbowL, setSimElbowL] = useState(165);
   
-  // Occlusion Simulation Settings
+  // Occlusion Simulation Settings (for simulation mode)
   const [occlusionType, setOcclusionType] = useState<"none" | "left_elbow" | "right_knee">("none");
   const [speechEnabled, setSpeechEnabled] = useState(true);
   
@@ -99,7 +107,22 @@ export default function Dashboard() {
   const [calibShoulderMin, setCalibShoulderMin] = useState(30);
   const [calibShoulderMax, setCalibShoulderMax] = useState(150);
 
-  // Set environment variable on startup if available
+  // MediaPipe state
+  const [mediaPipeLoaded, setMediaPipeLoaded] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [isInitializingCamera, setIsInitializingCamera] = useState(false);
+
+  // References
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraRef = useRef<any>(null);
+  const poseRef = useRef<any>(null);
+  const lastSpokenText = useRef("");
+  
+  // Dynamic metrics computed in real-time
+  const [currentKneeAngle, setCurrentKneeAngle] = useState(180);
+  const [currentShoulderAngle, setCurrentShoulderAngle] = useState(0);
+
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_YOGA_API_URL) {
       setApiURL(process.env.NEXT_PUBLIC_YOGA_API_URL);
@@ -128,15 +151,10 @@ export default function Dashboard() {
     correctnessThreshold: 0.75
   });
 
-  // Keep track of spoken text to avoid repeating
-  const lastSpokenText = useRef("");
-
-  // Speech synthesis wrapper for Audio Guidance (Stage 11)
+  // Audio speech synthesis loop
   useEffect(() => {
     if (speechEnabled && correctionText && correctionText !== lastSpokenText.current) {
-      // Cancel ongoing speech
       window.speechSynthesis.cancel();
-      
       const utterance = new SpeechSynthesisUtterance(correctionText);
       if (lang === "hi") {
         utterance.lang = "hi-IN";
@@ -150,151 +168,261 @@ export default function Dashboard() {
     }
   }, [correctionText, speechEnabled, lang]);
 
-  // Sync preset changes to sliders
+  // Sync sliders to preset values in simulation mode
   useEffect(() => {
-    const preset = PRESET_POSES[activePreset];
-    setSimKneeL(preset.angles[6]);      // index 6 is knee_l
-    setSimShoulderL(preset.angles[2]);  // index 2 is shoulder_l
-    setSimElbowL(preset.angles[0]);     // index 0 is elbow_l
-    resetPipeline();
-  }, [activePreset]);
+    if (appMode === "simulate") {
+      const preset = PRESET_POSES[activePreset];
+      setSimKneeL(preset.angles[6]);
+      setSimShoulderL(preset.angles[2]);
+      setSimElbowL(preset.angles[0]);
+      setCurrentKneeAngle(preset.angles[6]);
+      setCurrentShoulderAngle(preset.angles[2]);
+      resetPipeline();
+    }
+  }, [activePreset, appMode]);
 
-  // Construct current simulated joint angles and landmarks coordinates
-  const triggerPipelineStep = () => {
-    // 1. Get preset data
-    const preset = PRESET_POSES[activePreset];
+  // Handle checking scripts loading
+  const handleScriptLoad = () => {
+    if (typeof window !== "undefined" && (window as any).Pose && (window as any).Camera) {
+      setMediaPipeLoaded(true);
+    }
+  };
+
+  // Check on mount if scripts are already in window
+  useEffect(() => {
+    handleScriptLoad();
+  }, []);
+
+  // Initialize MediaPipe Pose Model
+  const initMediaPipe = () => {
+    if (!mediaPipeLoaded) return;
+    if (poseRef.current) return;
+
+    const PoseClass = (window as any).Pose;
+    const pose = new PoseClass({
+      locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    pose.onResults(onPoseResults);
+    poseRef.current = pose;
+  };
+
+  // Start Live Webcam Video Loop
+  const startCamera = async () => {
+    if (appMode !== "live") return;
+    initMediaPipe();
     
-    // 2. Adjust angles based on simulated sliders
+    setIsInitializingCamera(true);
+    try {
+      const videoElement = videoRef.current;
+      if (!videoElement) return;
+
+      const CameraClass = (window as any).Camera;
+      const camera = new CameraClass(videoElement, {
+        onFrame: async () => {
+          if (poseRef.current) {
+            await poseRef.current.send({ image: videoElement });
+          }
+        },
+        width: 640,
+        height: 480
+      });
+      
+      await camera.start();
+      cameraRef.current = camera;
+      setCameraActive(true);
+    } catch (err) {
+      console.error("Camera access failed:", err);
+      alert("Failed to access camera. Please check camera permissions.");
+    } finally {
+      setIsInitializingCamera(false);
+    }
+  };
+
+  // Stop Camera Feed
+  const stopCamera = () => {
+    if (cameraRef.current) {
+      cameraRef.current.stop();
+      cameraRef.current = null;
+    }
+    setCameraActive(false);
+    resetPipeline();
+  };
+
+  // Cleanup camera on unmount or mode switch
+  useEffect(() => {
+    if (appMode === "simulate") {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [appMode]);
+
+  // MediaPipe Result processing callback
+  const onPoseResults = (results: any) => {
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) return;
+    const canvasCtx = canvasElement.getContext("2d");
+    if (!canvasCtx) return;
+
+    // Draw raw camera frame onto canvas
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.poseLandmarks) {
+      // 1. Draw joints skeleton overlay (with premium glowing aesthetics)
+      drawSkeletonOverlay(canvasCtx, results.poseLandmarks);
+
+      // 2. Format landmarks for API pipeline: [33 joints, [x, y, z, visibility]]
+      const rawLandmarks = results.poseLandmarks.map((pt: any) => [
+        pt.x, 
+        pt.y, 
+        pt.z, 
+        pt.visibility || 0.0
+      ]);
+
+      // 3. Compute client-side angles for feature list (15 biomechanical features)
+      const points = results.poseLandmarks.map((pt: any) => ({
+        x: pt.x,
+        y: pt.y,
+        z: pt.z
+      }));
+      const angles = extractAnglesFromLandmarks(points);
+
+      // Update UI real-time angle display
+      setCurrentKneeAngle(Math.round(angles[6])); // Left Knee
+      setCurrentShoulderAngle(Math.round(angles[2])); // Left Shoulder
+
+      // 4. Overwrite base URL in window namespace for pipeline helper
+      if (typeof window !== "undefined") {
+        (window as any).process = {
+          env: { NEXT_PUBLIC_YOGA_API_URL: apiURL }
+        };
+      }
+
+      // 5. Invoke 13-stage pipeline processing step
+      processFrame(rawLandmarks, angles);
+    } else {
+      // Clear angles when body is out of frame
+      setCurrentKneeAngle(180);
+      setCurrentShoulderAngle(0);
+    }
+    canvasCtx.restore();
+  };
+
+  // Drawing method for Canvas Overlay
+  const drawSkeletonOverlay = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
+    const drawLine = (idx1: number, idx2: number, color = "#f8fafc", width = 3) => {
+      const pt1 = landmarks[idx1];
+      const pt2 = landmarks[idx2];
+      if (pt1 && pt2) {
+        ctx.beginPath();
+        ctx.moveTo(pt1.x * 640, pt1.y * 480);
+        ctx.lineTo(pt2.x * 640, pt2.y * 480);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+    };
+
+    // Connections:
+    // Shoulders
+    drawLine(11, 12, "#3b82f6", 4);
+    // Left Arm
+    drawLine(11, 13, "#f8fafc", 3);
+    drawLine(13, 15, "#f8fafc", 3);
+    // Right Arm
+    drawLine(12, 14, "#f8fafc", 3);
+    drawLine(14, 16, "#f8fafc", 3);
+    // Hips
+    drawLine(23, 24, "#3b82f6", 4);
+    drawLine(11, 23, "#f8fafc", 3);
+    drawLine(12, 24, "#f8fafc", 3);
+    // Left Leg
+    drawLine(23, 25, "#f8fafc", 3);
+    // Color code left knee connection if alert triggered
+    const isKneeDeviating = Math.abs(currentKneeAngle - 90) > 15 && activePose === "warrior_2";
+    drawLine(25, 27, isKneeDeviating ? "#ef4444" : "#f8fafc", isKneeDeviating ? 5 : 3);
+    // Right Leg
+    drawLine(24, 26, "#f8fafc", 3);
+    drawLine(26, 28, "#f8fafc", 3);
+
+    // Draw joints glow and circle
+    landmarks.forEach((pt: any, i: number) => {
+      if (pt.visibility > 0.5 && [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].includes(i)) {
+        ctx.beginPath();
+        ctx.arc(pt.x * 640, pt.y * 480, i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
+        ctx.fillStyle = i === 25 && isKneeDeviating ? "#ef4444" : "#10b981";
+        ctx.fill();
+      }
+    });
+  };
+
+  // Pipeline simulation evaluation button (used in Simulation Mode)
+  const triggerSimulationStep = () => {
+    const preset = PRESET_POSES[activePreset];
     const angles = [...preset.angles];
     angles[6] = simKneeL;
     angles[2] = simShoulderL;
     angles[0] = simElbowL;
 
-    // 3. Adjust visibility landmarks depending on simulated occlusion
+    setCurrentKneeAngle(simKneeL);
+    setCurrentShoulderAngle(simShoulderL);
+
     const landmarks = preset.landmarks.map(pt => [...pt]);
     if (occlusionType === "left_elbow") {
-      // index 3 is left elbow (MP index 13)
       if (landmarks[3]) {
-        landmarks[3][3] = 0.1; // Drop visibility to 10%
-        landmarks[3][0] = 0.0; // Clear coordinate to simulate raw occlusion
+        landmarks[3][3] = 0.1;
+        landmarks[3][0] = 0.0;
         landmarks[3][1] = 0.0;
         landmarks[3][2] = 0.0;
       }
     } else if (occlusionType === "right_knee") {
-      // index 10 is right knee (MP index 26)
       if (landmarks[10]) {
-        landmarks[10][3] = 0.1; // Drop visibility
+        landmarks[10][3] = 0.1;
         landmarks[10][0] = 0.0;
         landmarks[10][1] = 0.0;
         landmarks[10][2] = 0.0;
       }
     }
 
-    // 4. Update the endpoint base URL in local storage
     if (typeof window !== "undefined") {
       (window as any).process = {
         env: { NEXT_PUBLIC_YOGA_API_URL: apiURL }
       };
     }
 
-    // 5. Send to hook
     processFrame(landmarks, angles);
-  };
-
-  // SVG skeleton rendering helper coordinates
-  const renderSkeleton = () => {
-    const preset = PRESET_POSES[activePreset];
-    // Scale and translate coordinates to fit 100% SVG box
-    const getCoords = (idx: number) => {
-      const pt = preset.landmarks[idx];
-      if (!pt) return { x: 150, y: 150 };
-      
-      // Basic scaling: x is inside [-1, 1], y is inside [-1, 1]
-      // Map to SVG width 300, height 300
-      const x = (pt[0] + 0.8) * 180 + 10;
-      const y = (pt[1] + 0.8) * 180 + 10;
-      return { x, y };
-    };
-
-    // Joint indices mapping:
-    // Nose=0, ShoulderL=1, ShoulderR=2, ElbowL=3, ElbowR=4, WristL=5, WristR=6
-    // HipL=7, HipR=8, KneeL=9, KneeR=10, AnkleL=11, AnkleR=12
-    const n = getCoords(0);
-    const sl = getCoords(1);
-    const sr = getCoords(2);
-    const el = getCoords(3);
-    const er = getCoords(4);
-    const wl = getCoords(5);
-    const wr = getCoords(6);
-    const hl = getCoords(7);
-    const hr = getCoords(8);
-    const kl = getCoords(9);
-    const kr = getCoords(10);
-    const al = getCoords(11);
-    const ar = getCoords(12);
-
-    const isKneeDeviating = Math.abs(simKneeL - 90) > 15 && activePose === "warrior_2";
-
-    return (
-      <svg className="skeleton-svg" viewBox="0 0 350 350">
-        <defs>
-          <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.4"/>
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
-          </radialGradient>
-          <radialGradient id="glowWarn" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.5"/>
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0"/>
-          </radialGradient>
-        </defs>
-        
-        {/* Ambient glows behind active joints */}
-        <circle cx={kl.x} cy={kl.y} r="35" fill={isKneeDeviating ? "url(#glowWarn)" : "url(#glowGrad)"} />
-        
-        {/* Head */}
-        <circle cx={n.x} cy={n.y} r="18" fill="#1e293b" stroke="#3b82f6" strokeWidth="3" />
-        
-        {/* Torso */}
-        <line x1={sl.x} y1={sl.y} x2={sr.x} y2={sr.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={sl.x} y1={sl.y} x2={hl.x} y2={hl.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={sr.x} y1={sr.y} x2={hr.x} y2={hr.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={hl.x} y1={hl.y} x2={hr.x} y2={hr.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        
-        {/* Left Arm */}
-        <line x1={sl.x} y1={sl.y} x2={el.x} y2={el.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={el.x} y1={el.y} x2={wl.x} y2={wl.y} stroke={occlusionType === "left_elbow" ? "#f59e0b" : "#f8fafc"} strokeWidth="4" strokeLinecap="round" />
-        
-        {/* Right Arm */}
-        <line x1={sr.x} y1={sr.y} x2={er.x} y2={er.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={er.x} y1={er.y} x2={wr.x} y2={wr.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-
-        {/* Left Leg */}
-        <line x1={hl.x} y1={hl.y} x2={kl.x} y2={kl.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={kl.x} y1={kl.y} x2={al.x} y2={al.y} stroke={isKneeDeviating ? "#ef4444" : "#f8fafc"} strokeWidth="4" strokeLinecap="round" />
-
-        {/* Right Leg */}
-        <line x1={hr.x} y1={hr.y} x2={kr.x} y2={kr.y} stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-        <line x1={kr.x} y1={kr.y} x2={ar.x} y2={ar.y} stroke={occlusionType === "right_knee" ? "#f59e0b" : "#f8fafc"} strokeWidth="4" strokeLinecap="round" />
-
-        {/* Joint Points */}
-        <circle cx={sl.x} cy={sl.y} r="6" fill="#3b82f6" />
-        <circle cx={sr.x} cy={sr.y} r="6" fill="#3b82f6" />
-        <circle cx={el.x} cy={el.y} r="6" fill={occlusionType === "left_elbow" ? "#f59e0b" : "#3b82f6"} />
-        <circle cx={er.x} cy={er.y} r="6" fill="#3b82f6" />
-        <circle cx={wl.x} cy={wl.y} r="6" fill="#10b981" />
-        <circle cx={wr.x} cy={wr.y} r="6" fill="#10b981" />
-        <circle cx={hl.x} cy={hl.y} r="6" fill="#3b82f6" />
-        <circle cx={hr.x} cy={hr.y} r="6" fill="#3b82f6" />
-        <circle cx={kl.x} cy={kl.y} r="8" fill={isKneeDeviating ? "#ef4444" : "#3b82f6"} />
-        <circle cx={kr.x} cy={kr.y} r="6" fill={occlusionType === "right_knee" ? "#f59e0b" : "#3b82f6"} />
-        <circle cx={al.x} cy={al.y} r="6" fill="#10b981" />
-        <circle cx={ar.x} cy={ar.y} r="6" fill="#10b981" />
-      </svg>
-    );
   };
 
   return (
     <div style={{ minHeight: "100vh" }}>
+      <Head>
+        <title>Smart Yoga Posture Correction System</title>
+      </Head>
+
+      {/* Load MediaPipe SDK from CDN */}
+      <Script 
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" 
+        strategy="lazyOnload"
+        onLoad={handleScriptLoad}
+      />
+      <Script 
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" 
+        strategy="lazyOnload"
+        onLoad={handleScriptLoad}
+      />
+
       {/* Navbar Header */}
       <header className="app-header">
         <div className="app-logo">
@@ -303,13 +431,12 @@ export default function Dashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <div className="status-pill">
-            <div className={`status-dot ${activePose !== "transition/unknown" ? "active" : ""}`} />
-            <span>{activePose === "transition/unknown" ? "Awaiting Input" : `Pose: ${activePose}`}</span>
+            <div className={`status-dot ${cameraActive ? "active" : ""}`} />
+            <span>{appMode === "live" ? (cameraActive ? "Live Webcam" : "Cam Off") : "Simulation Mode"}</span>
           </div>
           <button 
             className="btn-toggle" 
             onClick={() => setSpeechEnabled(!speechEnabled)}
-            title={speechEnabled ? "Mute audio corrections" : "Unmute audio corrections"}
           >
             {speechEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
@@ -318,127 +445,131 @@ export default function Dashboard() {
 
       {/* Main Grid */}
       <main className="dashboard-grid">
-        {/* LEFT COLUMN: CONTROL & SIMULATION PANEL */}
+        
+        {/* LEFT COLUMN: CONTROL & SETTINGS */}
         <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
-          {/* Preset Selector */}
+          {/* Mode Switcher */}
           <div className="glass-panel">
             <h2 className="section-title">
-              <Compass size={20} className="text-primary" style={{ color: "#3b82f6" }} />
-              <span>Pose Selector</span>
+              <Compass size={20} style={{ color: "#3b82f6" }} />
+              <span>Operation Mode</span>
             </h2>
             <div className="btn-row">
               <button 
-                className={`btn-toggle ${activePreset === "warrior_2" ? "active" : ""}`}
-                onClick={() => setActivePreset("warrior_2")}
+                className={`btn-toggle ${appMode === "live" ? "active" : ""}`}
+                onClick={() => setAppMode("live")}
               >
-                Warrior II
+                Webcam Feed
               </button>
               <button 
-                className={`btn-toggle ${activePreset === "plank" ? "active" : ""}`}
-                onClick={() => setActivePreset("plank")}
+                className={`btn-toggle ${appMode === "simulate" ? "active" : ""}`}
+                onClick={() => setAppMode("simulate")}
               >
-                Plank
+                Simulation Sliders
               </button>
-              <button 
-                className={`btn-toggle ${activePreset === "tree_pose" ? "active" : ""}`}
-                onClick={() => setActivePreset("tree_pose")}
-              >
-                Tree Pose
-              </button>
-            </div>
-            <p style={{ marginTop: "12px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              Current simulated target: <strong>{PRESET_POSES[activePreset].name}</strong>
-            </p>
-          </div>
-
-          {/* Interactive Joint Slider Controls */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <Sliders size={20} style={{ color: "#3b82f6" }} />
-              <span>Joint Angle Simulator</span>
-            </h2>
-            <div className="input-group">
-              <label className="input-label">Left Knee Angle (Warrior II Target: 90°)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  min="40" 
-                  max="180" 
-                  value={simKneeL} 
-                  onChange={(e) => setSimKneeL(Number(e.target.value))}
-                  className="slider-input" 
-                />
-                <span className="slider-value">{simKneeL}°</span>
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">Left Shoulder Angle (Warrior II Target: 90°)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="180" 
-                  value={simShoulderL} 
-                  onChange={(e) => setSimShoulderL(Number(e.target.value))}
-                  className="slider-input" 
-                />
-                <span className="slider-value">{simShoulderL}°</span>
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">Left Elbow Angle (Warrior II Target: 180°)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  min="40" 
-                  max="180" 
-                  value={simElbowL} 
-                  onChange={(e) => setSimElbowL(Number(e.target.value))}
-                  className="slider-input" 
-                />
-                <span className="slider-value">{simElbowL}°</span>
-              </div>
-            </div>
-
-            {/* Simulated Occlusion options */}
-            <div className="input-group" style={{ marginTop: "20px" }}>
-              <label className="input-label">Simulate joint occlusion</label>
-              <div className="btn-row">
-                <button 
-                  className={`btn-toggle ${occlusionType === "none" ? "active" : ""}`}
-                  onClick={() => setOcclusionType("none")}
-                >
-                  None
-                </button>
-                <button 
-                  className={`btn-toggle ${occlusionType === "left_elbow" ? "active" : ""}`}
-                  onClick={() => setOcclusionType("left_elbow")}
-                >
-                  Left Elbow
-                </button>
-                <button 
-                  className={`btn-toggle ${occlusionType === "right_knee" ? "active" : ""}`}
-                  onClick={() => setOcclusionType("right_knee")}
-                >
-                  Right Knee
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* User Digital Twin Calibration Limits */}
+          {/* Simulation mode configurations */}
+          {appMode === "simulate" && (
+            <div className="glass-panel">
+              <h2 className="section-title">
+                <Sliders size={20} style={{ color: "#3b82f6" }} />
+                <span>Simulate Joint Angles</span>
+              </h2>
+              
+              <div className="input-group">
+                <label className="input-label">Select Base Pose Target</label>
+                <select 
+                  className="groq-config-input"
+                  value={activePreset}
+                  onChange={(e) => setActivePreset(e.target.value as any)}
+                  style={{ appearance: "auto" }}
+                >
+                  <option value="warrior_2">Warrior II</option>
+                  <option value="plank">Plank</option>
+                  <option value="tree_pose">Tree Pose</option>
+                </select>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Simulate Left Knee Angle</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="40" 
+                    max="180" 
+                    value={simKneeL} 
+                    onChange={(e) => setSimKneeL(Number(e.target.value))}
+                    className="slider-input" 
+                  />
+                  <span className="slider-value">{simKneeL}°</span>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Simulate Left Shoulder Angle</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="180" 
+                    value={simShoulderL} 
+                    onChange={(e) => setSimShoulderL(Number(e.target.value))}
+                    className="slider-input" 
+                  />
+                  <span className="slider-value">{simShoulderL}°</span>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Simulate Left Elbow Angle</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="40" 
+                    max="180" 
+                    value={simElbowL} 
+                    onChange={(e) => setSimElbowL(Number(e.target.value))}
+                    className="slider-input" 
+                  />
+                  <span className="slider-value">{simElbowL}°</span>
+                </div>
+              </div>
+
+              <div className="input-group" style={{ marginTop: "15px" }}>
+                <label className="input-label">Simulate occlusion block</label>
+                <div className="btn-row">
+                  <button 
+                    className={`btn-toggle ${occlusionType === "none" ? "active" : ""}`}
+                    onClick={() => setOcclusionType("none")}
+                  >
+                    None
+                  </button>
+                  <button 
+                    className={`btn-toggle ${occlusionType === "left_elbow" ? "active" : ""}`}
+                    onClick={() => setOcclusionType("left_elbow")}
+                  >
+                    Left Elbow
+                  </button>
+                  <button 
+                    className={`btn-toggle ${occlusionType === "right_knee" ? "active" : ""}`}
+                    onClick={() => setOcclusionType("right_knee")}
+                  >
+                    Right Knee
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* User Digital Twin calibration profile */}
           <div className="glass-panel">
             <h2 className="section-title">
               <ShieldCheck size={20} style={{ color: "#10b981" }} />
               <span>Digital Twin Limits Calibration</span>
             </h2>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "15px" }}>
-              Adjust limits to model physical constraints. Correct angles within limits bypass warnings.
-            </p>
-            
             <div className="input-group">
               <label className="input-label">Left Knee Min/Max Limits</label>
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -448,7 +579,6 @@ export default function Dashboard() {
                   style={{ width: "80px", padding: "8px" }}
                   value={calibKneeMin}
                   onChange={(e) => setCalibKneeMin(Number(e.target.value))}
-                  placeholder="Min"
                 />
                 <span className="text-muted">to</span>
                 <input 
@@ -457,9 +587,7 @@ export default function Dashboard() {
                   style={{ width: "80px", padding: "8px" }}
                   value={calibKneeMax}
                   onChange={(e) => setCalibKneeMax(Number(e.target.value))}
-                  placeholder="Max"
                 />
-                <span className="text-muted">degrees</span>
               </div>
             </div>
 
@@ -472,7 +600,6 @@ export default function Dashboard() {
                   style={{ width: "80px", padding: "8px" }}
                   value={calibShoulderMin}
                   onChange={(e) => setCalibShoulderMin(Number(e.target.value))}
-                  placeholder="Min"
                 />
                 <span className="text-muted">to</span>
                 <input 
@@ -481,18 +608,16 @@ export default function Dashboard() {
                   style={{ width: "80px", padding: "8px" }}
                   value={calibShoulderMax}
                   onChange={(e) => setCalibShoulderMax(Number(e.target.value))}
-                  placeholder="Max"
                 />
-                <span className="text-muted">degrees</span>
               </div>
             </div>
           </div>
 
-          {/* API and Groq Configuration */}
+          {/* Configuration Settings */}
           <div className="glass-panel">
             <h2 className="section-title">
               <Settings size={20} style={{ color: "#94a3b8" }} />
-              <span>API Gateway Configuration</span>
+              <span>Config Gateway</span>
             </h2>
             <div className="input-group">
               <label className="input-label">FastAPI Backend Endpoint</label>
@@ -501,12 +626,12 @@ export default function Dashboard() {
                 className="groq-config-input" 
                 value={apiURL} 
                 onChange={(e) => setApiURL(e.target.value)}
-                placeholder="http://localhost:8000/api" 
+                placeholder="http://localhost:7860/api" 
               />
             </div>
             
             <div className="input-group">
-              <label className="input-label">Groq API Key (Optional)</label>
+              <label className="input-label">Groq API Key (LLM Guidance)</label>
               <input 
                 type="password" 
                 className="groq-config-input" 
@@ -517,7 +642,7 @@ export default function Dashboard() {
             </div>
 
             <div className="input-group">
-              <label className="input-label">Language Translation</label>
+              <label className="input-label">Guidance Language</label>
               <select 
                 className="groq-config-input"
                 value={lang}
@@ -533,31 +658,93 @@ export default function Dashboard() {
 
         </section>
 
-        {/* RIGHT COLUMN: VISUAL SKELETON & REALTIME ANALYTICS */}
+        {/* RIGHT COLUMN: REAL VIDEO AND METRICS */}
         <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
-          {/* Skeleton Renderer & Execution */}
+          {/* Real-time Video Render block */}
           <div className="glass-panel" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h2 className="section-title" style={{ marginBottom: 0 }}>
-                <Activity size={20} style={{ color: "#10b981" }} />
-                <span>Anatomical Projection</span>
+                <CameraIcon size={20} style={{ color: "#10b981" }} />
+                <span>Camera Stream</span>
               </h2>
-              <button 
-                className="btn-primary" 
-                onClick={triggerPipelineStep}
-                disabled={isLoading}
-                style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 18px" }}
-              >
-                {isLoading ? <RefreshCw className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                <span>Evaluate Frame</span>
-              </button>
+
+              {appMode === "live" ? (
+                <button 
+                  className={`btn-primary ${cameraActive ? "btn-error" : ""}`}
+                  onClick={cameraActive ? stopCamera : startCamera}
+                  disabled={!mediaPipeLoaded || isInitializingCamera}
+                  style={{ 
+                    padding: "8px 18px", 
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: cameraActive ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" : undefined,
+                    boxShadow: cameraActive ? "0 4px 15px rgba(239, 68, 68, 0.3)" : undefined
+                  }}
+                >
+                  {isInitializingCamera ? (
+                    <RefreshCw className="animate-spin" size={16} />
+                  ) : cameraActive ? (
+                    <>
+                      <VideoOff size={16} />
+                      <span>Stop Video</span>
+                    </>
+                  ) : (
+                    <>
+                      <CameraIcon size={16} />
+                      <span>Start Video</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button 
+                  className="btn-primary" 
+                  onClick={triggerSimulationStep}
+                  disabled={isLoading}
+                  style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 18px", fontSize: "0.85rem" }}
+                >
+                  {isLoading ? <RefreshCw className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                  <span>Evaluate step</span>
+                </button>
+              )}
             </div>
-            
-            {renderSkeleton()}
+
+            {/* Video + Canvas Frame setup */}
+            <div style={{ position: "relative", width: "100%", height: "480px", background: "#090d16", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)" }}>
+              {appMode === "live" ? (
+                <>
+                  <video 
+                    ref={videoRef} 
+                    style={{ display: "none" }} 
+                    width="640" 
+                    height="480" 
+                    playsInline 
+                    muted 
+                  />
+                  <canvas 
+                    ref={canvasRef} 
+                    width="640" 
+                    height="480" 
+                    style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} 
+                  />
+                  {!cameraActive && (
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", color: "var(--text-muted)" }}>
+                      <VideoOff size={48} />
+                      <span>Camera is inactive. Click "Start Video" to begin.</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                  <span>Switching to Simulation mode... Sliders are active.</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Real-time metrics dashboard */}
+          {/* Real-time status Metrics */}
           <div className="glass-panel">
             <h2 className="section-title">
               <Gauge size={20} style={{ color: "#3b82f6" }} />
@@ -565,7 +752,6 @@ export default function Dashboard() {
             </h2>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              {/* Correctness Score circular gauge */}
               <div className="gauge-container glass-panel" style={{ background: "rgba(0,0,0,0.2)" }}>
                 <div className={`gauge-circle ${correctness >= 0.75 ? "success" : "warning"}`}>
                   <span className="gauge-percentage">
@@ -575,12 +761,11 @@ export default function Dashboard() {
                 <span className="gauge-label">Correctness Score</span>
               </div>
 
-              {/* Status information */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", justifyContent: "center" }}>
                 <div className="deviation-item" style={{ margin: 0 }}>
                   <span className="text-muted">Detected Pose</span>
                   <span style={{ fontWeight: 600, color: "#60a5fa" }}>
-                    {activePose === "transition/unknown" ? "Transition" : activePose.toUpperCase()}
+                    {activePose === "transition/unknown" ? "Transition/Unknown" : activePose.toUpperCase()}
                   </span>
                 </div>
                 <div className="deviation-item" style={{ margin: 0 }}>
@@ -590,25 +775,25 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="deviation-item" style={{ margin: 0 }}>
-                  <span className="text-muted">Occlusion Recovery</span>
+                  <span className="text-muted">Occlusion Fusing</span>
                   <span style={{ fontWeight: 600, color: recoveredJoints.length > 0 ? "#f59e0b" : "#10b981" }}>
-                    {recoveredJoints.length > 0 ? `Fused (${recoveredJoints.length})` : "Inactive"}
+                    {recoveredJoints.length > 0 ? `Active (${recoveredJoints.length} joints)` : "Inactive"}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Recycled Joints List */}
+            {/* Occlusion recovery logs */}
             {recoveredJoints.length > 0 && (
               <div style={{ marginTop: "16px", padding: "10px", background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "8px" }}>
                 <p style={{ fontSize: "0.85rem", color: "#f59e0b", display: "flex", alignItems: "center", gap: "6px" }}>
                   <ShieldAlert size={14} />
-                  <span><strong>Occlusion Fused joints:</strong> {recoveredJoints.join(", ")} (Coordinate mirrored from twin joint)</span>
+                  <span><strong>Fusing Occluded landmarks:</strong> {recoveredJoints.join(", ")} (Coordinate mirrored dynamically from twin joint)</span>
                 </p>
               </div>
             )}
 
-            {/* Audio Correction alert text */}
+            {/* Generated correction text */}
             {correctionText && (
               <div className="guidance-box">
                 <Volume2 size={24} className="text-warning" style={{ color: "#f59e0b" }} />
@@ -623,60 +808,56 @@ export default function Dashboard() {
               <div className="guidance-box" style={{ background: "rgba(16, 185, 129, 0.05)", borderColor: "var(--color-success)" }}>
                 <CheckCircle2 size={24} style={{ color: "var(--color-success)" }} />
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Pose Perfect</span>
-                  <span className="guidance-text" style={{ color: "#d1fae5" }}>Pose execution is within biomechanical tolerances. Keep it up!</span>
+                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Pose Alignment Correct</span>
+                  <span className="guidance-text" style={{ color: "#d1fae5" }}>Joint angle alignment is correct. Keep breathing steadily.</span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Dynamic joint deviations display list */}
+          {/* Real angles comparison list */}
           {activePose !== "transition/unknown" && (
             <div className="glass-panel">
               <h2 className="section-title">
                 <HelpCircle size={20} style={{ color: "#ef4444" }} />
-                <span>Joint Deviations details</span>
+                <span>Angle Alignment Details</span>
               </h2>
               
               <div className="deviation-item">
-                <span className="deviation-name">Left Knee Angle</span>
+                <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div className="deviation-bar-bg">
                     <div 
                       className="deviation-bar-fill" 
                       style={{ 
-                        width: `${Math.min(100, Math.abs(simKneeL - 90) * 1.5)}%`,
-                        background: Math.abs(simKneeL - 90) > 15 ? "var(--color-error)" : "var(--color-success)"
+                        width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%`,
+                        background: Math.abs(currentKneeAngle - 90) > 15 ? "var(--color-error)" : "var(--color-success)"
                       }} 
                     />
                   </div>
-                  <span className={`deviation-value ${Math.abs(simKneeL - 90) > 15 ? "error" : "success"}`}>
-                    {simKneeL}° (Diff: {Math.round(simKneeL - 90)}°)
+                  <span className={`deviation-value ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}>
+                    {currentKneeAngle}° (Diff: {Math.round(currentKneeAngle - 90)}°)
                   </span>
                 </div>
               </div>
 
               <div className="deviation-item">
-                <span className="deviation-name">Left Shoulder Angle</span>
+                <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div className="deviation-bar-bg">
                     <div 
                       className="deviation-bar-fill" 
                       style={{ 
-                        width: `${Math.min(100, Math.abs(simShoulderL - 90) * 1.5)}%`,
-                        background: Math.abs(simShoulderL - 90) > 15 ? "var(--color-error)" : "var(--color-success)"
+                        width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%`,
+                        background: Math.abs(currentShoulderAngle - 90) > 15 ? "var(--color-error)" : "var(--color-success)"
                       }} 
                     />
                   </div>
-                  <span className={`deviation-value ${Math.abs(simShoulderL - 90) > 15 ? "error" : "success"}`}>
-                    {simShoulderL}° (Diff: {Math.round(simShoulderL - 90)}°)
+                  <span className={`deviation-value ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}>
+                    {currentShoulderAngle}° (Diff: {Math.round(currentShoulderAngle - 90)}°)
                   </span>
                 </div>
               </div>
-              
-              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "12px", textAlign: "right" }}>
-                * Target angles calculated relative to standard biomechanical template models.
-              </p>
             </div>
           )}
 
