@@ -1,0 +1,46 @@
+name: Sync Backend to Hugging Face Space
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/hf_sync.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ secrets.HF_SPACE }}
+        run: |
+          # Configure Git
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # Clone the Hugging Face Space repository
+          # HF_SPACE should be in the format: username/space-name (e.g. Anamitra-Sarkar/yoga-posture-correction)
+          git clone https://x-access-token:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE hf_space_repo
+          
+          # Clean existing files in HF Space repo (except git configuration files)
+          cd hf_space_repo
+          find . -maxdepth 1 -not -name '.' -not -name '..' -not -name '.git' -exec rm -rf {} +
+          
+          # Copy backend files to HF Space repo root directory
+          cp -r ../backend/* .
+          
+          # Add, commit and push changes
+          git add -A
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            git commit -m "Sync backend from GitHub commit ${{ github.sha }}"
+            git push origin main
+          fi
