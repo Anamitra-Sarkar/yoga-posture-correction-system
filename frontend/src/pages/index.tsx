@@ -214,7 +214,7 @@ function ScoreRing({ correctness }: ScoreRingProps) {
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.16, 1, 0.3, 1)" }}
+          style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.16, 1, 0.3, 1), stroke 400ms ease" }}
         />
       </svg>
       <div className={`gauge-percentage-center ${isSuccess ? "success" : "warning"}`}>
@@ -227,6 +227,7 @@ function ScoreRing({ correctness }: ScoreRingProps) {
 export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
+  const [langDropOpen, setLangDropOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<"warrior_2" | "plank" | "tree_pose">("warrior_2");
   const [speechEnabled, setSpeechEnabled] = useState(true);
   // Digital Twin Calibration States
@@ -844,17 +845,63 @@ export default function Dashboard() {
               <span>{cameraActive ? "Live" : "Ready"}</span>
             </div>
             
-            <div className="language-selector-wrapper">
-              <Globe size={16} />
-              <select 
-                value={lang} 
-                onChange={(e) => setLang(e.target.value as any)}
-                className="language-select-native"
+            <div 
+              className="language-selector-wrapper-custom"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setLangDropOpen(false);
+                }
+              }}
+            >
+              <button
+                className="language-selector-trigger"
+                onClick={() => setLangDropOpen(!langDropOpen)}
+                aria-expanded={langDropOpen}
+                aria-haspopup="listbox"
+                aria-label="Select language"
               >
-                <option value="en">EN</option>
-                <option value="hi">HI</option>
-                <option value="bn">BN</option>
-              </select>
+                <Globe size={14} />
+                <span>{lang.toUpperCase()}</span>
+                <ChevronDown size={14} className={`chevron-icon ${langDropOpen ? "open" : ""}`} />
+              </button>
+
+              {langDropOpen && (
+                <div className="language-dropdown-menu" role="listbox">
+                  <button 
+                    role="option" 
+                    aria-selected={lang === "en"} 
+                    className={`language-dropdown-item ${lang === "en" ? "active" : ""}`}
+                    onClick={() => {
+                      setLang("en");
+                      setLangDropOpen(false);
+                    }}
+                  >
+                    EN
+                  </button>
+                  <button 
+                    role="option" 
+                    aria-selected={lang === "hi"} 
+                    className={`language-dropdown-item ${lang === "hi" ? "active" : ""}`}
+                    onClick={() => {
+                      setLang("hi");
+                      setLangDropOpen(false);
+                    }}
+                  >
+                    HI
+                  </button>
+                  <button 
+                    role="option" 
+                    aria-selected={lang === "bn"} 
+                    className={`language-dropdown-item ${lang === "bn" ? "active" : ""}`}
+                    onClick={() => {
+                      setLang("bn");
+                      setLangDropOpen(false);
+                    }}
+                  >
+                    BN
+                  </button>
+                </div>
+              )}
             </div>
 
             <button
@@ -888,42 +935,40 @@ export default function Dashboard() {
               <span>Target Pose</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupPose ? "collapsed" : ""}`} />
             </div>
-            {openGroupPose && (
-              <div className="sidebar-group-body">
-                <div className="pose-card-grid">
-                  <div 
-                    className={`pose-card ${activePreset === "warrior_2" ? "active" : ""}`}
-                    onClick={() => {
-                      setActivePreset("warrior_2");
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <span className="pose-card-icon">🧘</span>
-                    <span className="pose-card-label">Warrior II</span>
-                  </div>
-                  <div 
-                    className={`pose-card ${activePreset === "plank" ? "active" : ""}`}
-                    onClick={() => {
-                      setActivePreset("plank");
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <span className="pose-card-icon">🏋️</span>
-                    <span className="pose-card-label">Plank</span>
-                  </div>
-                  <div 
-                    className={`pose-card ${activePreset === "tree_pose" ? "active" : ""}`}
-                    onClick={() => {
-                      setActivePreset("tree_pose");
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <span className="pose-card-icon">🌲</span>
-                    <span className="pose-card-label">Tree Pose</span>
-                  </div>
+            <div className={`sidebar-group-body ${!openGroupPose ? "collapsed" : ""}`}>
+              <div className="pose-card-grid">
+                <div 
+                  className={`pose-card ${activePreset === "warrior_2" ? "active" : ""}`}
+                  onClick={() => {
+                    setActivePreset("warrior_2");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <span className="pose-card-icon">🧘</span>
+                  <span className="pose-card-label">Warrior II</span>
+                </div>
+                <div 
+                  className={`pose-card ${activePreset === "plank" ? "active" : ""}`}
+                  onClick={() => {
+                    setActivePreset("plank");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <span className="pose-card-icon">🏋️</span>
+                  <span className="pose-card-label">Plank</span>
+                </div>
+                <div 
+                  className={`pose-card ${activePreset === "tree_pose" ? "active" : ""}`}
+                  onClick={() => {
+                    setActivePreset("tree_pose");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <span className="pose-card-icon">🌲</span>
+                  <span className="pose-card-label">Tree Pose</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
 
@@ -933,33 +978,31 @@ export default function Dashboard() {
               <span>Digital Twin Profile</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupTwin ? "collapsed" : ""}`} />
             </div>
-            {openGroupTwin && (
-              <div className="sidebar-group-body">
-                {calibratedProfile ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "200px", overflowY: "auto", paddingRight: "4px" }}>
-                    <div style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500", marginBottom: "4px" }}>
-                      ✓ Active Calibration Profile
+            <div className={`sidebar-group-body ${!openGroupTwin ? "collapsed" : ""}`}>
+              {calibratedProfile ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "200px", overflowY: "auto", paddingRight: "4px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500", marginBottom: "4px" }}>
+                    ✓ Active Calibration Profile
+                  </div>
+                  {Object.keys(calibratedProfile).map((joint) => (
+                    <div key={joint} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "4px" }}>
+                      <span style={{ color: "rgba(255,255,255,0.7)" }}>{joint.replace('_', ' ').toUpperCase()}</span>
+                      <span style={{ fontWeight: "600" }}>
+                        {calibratedProfile[joint].min}° – {calibratedProfile[joint].max}°
+                      </span>
                     </div>
-                    {Object.keys(calibratedProfile).map((joint) => (
-                      <div key={joint} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "4px" }}>
-                        <span style={{ color: "rgba(255,255,255,0.7)" }}>{joint.replace('_', ' ').toUpperCase()}</span>
-                        <span style={{ fontWeight: "600" }}>
-                          {calibratedProfile[joint].min}° – {calibratedProfile[joint].max}°
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", lineHeight: "1.5" }}>
-                    {calibrationState === "calibrating" ? (
-                      <span style={{ color: "var(--color-warning)" }}>Calibrating... recording joint ranges.</span>
-                    ) : (
-                      "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges."
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", lineHeight: "1.5" }}>
+                  {calibrationState === "calibrating" ? (
+                    <span style={{ color: "var(--color-warning)" }}>Calibrating... recording joint ranges.</span>
+                  ) : (
+                    "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges."
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Group 3: API Configuration */}
@@ -968,29 +1011,27 @@ export default function Dashboard() {
               <span>API Configuration</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupConfig ? "collapsed" : ""}`} />
             </div>
-            {openGroupConfig && (
-              <div className="sidebar-group-body">
-                <div className="input-group">
-                  <label className="input-label">Backend API URL</label>
-                  <input
-                    type="text"
-                    className="groq-config-input"
-                    style={{ width: "100%", padding: "6px 10px", fontSize: "13px" }}
-                    value={apiURL}
-                    onChange={(e) => {
-                      setApiURL(e.target.value);
-                      if (typeof window !== "undefined") {
-                        (window as any).customApiUrl = e.target.value;
-                      }
-                    }}
-                    placeholder="http://localhost:8000/api"
-                  />
-                  <p className="text-muted" style={{ fontSize: "11px", marginTop: "4px" }}>
-                    Point to localhost or your Hugging Face Space URL.
-                  </p>
-                </div>
+            <div className={`sidebar-group-body ${!openGroupConfig ? "collapsed" : ""}`}>
+              <div className="input-group">
+                <label className="input-label">Backend API URL</label>
+                <input
+                  type="text"
+                  className="groq-config-input"
+                  style={{ width: "100%", padding: "6px 10px", fontSize: "13px" }}
+                  value={apiURL}
+                  onChange={(e) => {
+                    setApiURL(e.target.value);
+                    if (typeof window !== "undefined") {
+                      (window as any).customApiUrl = e.target.value;
+                    }
+                  }}
+                  placeholder="http://localhost:8000/api"
+                />
+                <p className="text-muted" style={{ fontSize: "11px", marginTop: "4px" }}>
+                  Point to localhost or your Hugging Face Space URL.
+                </p>
               </div>
-            )}
+            </div>
           </div>
 
         </aside>
@@ -1061,7 +1102,7 @@ export default function Dashboard() {
                 )}
 
                 <button 
-                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
+                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""} ${isInitializingCamera ? "btn-loading" : ""}`}
                   onClick={cameraActive ? stopCamera : () => startCamera()}
                   disabled={!mediaPipeLoaded || isInitializingCamera}
                 >
@@ -1116,7 +1157,7 @@ export default function Dashboard() {
                     border: "1px solid rgba(255, 255, 255, 0.2)",
                     boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
                   }}>
-                    <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "spin 3s linear infinite" }} size={40} />
+                    <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
                     <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
                     <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
                     <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>

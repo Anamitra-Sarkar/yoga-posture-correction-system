@@ -1375,3 +1375,209 @@ button, [role="button"] {
   justify-content: center;
   min-height: 120px;
 }
+
+/* ==========================================
+   GLOBAL UI SMOOTHNESS PASS & CUSTOM DROPDOWNS
+   ========================================== */
+
+/* 1. Transitions everywhere */
+button,
+.pose-card,
+.sidebar-group-header,
+.kpi-card,
+.deviation-item,
+.guidance-box {
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Hover scales and lifts */
+.pose-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-border);
+}
+
+.kpi-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-group-header:hover {
+  background: var(--color-surface-offset) !important;
+}
+
+/* 2. Collapsible sidebar groups with max-height transition */
+.sidebar-group-body {
+  overflow: hidden;
+  max-height: 600px;
+  opacity: 1;
+  transition: max-height 300ms cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 200ms ease, 
+              padding 300ms cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 300ms ease !important;
+}
+.sidebar-group-body.collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-top-color: transparent !important;
+}
+
+/* 3. ChevronDown rotation on collapsed groups */
+.chevron-icon {
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.chevron-icon.collapsed {
+  transform: rotate(-180deg) !important;
+}
+
+/* 4. Guidance box transitions */
+.guidance-box {
+  transition: background 300ms ease, 
+              border-color 300ms ease, 
+              border-left-color 300ms ease !important;
+}
+
+/* 5. Calibration overlay pulse-spin keyframes */
+@keyframes pulse-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* 6. Focus styles visible ring */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 3px !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* 7. Camera button initializing pulse */
+.btn-loading {
+  animation: pulse-bg 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pulse-bg {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+    background-color: var(--color-primary-hover);
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* 8. Custom Language Dropdown Selector styling */
+.language-selector-wrapper-custom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.language-selector-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--color-surface-offset);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 28px;
+  user-select: none;
+}
+
+.language-selector-trigger:hover {
+  background: var(--color-surface);
+  border-color: var(--color-primary-border);
+  color: var(--color-text);
+}
+
+.language-selector-trigger .chevron-icon {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.language-selector-trigger .chevron-icon.open {
+  transform: rotate(180deg);
+}
+
+.language-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 110;
+  min-width: 100px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: lang-dropdown-fade-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+}
+
+@keyframes lang-dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.language-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: background 150ms ease, color 150ms ease;
+  user-select: none;
+}
+
+.language-dropdown-item:hover {
+  background: var(--color-surface-offset);
+  color: var(--color-text);
+}
+
+.language-dropdown-item.active {
+  color: var(--color-primary);
+  font-weight: 600;
+  background: var(--color-surface-offset);
+}
+
+.language-dropdown-item + .language-dropdown-item {
+  border-top: 1px solid var(--color-divider);
+}
