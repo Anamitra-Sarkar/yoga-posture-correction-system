@@ -1581,3 +1581,57 @@ select:focus-visible {
 .language-dropdown-item + .language-dropdown-item {
   border-top: 1px solid var(--color-divider);
 }
+
+/* ==========================================
+   CAMERA & KPI SIDE-BY-SIDE LAYOUT
+   ========================================== */
+.camera-kpi-layout {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-4);
+  align-items: stretch;
+  width: 100%;
+}
+
+.camera-kpi-layout .camera-panel {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.kpi-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 200px;
+  flex-shrink: 0;
+}
+
+.kpi-column .kpi-card {
+  flex: 1;
+}
+
+/* On small screens, stack camera on top, KPI row below */
+@media (max-width: 767px) {
+  .camera-kpi-layout {
+    flex-direction: column;
+  }
+  .kpi-column {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .kpi-column .kpi-card {
+    flex: 1 1 calc(33% - var(--space-2));
+    min-width: 120px;
+  }
+}
+
+/* On very small screens, 2-column KPI grid */
+@media (max-width: 374px) {
+  .kpi-column .kpi-card {
+    flex: 1 1 calc(50% - var(--space-2));
+  }
+  .kpi-column .kpi-card:last-child {
+    flex: 1 1 100%;
+  }
+}

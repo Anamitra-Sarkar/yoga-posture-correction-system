@@ -1039,144 +1039,146 @@ export default function Dashboard() {
         {/* RIGHT COLUMN: MAIN CONTENT */}
         <main className="app-content">
           
-          {/* KPI Cards Row */}
-          <div className="kpi-row">
-            {isLoading ? (
-              <>
-                <div className="kpi-card skeleton">
-                  <div className="kpi-label skeleton-text" />
-                  <div className="kpi-value skeleton-heading" />
-                  <div className="kpi-sub skeleton-text" />
+          <div className="camera-kpi-layout">
+            {/* Camera stream block */}
+            <div className="camera-panel">
+              <div className="camera-panel-header">
+                <div className="camera-panel-title">
+                  <CameraIcon size={18} />
+                  <span>Camera Stream</span>
                 </div>
-                <div className="kpi-card skeleton">
-                  <div className="kpi-label skeleton-text" />
-                  <div className="kpi-value skeleton-heading" />
-                  <div className="kpi-sub skeleton-text" />
-                </div>
-                <div className="kpi-card skeleton">
-                  <div className="kpi-label skeleton-text" />
-                  <div className="kpi-value skeleton-heading" />
-                  <div className="kpi-sub skeleton-text" />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="kpi-card">
-                  <span className="kpi-label">Posture Score</span>
-                  <span className="kpi-value">{Math.round(correctness * 100)}%</span>
-                  <span className="kpi-sub">{correctness >= 0.75 ? "✓ On target" : "Needs adjustment"}</span>
-                </div>
-                <div className="kpi-card">
-                  <span className="kpi-label">Detected Pose</span>
-                  <span className="kpi-value">{activePose === "transition/unknown" ? "—" : activePose.split('/').pop()?.toUpperCase()}</span>
-                  <span className="kpi-sub">{flowPose === "transition/unknown" ? "Static" : "Flow mode"}</span>
-                </div>
-                <div className="kpi-card">
-                  <span className="kpi-label">Fusing</span>
-                  <span className="kpi-value">{recoveredJoints.length > 0 ? recoveredJoints.length : "—"}</span>
-                  <span className="kpi-sub">{recoveredJoints.length > 0 ? "Occlusion active" : "All visible"}</span>
-                </div>
-              </>
-            )}
-          </div>
 
-          {/* Camera stream block */}
-          <div className="camera-panel">
-            <div className="camera-panel-header">
-              <div className="camera-panel-title">
-                <CameraIcon size={18} />
-                <span>Camera Stream</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {cameraActive && hasMultipleCameras && (
+                    <button
+                      className="btn-primary btn-sm"
+                      style={{ background: "var(--color-primary-muted)", border: "1px solid var(--color-primary)", display: "flex", alignItems: "center", gap: "6px" }}
+                      onClick={toggleCamera}
+                      disabled={isInitializingCamera}
+                    >
+                      <RefreshCw size={16} />
+                      <span>Swap Camera</span>
+                    </button>
+                  )}
+
+                  <button 
+                    className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""} ${isInitializingCamera ? "btn-loading" : ""}`}
+                    onClick={cameraActive ? stopCamera : () => startCamera()}
+                    disabled={!mediaPipeLoaded || isInitializingCamera}
+                  >
+                    {isInitializingCamera ? (
+                      <RefreshCw className="animate-spin" size={16} />
+                    ) : cameraActive ? (
+                      <>
+                        <VideoOff size={16} />
+                        <span>Stop Video</span>
+                      </>
+                    ) : (
+                      <>
+                        <CameraIcon size={16} />
+                        <span>Start Video</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                {cameraActive && hasMultipleCameras && (
-                  <button
-                    className="btn-primary btn-sm"
-                    style={{ background: "var(--color-primary-muted)", border: "1px solid var(--color-primary)", display: "flex", alignItems: "center", gap: "6px" }}
-                    onClick={toggleCamera}
-                    disabled={isInitializingCamera}
-                  >
-                    <RefreshCw size={16} />
-                    <span>Swap Camera</span>
-                  </button>
+              <div className="camera-frame" style={{ position: "relative" }}>
+                <video 
+                  ref={videoRef} 
+                  className="camera-video-element"
+                  playsInline 
+                  muted 
+                />
+                <canvas 
+                  ref={canvasRef} 
+                  width={640} 
+                  height={480} 
+                  className="camera-canvas"
+                />
+                {cameraActive && calibrationState === "calibrating" && (
+                  <div style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(10, 15, 30, 0.7)",
+                    backdropFilter: "blur(4px)",
+                    borderRadius: "12px",
+                    zIndex: 10,
+                    color: "#fff",
+                    textAlign: "center"
+                  }}>
+                    <div style={{
+                      padding: "24px 32px",
+                      borderRadius: "16px",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
+                    }}>
+                      <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
+                      <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
+                      <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
+                      <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
+                    </div>
+                  </div>
                 )}
-
-                <button 
-                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""} ${isInitializingCamera ? "btn-loading" : ""}`}
-                  onClick={cameraActive ? stopCamera : () => startCamera()}
-                  disabled={!mediaPipeLoaded || isInitializingCamera}
-                >
-                  {isInitializingCamera ? (
-                    <RefreshCw className="animate-spin" size={16} />
-                  ) : cameraActive ? (
-                    <>
-                      <VideoOff size={16} />
-                      <span>Stop Video</span>
-                    </>
-                  ) : (
-                    <>
-                      <CameraIcon size={16} />
-                      <span>Start Video</span>
-                    </>
-                  )}
-                </button>
+                {cameraActive && (
+                  <div className="camera-live-badge">
+                    <div className="live-dot" />
+                    <span>LIVE</span>
+                  </div>
+                )}
+                {!cameraActive && (
+                  <div className="camera-placeholder">
+                    <div className="camera-empty-icon">
+                      <VideoOff size={32} />
+                    </div>
+                    <p>Camera is inactive. Click "Start Video" to begin.</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="camera-frame" style={{ position: "relative" }}>
-              <video 
-                ref={videoRef} 
-                className="camera-video-element"
-                playsInline 
-                muted 
-              />
-              <canvas 
-                ref={canvasRef} 
-                width={640} 
-                height={480} 
-                className="camera-canvas"
-              />
-              {cameraActive && calibrationState === "calibrating" && (
-                <div style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "rgba(10, 15, 30, 0.7)",
-                  backdropFilter: "blur(4px)",
-                  borderRadius: "12px",
-                  zIndex: 10,
-                  color: "#fff",
-                  textAlign: "center"
-                }}>
-                  <div style={{
-                    padding: "24px 32px",
-                    borderRadius: "16px",
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
-                  }}>
-                    <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
-                    <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
-                    <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
-                    <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
+            {/* KPI Cards Column */}
+            <div className="kpi-column">
+              {isLoading ? (
+                <>
+                  <div className="kpi-card skeleton">
+                    <div className="kpi-label skeleton-text" />
+                    <div className="kpi-value skeleton-heading" />
+                    <div className="kpi-sub skeleton-text" />
                   </div>
-                </div>
-              )}
-              {cameraActive && (
-                <div className="camera-live-badge">
-                  <div className="live-dot" />
-                  <span>LIVE</span>
-                </div>
-              )}
-              {!cameraActive && (
-                <div className="camera-placeholder">
-                  <div className="camera-empty-icon">
-                    <VideoOff size={32} />
+                  <div className="kpi-card skeleton">
+                    <div className="kpi-label skeleton-text" />
+                    <div className="kpi-value skeleton-heading" />
+                    <div className="kpi-sub skeleton-text" />
                   </div>
-                  <p>Camera is inactive. Click "Start Video" to begin.</p>
-                </div>
+                  <div className="kpi-card skeleton">
+                    <div className="kpi-label skeleton-text" />
+                    <div className="kpi-value skeleton-heading" />
+                    <div className="kpi-sub skeleton-text" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="kpi-card">
+                    <span className="kpi-label">Posture Score</span>
+                    <span className="kpi-value">{Math.round(correctness * 100)}%</span>
+                    <span className="kpi-sub">{correctness >= 0.75 ? "✓ On target" : "Needs adjustment"}</span>
+                  </div>
+                  <div className="kpi-card">
+                    <span className="kpi-label">Detected Pose</span>
+                    <span className="kpi-value">{activePose === "transition/unknown" ? "—" : activePose.split('/').pop()?.toUpperCase()}</span>
+                    <span className="kpi-sub">{flowPose === "transition/unknown" ? "Static" : "Flow mode"}</span>
+                  </div>
+                  <div className="kpi-card">
+                    <span className="kpi-label">Fusing</span>
+                    <span className="kpi-value">{recoveredJoints.length > 0 ? recoveredJoints.length : "—"}</span>
+                    <span className="kpi-sub">{recoveredJoints.length > 0 ? "Occlusion active" : "All visible"}</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
