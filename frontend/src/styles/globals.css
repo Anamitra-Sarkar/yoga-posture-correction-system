@@ -569,21 +569,13 @@ p, li {
   color: var(--color-primary);
 }
 
+/* ─── CAMERA FRAME: 16/9 ratio, wider & shorter ─── */
 .camera-frame {
   background: #0a0a0a;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   width: 100%;
-  max-height: 60vh;
-  max-height: 60dvh;
   position: relative;
   overflow: hidden;
-}
-
-@media (min-width: 1024px) {
-  .camera-frame {
-    max-height: none;
-    aspect-ratio: 4 / 3;
-  }
 }
 
 /* Landscape orientation adjustments for mobile layout viewports */
@@ -1340,6 +1332,56 @@ button, [role="button"] {
   flex-shrink: 0;
 }
 
+/* ==========================================
+   GLASS PANEL — Feedback Hub & Angle Details
+   ========================================== */
+.glass-panel {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  transition: box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Section title used inside glass-panel */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.section-title svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* Gauge container inside glass-panel */
+.gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Override glass-panel padding for the nested one */
+  padding: var(--space-5) !important;
+  background: var(--color-surface) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--color-border) !important;
+}
+
 /* Utilities */
 .feedback-grid {
   display: grid;
@@ -1602,7 +1644,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  width: 200px;
+  width: 220px;
   flex-shrink: 0;
 }
 
