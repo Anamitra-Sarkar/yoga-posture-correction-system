@@ -112,14 +112,14 @@ graph TD
 4. Or run locally:
    ```bash
    pip install -r backend/requirements.txt
-   uvicorn app:app --host 0.0.0.0 --port 7860
+   cd backend
+   uvicorn app.main:app --host 0.0.0.0 --port 7860
    ```
 
 ---
 
 ## 🛠️ Repository Directory Structure
 
-*   `app.py`: Main monolithic FastAPI backend wrapper.
 *   `backend/`: Modular FastAPI app layout, Dockerfile, and requirements.
 *   `frontend/`: TypeScript Next.js hooks and API interfaces for the client.
 *   `.github/workflows/hf_sync.yml`: Automates CI/CD synchronization of the backend folder to Hugging Face Spaces.

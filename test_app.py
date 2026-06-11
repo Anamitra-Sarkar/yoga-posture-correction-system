@@ -1,11 +1,12 @@
 import sys
 import os
 
-# Ensure the workspace directory is in the python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Ensure the modular backend directory is in the python path
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
 
 from fastapi.testclient import TestClient
-from app import app, FEATURE_NAMES
+from app.main import app
+from app.utils.geometry import FEATURE_NAMES
 
 def test_backend():
     print("Initializing FastAPI TestClient and loading models from HF Hub...")

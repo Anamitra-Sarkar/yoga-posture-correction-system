@@ -5,10 +5,11 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 # Ensure workspace is in python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
 sys.path.append("/home/anamitra/Projects_and_Code/Scripts_and_Source/")
 
-from app import app, FEATURE_NAMES
+from app.main import app
+from app.utils.geometry import FEATURE_NAMES
 from extract_features_safe import calculate_angle_3d, interpolate_occlusions
 
 LANDMARKS_PATH = "/home/anamitra/yoga_raw_dataset/landmarks_20170209_How to do a Vinyasa (Flow).npy"

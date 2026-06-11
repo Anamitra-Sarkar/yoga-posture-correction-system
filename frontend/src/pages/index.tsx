@@ -87,6 +87,65 @@ const PRESET_POSES = {
   }
 };
 
+const POSE_TARGET_ANGLES: {
+  [poseId: string]: {
+    joint: string;
+    label: string;
+    target: number;
+    tolerance: number;
+  }[];
+} = {
+  warrior_2: [
+    { joint: "knee_l", label: "Left Knee Angle", target: 90, tolerance: 15 },
+    { joint: "shoulder_l", label: "Left Shoulder Angle", target: 90, tolerance: 15 },
+    { joint: "knee_r", label: "Right Knee Angle", target: 180, tolerance: 15 },
+    { joint: "shoulder_r", label: "Right Shoulder Angle", target: 90, tolerance: 15 }
+  ],
+  chair_pose: [
+    { joint: "knee_l", label: "Left Knee Bend", target: 100, tolerance: 15 },
+    { joint: "knee_r", label: "Right Knee Bend", target: 100, tolerance: 15 },
+    { joint: "hip_l", label: "Left Hip Bend", target: 100, tolerance: 15 }
+  ],
+  cobra_pose: [
+    { joint: "neck", label: "Neck Extension", target: 140, tolerance: 20 },
+    { joint: "trunk_l", label: "Left Trunk Extension", target: 140, tolerance: 20 }
+  ],
+  plank: [
+    { joint: "elbow_l", label: "Left Elbow Extension", target: 180, tolerance: 10 },
+    { joint: "elbow_r", label: "Right Elbow Extension", target: 180, tolerance: 10 },
+    { joint: "trunk_l", label: "Left Spine Line", target: 180, tolerance: 15 }
+  ],
+  tree_pose: [
+    { joint: "knee_l", label: "Left Knee Angle (Bent)", target: 45, tolerance: 15 },
+    { joint: "hip_abduct_l", label: "Left Hip Abduction", target: 45, tolerance: 15 },
+    { joint: "knee_r", label: "Right Knee Angle (Standing)", target: 180, tolerance: 15 }
+  ],
+  mountain_pose: [
+    { joint: "knee_l", label: "Left Knee Extension", target: 180, tolerance: 10 },
+    { joint: "knee_r", label: "Right Knee Extension", target: 180, tolerance: 10 },
+    { joint: "trunk_l", label: "Left Spine Straightness", target: 180, tolerance: 10 }
+  ]
+};
+
+const FEATURE_NAMES_ORDER = [
+  "elbow_l", "elbow_r", "shoulder_l", "shoulder_r",
+  "hip_l", "hip_r", "knee_l", "knee_r",
+  "ankle_l", "ankle_r", "trunk_l", "trunk_r",
+  "neck", "hip_abduct_l", "hip_abduct_r"
+];
+
+const getPoseJoints = (poseId: string) => {
+  const cleanId = poseId.toLowerCase().split('/').pop() || "";
+  if (POSE_TARGET_ANGLES[cleanId]) {
+    return POSE_TARGET_ANGLES[cleanId];
+  }
+  return [
+    { joint: "knee_l", label: "Left Knee Angle", target: 90, tolerance: 15 },
+    { joint: "shoulder_l", label: "Left Shoulder Angle", target: 90, tolerance: 15 }
+  ];
+};
+
+
 interface ScoreRingProps {
   correctness: number;
 }
@@ -176,6 +235,9 @@ export default function Dashboard() {
   const [calibKneeMax, setCalibKneeMax] = useState(160);
   const [calibShoulderMin, setCalibShoulderMin] = useState(30);
   const [calibShoulderMax, setCalibShoulderMax] = useState(150);
+
+  // Dynamic metrics computed in real-time
+  const [allCurrentAngles, setAllCurrentAngles] = useState<number[]>(new Array(15).fill(180));
 
   // MediaPipe state
   const [mediaPipeLoaded, setMediaPipeLoaded] = useState(false);
@@ -302,8 +364,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_YOGA_API_URL) {
-      setApiURL(process.env.NEXT_PUBLIC_YOGA_API_URL);
+    const url = process.env.NEXT_PUBLIC_YOGA_API_URL || "http://localhost:8000/api";
+    setApiURL(url);
+    if (typeof window !== "undefined") {
+      (window as any).customApiUrl = url;
     }
   }, []);
 
@@ -473,14 +537,13 @@ export default function Dashboard() {
       const angles = extractAnglesFromLandmarks(points);
 
       // Update UI real-time angle display
+      setAllCurrentAngles(angles);
       setCurrentKneeAngle(Math.round(angles[6])); // Left Knee
       setCurrentShoulderAngle(Math.round(angles[2])); // Left Shoulder
 
-      // 4. Overwrite base URL in window namespace for pipeline helper
+      // 4. Overwrite custom URL in window namespace for pipeline helper
       if (typeof window !== "undefined") {
-        (window as any).process = {
-          env: { NEXT_PUBLIC_YOGA_API_URL: apiURL }
-        };
+        (window as any).customApiUrl = apiURL;
       }
 
       // 5. Invoke 13-stage pipeline processing step with 500ms (2fps) throttling
@@ -766,7 +829,36 @@ export default function Dashboard() {
             )}
           </div>
 
-
+          {/* Group 3: API Configuration */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-header" onClick={() => setOpenGroupConfig(!openGroupConfig)}>
+              <span>API Configuration</span>
+              <ChevronDown size={16} className={`chevron-icon ${!openGroupConfig ? "collapsed" : ""}`} />
+            </div>
+            {openGroupConfig && (
+              <div className="sidebar-group-body">
+                <div className="input-group">
+                  <label className="input-label">Backend API URL</label>
+                  <input
+                    type="text"
+                    className="groq-config-input"
+                    style={{ width: "100%", padding: "6px 10px", fontSize: "13px" }}
+                    value={apiURL}
+                    onChange={(e) => {
+                      setApiURL(e.target.value);
+                      if (typeof window !== "undefined") {
+                        (window as any).customApiUrl = e.target.value;
+                      }
+                    }}
+                    placeholder="http://localhost:8000/api"
+                  />
+                  <p className="text-muted" style={{ fontSize: "11px", marginTop: "4px" }}>
+                    Point to localhost or your Hugging Face Space URL.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
         </aside>
 
@@ -959,39 +1051,33 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                <div className="deviation-item">
-                  <span className="deviation-name">Left Knee Angle (Target: 90° for Warrior II)</span>
-                  <div className="deviation-row-detail">
-                    <div className="deviation-bar-bg">
-                      <div 
-                        className={`deviation-bar-fill ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}
-                        style={{ 
-                          width: `${Math.min(100, Math.abs(currentKneeAngle - 90) * 1.5)}%` 
-                        }} 
-                      />
-                    </div>
-                    <span className={`deviation-value ${Math.abs(currentKneeAngle - 90) > 15 ? "error" : "success"}`}>
-                      {currentKneeAngle}° (Diff: {Math.round(currentKneeAngle - 90)}°)
-                    </span>
-                  </div>
-                </div>
+                {getPoseJoints(activePose).map(({ joint, label, target, tolerance }) => {
+                  const jointIdx = FEATURE_NAMES_ORDER.indexOf(joint);
+                  const currentAngle = allCurrentAngles[jointIdx] !== undefined 
+                    ? Math.round(allCurrentAngles[jointIdx]) 
+                    : (joint === "knee_l" ? currentKneeAngle : (joint === "shoulder_l" ? currentShoulderAngle : 180));
+                  const diff = currentAngle - target;
+                  const isDeviating = Math.abs(diff) > tolerance;
 
-                <div className="deviation-item">
-                  <span className="deviation-name">Left Shoulder Angle (Target: 90° for Warrior II)</span>
-                  <div className="deviation-row-detail">
-                    <div className="deviation-bar-bg">
-                      <div 
-                        className={`deviation-bar-fill ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}
-                        style={{ 
-                          width: `${Math.min(100, Math.abs(currentShoulderAngle - 90) * 1.5)}%` 
-                        }} 
-                      />
+                  return (
+                    <div className="deviation-item" key={joint}>
+                      <span className="deviation-name">{label} (Target: {target}° for {activePose.split('/').pop()?.toUpperCase()})</span>
+                      <div className="deviation-row-detail">
+                        <div className="deviation-bar-bg">
+                          <div 
+                            className={`deviation-bar-fill ${isDeviating ? "error" : "success"}`}
+                            style={{ 
+                              width: `${Math.min(100, Math.abs(diff) * 1.5)}%` 
+                            }} 
+                          />
+                        </div>
+                        <span className={`deviation-value ${isDeviating ? "error" : "success"}`}>
+                          {currentAngle}° (Diff: {diff > 0 ? "+" : ""}{diff}°)
+                        </span>
+                      </div>
                     </div>
-                    <span className={`deviation-value ${Math.abs(currentShoulderAngle - 90) > 15 ? "error" : "success"}`}>
-                      {currentShoulderAngle}° (Diff: {Math.round(currentShoulderAngle - 90)}°)
-                    </span>
-                  </div>
-                </div>
+                  );
+                })}
               </>
             )}
           </div>

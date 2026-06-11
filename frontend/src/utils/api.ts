@@ -10,10 +10,15 @@ import {
 } from "../types/yoga";
 
 // In production, point to your Hugging Face Space URL (e.g. https://arko007-yoga-posture-models.hf.space)
-const API_BASE_URL = process.env.NEXT_PUBLIC_YOGA_API_URL || "http://localhost:8000/api";
+const getApiUrl = () => {
+  if (typeof window !== "undefined" && (window as any).customApiUrl) {
+    return (window as any).customApiUrl;
+  }
+  return process.env.NEXT_PUBLIC_YOGA_API_URL || "http://localhost:8000/api";
+};
 
 export async function analyseFrame(data: FrameInput): Promise<FrameResponse> {
-  const response = await fetch(`${API_BASE_URL}/analyse_frame`, {
+  const response = await fetch(`${getApiUrl()}/analyse_frame`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -25,7 +30,7 @@ export async function analyseFrame(data: FrameInput): Promise<FrameResponse> {
 }
 
 export async function analyseSequence(data: SequenceInput): Promise<SequenceResponse> {
-  const response = await fetch(`${API_BASE_URL}/analyse_sequence`, {
+  const response = await fetch(`${getApiUrl()}/analyse_sequence`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -37,7 +42,7 @@ export async function analyseSequence(data: SequenceInput): Promise<SequenceResp
 }
 
 export async function generateCorrection(data: CorrectionInput): Promise<CorrectionResponse> {
-  const response = await fetch(`${API_BASE_URL}/generate_correction`, {
+  const response = await fetch(`${getApiUrl()}/generate_correction`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -49,7 +54,7 @@ export async function generateCorrection(data: CorrectionInput): Promise<Correct
 }
 
 export async function recoverOcclusion(data: OcclusionInput): Promise<OcclusionResponse> {
-  const response = await fetch(`${API_BASE_URL}/occlusion_recovery`, {
+  const response = await fetch(`${getApiUrl()}/occlusion_recovery`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

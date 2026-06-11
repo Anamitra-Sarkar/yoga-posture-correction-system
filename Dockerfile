@@ -10,24 +10,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up working directory
 WORKDIR /app
 
-# Copy application files
-COPY app.py /app/app.py
-
-# Install python dependencies (CPU-only torch keeps footprint minimal to prevent OOMs)
+# Copy requirement files and install
+COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu \
-    numpy \
-    pandas \
-    scikit-learn \
-    fastapi \
-    uvicorn \
-    pydantic \
-    huggingface_hub \
-    requests
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application package files
+COPY backend/app /app/app
 
 # Expose port for Hugging Face Spaces
 EXPOSE 7860
 
-# Command to run the uvicorn API server
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Command to run uvicorn targeting the app module inside main
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
