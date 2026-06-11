@@ -16,8 +16,8 @@ import {
   Sparkles,
   Camera as CameraIcon,
   VideoOff,
-  Menu,
-  X,
+  PanelLeftClose,
+  PanelLeftOpen,
   ChevronDown,
   Globe,
   Gauge
@@ -805,11 +805,15 @@ export default function Dashboard() {
           <title>AsanaAI — Smart Yoga Coach</title>
         </Head>
 
-        {/* Navbar Header */}
         <header className="app-header">
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            <button 
+              className="mobile-menu-btn" 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
             </button>
             <div className="app-logo">
               <svg

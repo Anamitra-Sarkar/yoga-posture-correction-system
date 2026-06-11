@@ -36,3 +36,6 @@ temp/
 **/public/workbox-*.js
 **/public/worker-*.js
 **/public/sw.js.map
+
+# TypeScript build cache
+*.tsbuildinfo
