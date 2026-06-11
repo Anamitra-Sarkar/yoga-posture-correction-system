@@ -26,7 +26,7 @@ export function useYogaPipeline({
   // Buffers and timers
   const coordBuffer = useRef<number[][]>([]); // Holds 60 frames of coordinates [60, 99]
   const lastCorrectionTime = useRef<number>(0);
-  const DEBOUNCE_MS = 10000; // 10 second throttle for audio guidance
+  const DEBOUNCE_MS = 30000; // 30 second throttle for LLM guidance API calls
 
   const processFrame = async (rawLandmarks: number[][], currentAngles: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
@@ -73,8 +73,18 @@ export function useYogaPipeline({
         setCorrectness(currentCorrectness);
       } else {
         // If sequence model is confident, sync Pose ID with the sequence target
+        currentPoseId = flowPose;
+        currentCorrectness = flowConfidence;
         setActivePose(flowPose);
         setCorrectness(flowConfidence);
+
+        // Fetch frame deviations for sequence flow to provide rich context to the correction generator
+        try {
+          const frameRes = await analyseFrame({ angles: currentAngles });
+          activeDeviations = frameRes.deviations;
+        } catch (err) {
+          console.error("Error fetching deviations for sequence:", err);
+        }
       }
       
       // 4. Stage 8: User Digital Twin Range Filter
@@ -91,23 +101,37 @@ export function useYogaPipeline({
         });
       }
       
-      // 5. Stage 9 & 10: LLM Correction Generation (with debounce throttle)
+      // 5. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
       const now = Date.now();
-      if (
-        currentCorrectness < correctnessThreshold && 
-        currentPoseId !== "transition/unknown" &&
-        now - lastCorrectionTime.current > DEBOUNCE_MS
-      ) {
-        const corrRes = await generateCorrection({
-          pose_id: currentPoseId,
-          deviations: activeDeviations,
-          language,
-          groq_api_key: groqApiKey
-        });
-        setCorrectionText(corrRes.correction_text);
-        lastCorrectionTime.current = now;
-      } else if (currentCorrectness >= correctnessThreshold) {
-        setCorrectionText(""); // Clear feedback once pose is correct
+      if (currentPoseId !== "transition/unknown") {
+        if (currentCorrectness < correctnessThreshold) {
+          if (now - lastCorrectionTime.current > DEBOUNCE_MS) {
+            const corrRes = await generateCorrection({
+              pose_id: currentPoseId,
+              deviations: activeDeviations,
+              language,
+              groq_api_key: groqApiKey
+            });
+            setCorrectionText(corrRes.correction_text);
+            lastCorrectionTime.current = now;
+          }
+        } else {
+          // Pose is correct - notify user visually in real-time
+          const successMsg = language === "hi"
+            ? "अंग संरेखण सही है। निरंतर सांस लेते रहें।"
+            : language === "bn"
+            ? "আসন ভঙ্গি সঠিক আছে। স্বাভাবিক শ্বাস-প্রশ্বাস বজায় রাখুন।"
+            : "Pose alignment correct. Keep breathing steadily.";
+          setCorrectionText(successMsg);
+        }
+      } else {
+        // Transition/Unknown - prompt user to align body visually in real-time
+        const alignMsg = language === "hi"
+          ? "कैमरे के साथ अपने शरीर को संरेखित करें..."
+          : language === "bn"
+          ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..."
+          : "Align your body with the camera...";
+        setCorrectionText(alignMsg);
       }
       
     } catch (error) {

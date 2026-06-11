@@ -260,6 +260,7 @@ export default function Dashboard() {
   const cameraRef = useRef<any>(null);
   const poseRef = useRef<any>(null);
   const lastSpokenText = useRef("");
+  const lastSpokenTime = useRef<number>(0);
   const lastApiCallTime = useRef<number>(0);
   const API_THROTTLE_MS = 500;
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -505,18 +506,26 @@ export default function Dashboard() {
 
   // Audio speech synthesis loop
   useEffect(() => {
-    if (speechEnabled && correctionText && correctionText !== lastSpokenText.current) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(correctionText);
-      if (lang === "hi") {
-        utterance.lang = "hi-IN";
-      } else if (lang === "bn") {
-        utterance.lang = "bn-IN";
-      } else {
-        utterance.lang = "en-US";
+    const now = Date.now();
+    if (speechEnabled && correctionText) {
+      const isNewText = correctionText !== lastSpokenText.current;
+      const timeSinceLastSpoke = now - lastSpokenTime.current;
+      
+      // Speak if it's a new instruction (and at least 5s has passed to avoid rapid overlaps) or if 30s has passed for repetition
+      if ((isNewText && timeSinceLastSpoke > 5000) || timeSinceLastSpoke > 30000) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(correctionText);
+        if (lang === "hi") {
+          utterance.lang = "hi-IN";
+        } else if (lang === "bn") {
+          utterance.lang = "bn-IN";
+        } else {
+          utterance.lang = "en-US";
+        }
+        window.speechSynthesis.speak(utterance);
+        lastSpokenText.current = correctionText;
+        lastSpokenTime.current = now;
       }
-      window.speechSynthesis.speak(utterance);
-      lastSpokenText.current = correctionText;
     }
   }, [correctionText, speechEnabled, lang]);
 
@@ -1174,6 +1183,15 @@ export default function Dashboard() {
                   )}
                 </div>
 
+                {/* Caption bar visible inside the camera frame wrapper unconditionally */}
+                {cameraActive && (
+                  <div className="fullscreen-caption-bar" key={correctionText}>
+                    <span className={correctionText ? 'caption-text active' : 'caption-text placeholder'}>
+                      {correctionText || (lang === "hi" ? "कैमरे के साथ अपने शरीर को संरेखित करें..." : lang === "bn" ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..." : "Align your body with the camera...")}
+                    </span>
+                  </div>
+                )}
+
                 {/* Fullscreen-only overlays */}
                 {isFullscreen && (
                   <>
@@ -1190,13 +1208,6 @@ export default function Dashboard() {
                     {/* Score badge */}
                     <div className={`fullscreen-score-badge ${correctness >= 0.75 ? 'good' : 'warn'}`}>
                       {Math.round(correctness * 100)}%
-                    </div>
-
-                    {/* Caption bar */}
-                    <div className="fullscreen-caption-bar" key={correctionText}>
-                      <span className={correctionText ? 'caption-text active' : 'caption-text placeholder'}>
-                        {correctionText || 'Align your body with the camera...'}
-                      </span>
                     </div>
                   </>
                 )}
