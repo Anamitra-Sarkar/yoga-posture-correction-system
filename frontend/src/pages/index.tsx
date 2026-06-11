@@ -409,17 +409,17 @@ export default function Dashboard() {
     }
     calibrationDataRef.current = [];
     updateCalibrationState("calibrating");
-    setCalibrationCountdown(5);
+    setCalibrationCountdown(15);
     
-    // Announce start of calibration
+    // Announce start of calibration with gentle, peaceful instructions
     const text = lang === "hi" 
-      ? "डिजिटल ट्विन कैलिब्रेशन शुरू हो रहा है। कृपया कैमरे के सामने खड़े हों और थोड़ा हिलें।" 
+      ? "डिजिटल ट्विन कैलिब्रेशन शुरू हो रहा है। कृपया कैमरे के सामने खड़े हों, गहरी सांस लें, और अपनी आरामदायक मुद्रा में रहें।" 
       : lang === "bn"
-      ? "ডিজিটাল টুইন ক্যালিব্রেশন শুরু হচ্ছে। অনুগ্রহ করে ক্যামেরার সামনে দাঁড়ান এবং সামান্য নড়াচড়া করুন।"
-      : "Starting digital twin calibration. Please stand in camera view and stretch or move your joints gently.";
+      ? "ডিজিটাল টুইন ক্যালিব্রেশন শুরু হচ্ছে। অনুগ্রহ করে ক্যামেরার সামনে শান্তভাবে দাঁড়িয়ে গভীর শ্বাস নিন এবং আরামদায়ক ভঙ্গিতে থাকুন।"
+      : "Starting digital twin calibration. Please stand peacefully in camera view, breathe deeply, and assume a comfortable resting posture.";
     announceTTS(text);
 
-    let count = 5;
+    let count = 15;
     calibrationTimerRef.current = setInterval(() => {
       count -= 1;
       setCalibrationCountdown(count);
