@@ -229,12 +229,18 @@ export default function Dashboard() {
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
   const [activePreset, setActivePreset] = useState<"warrior_2" | "plank" | "tree_pose">("warrior_2");
   const [speechEnabled, setSpeechEnabled] = useState(true);
-  
-  // Digital Twin User Calibration Profile
-  const [calibKneeMin, setCalibKneeMin] = useState(80);
-  const [calibKneeMax, setCalibKneeMax] = useState(160);
-  const [calibShoulderMin, setCalibShoulderMin] = useState(30);
-  const [calibShoulderMax, setCalibShoulderMax] = useState(150);
+  // Digital Twin Calibration States
+  const [calibrationState, setCalibrationState] = useState<"idle" | "calibrating" | "complete">("idle");
+  const [calibrationCountdown, setCalibrationCountdown] = useState(5);
+  const [calibratedProfile, setCalibratedProfile] = useState<CalibrationProfile | null>(null);
+  const calibrationDataRef = useRef<number[][]>([]);
+  const calibrationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Camera Facing Mode States
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
 
   // Dynamic metrics computed in real-time
   const [allCurrentAngles, setAllCurrentAngles] = useState<number[]>(new Array(15).fill(180));
@@ -363,6 +369,100 @@ export default function Dashboard() {
     return `${m}:${sec}`;
   };
 
+  // Detect if device has multiple cameras
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const videoDevices = devices.filter(device => device.kind === "videoinput");
+        setHasMultipleCameras(videoDevices.length > 1);
+      }).catch(err => {
+        console.error("Enumerate devices failed:", err);
+      });
+    }
+  }, []);
+
+  const calibrationStateRef = useRef<"idle" | "calibrating" | "complete">("idle");
+
+  const updateCalibrationState = (state: "idle" | "calibrating" | "complete") => {
+    setCalibrationState(state);
+    calibrationStateRef.current = state;
+  };
+
+  const announceTTS = (text: string) => {
+    if (speechEnabled && typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (lang === "hi") {
+        utterance.lang = "hi-IN";
+      } else if (lang === "bn") {
+        utterance.lang = "bn-IN";
+      } else {
+        utterance.lang = "en-US";
+      }
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const startCalibration = () => {
+    if (calibrationTimerRef.current) {
+      clearInterval(calibrationTimerRef.current);
+    }
+    calibrationDataRef.current = [];
+    updateCalibrationState("calibrating");
+    setCalibrationCountdown(5);
+    
+    // Announce start of calibration
+    const text = lang === "hi" 
+      ? "डिजिटल ट्विन कैलिब्रेशन शुरू हो रहा है। कृपया कैमरे के सामने खड़े हों और थोड़ा हिलें।" 
+      : lang === "bn"
+      ? "ডিজিটাল টুইন ক্যালিব্রেশন শুরু হচ্ছে। অনুগ্রহ করে ক্যামেরার সামনে দাঁড়ান এবং সামান্য নড়াচড়া করুন।"
+      : "Starting digital twin calibration. Please stand in camera view and stretch or move your joints gently.";
+    announceTTS(text);
+
+    let count = 5;
+    calibrationTimerRef.current = setInterval(() => {
+      count -= 1;
+      setCalibrationCountdown(count);
+      if (count <= 0) {
+        if (calibrationTimerRef.current) clearInterval(calibrationTimerRef.current);
+        finishCalibration();
+      }
+    }, 1000);
+  };
+
+  const finishCalibration = () => {
+    updateCalibrationState("complete");
+    const data = calibrationDataRef.current;
+    
+    const profile: CalibrationProfile = {};
+    FEATURE_NAMES_ORDER.forEach((joint, idx) => {
+      const jointAngles = data.map(frame => frame[idx]).filter(val => !isNaN(val) && val !== null);
+      if (jointAngles.length === 0) {
+        profile[joint] = { min: 80, max: 160, resting: 120 };
+        return;
+      }
+      const minVal = Math.min(...jointAngles);
+      const maxVal = Math.max(...jointAngles);
+      const avgVal = jointAngles.reduce((a, b) => a + b, 0) / jointAngles.length;
+      
+      // Pad comfort boundaries by 15 degrees to establish comfort zones
+      profile[joint] = {
+        min: Math.max(0, Math.round(minVal - 15)),
+        max: Math.min(180, Math.round(maxVal + 15)),
+        resting: Math.round(avgVal)
+      };
+    });
+    
+    setCalibratedProfile(profile);
+
+    const completeText = lang === "hi" 
+      ? "डिजिटल ट्विन कैलिब्रेशन पूरा हो गया है। अभ्यास शुरू करें।" 
+      : lang === "bn"
+      ? "ডিজিটাল টুইন ক্যালিব্রেশন সম্পন্ন হয়েছে। অনুশীলন শুরু করুন।"
+      : "Calibration complete. Your digital twin has been established. You can now begin practicing.";
+    announceTTS(completeText);
+  };
+
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_YOGA_API_URL || "http://localhost:8000/api";
     setApiURL(url);
@@ -370,11 +470,6 @@ export default function Dashboard() {
       (window as any).customApiUrl = url;
     }
   }, []);
-
-  const calibrationProfile: CalibrationProfile = {
-    knee_l: { min: calibKneeMin, max: calibKneeMax, resting: 180 },
-    shoulder_l: { min: calibShoulderMin, max: calibShoulderMax, resting: 0 }
-  };
 
   const {
     activePose,
@@ -389,7 +484,7 @@ export default function Dashboard() {
   } = useYogaPipeline({
     language: lang,
     groqApiKey: undefined,
-    calibrationProfile,
+    calibrationProfile: calibratedProfile || undefined,
     correctnessThreshold: 0.75
   });
 
@@ -451,8 +546,8 @@ export default function Dashboard() {
     poseRef.current = pose;
   };
 
-  // Start Live Webcam Video Loop
-  const startCamera = async () => {
+  // Start Live Webcam Video Loop (Custom Stream Implementation for swap/facingMode support)
+  const startCamera = async (mode = facingMode) => {
     if (!navigator.onLine) {
       alert("No internet connection. MediaPipe requires internet on first load.");
       return;
@@ -462,23 +557,50 @@ export default function Dashboard() {
     
     setIsInitializingCamera(true);
     try {
+      // Clean up previous streams and request frames
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+
+      const constraints = {
+        video: {
+          facingMode: mode,
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
       const videoElement = videoRef.current;
       if (!videoElement) return;
 
-      const CameraClass = (window as any).Camera;
-      const camera = new CameraClass(videoElement, {
-        onFrame: async () => {
-          if (poseRef.current) {
-            await poseRef.current.send({ image: videoElement });
-          }
-        },
-        width: 640,
-        height: 480
-      });
-      
-      await camera.start();
-      cameraRef.current = camera;
+      videoElement.srcObject = stream;
+      videoElement.setAttribute("playsinline", "true");
+      await videoElement.play();
+
       setCameraActive(true);
+      setFacingMode(mode);
+
+      // Start custom rendering loop tick to feed MediaPipe
+      const tick = async () => {
+        if (!stream.active || !videoRef.current) return;
+        if (videoRef.current.readyState >= 3) {
+          if (poseRef.current) {
+            await poseRef.current.send({ image: videoRef.current });
+          }
+        }
+        animationFrameIdRef.current = requestAnimationFrame(tick);
+      };
+      animationFrameIdRef.current = requestAnimationFrame(tick);
+
+      // Trigger automatic Calibration Sequence
+      startCalibration();
+      
     } catch (err) {
       console.error("Camera access failed:", err);
       alert("Failed to access camera. Please check camera permissions.");
@@ -487,14 +609,30 @@ export default function Dashboard() {
     }
   };
 
-  // Stop Camera Feed
+  // Stop Camera Feed & destroy Digital Twin calibration
   const stopCamera = () => {
-    if (cameraRef.current) {
-      cameraRef.current.stop();
-      cameraRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+    if (calibrationTimerRef.current) {
+      clearInterval(calibrationTimerRef.current);
+      calibrationTimerRef.current = null;
     }
     setCameraActive(false);
+    updateCalibrationState("idle");
+    setCalibratedProfile(null);
     resetPipeline();
+  };
+
+  // Camera facing mode toggle switcher
+  const toggleCamera = () => {
+    const nextMode = facingMode === "user" ? "environment" : "user";
+    startCamera(nextMode);
   };
 
   // Cleanup camera on unmount
@@ -540,6 +678,11 @@ export default function Dashboard() {
       setAllCurrentAngles(angles);
       setCurrentKneeAngle(Math.round(angles[6])); // Left Knee
       setCurrentShoulderAngle(Math.round(angles[2])); // Left Shoulder
+
+      // If currently in calibration mode, buffer joint features
+      if (calibrationStateRef.current === "calibrating") {
+        calibrationDataRef.current.push(angles);
+      }
 
       // 4. Overwrite custom URL in window namespace for pipeline helper
       if (typeof window !== "undefined") {
@@ -780,51 +923,37 @@ export default function Dashboard() {
           </div>
 
 
-          {/* Group 4: Digital Twin Limits Calibration */}
+          {/* Group 4: Digital Twin Profile */}
           <div className="sidebar-group">
             <div className="sidebar-group-header" onClick={() => setOpenGroupTwin(!openGroupTwin)}>
-              <span>Calibration Limits</span>
+              <span>Digital Twin Profile</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupTwin ? "collapsed" : ""}`} />
             </div>
             {openGroupTwin && (
               <div className="sidebar-group-body">
-                <div className="input-group">
-                  <label className="input-label">Left Knee Limits</label>
-                  <div className="limits-row">
-                    <input 
-                      type="number" 
-                      className="groq-config-input limits-input" 
-                      value={calibKneeMin}
-                      onChange={(e) => setCalibKneeMin(Number(e.target.value))}
-                    />
-                    <span className="text-muted">to</span>
-                    <input 
-                      type="number" 
-                      className="groq-config-input limits-input" 
-                      value={calibKneeMax}
-                      onChange={(e) => setCalibKneeMax(Number(e.target.value))}
-                    />
+                {calibratedProfile ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "200px", overflowY: "auto", paddingRight: "4px" }}>
+                    <div style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500", marginBottom: "4px" }}>
+                      ✓ Active Calibration Profile
+                    </div>
+                    {Object.keys(calibratedProfile).map((joint) => (
+                      <div key={joint} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "4px" }}>
+                        <span style={{ color: "rgba(255,255,255,0.7)" }}>{joint.replace('_', ' ').toUpperCase()}</span>
+                        <span style={{ fontWeight: "600" }}>
+                          {calibratedProfile[joint].min}° – {calibratedProfile[joint].max}°
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                <div className="input-group">
-                  <label className="input-label">Left Shoulder Limits</label>
-                  <div className="limits-row">
-                    <input 
-                      type="number" 
-                      className="groq-config-input limits-input" 
-                      value={calibShoulderMin}
-                      onChange={(e) => setCalibShoulderMin(Number(e.target.value))}
-                    />
-                    <span className="text-muted">to</span>
-                    <input 
-                      type="number" 
-                      className="groq-config-input limits-input" 
-                      value={calibShoulderMax}
-                      onChange={(e) => setCalibShoulderMax(Number(e.target.value))}
-                    />
+                ) : (
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", lineHeight: "1.5" }}>
+                    {calibrationState === "calibrating" ? (
+                      <span style={{ color: "var(--color-warning)" }}>Calibrating... recording joint ranges.</span>
+                    ) : (
+                      "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges."
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -914,28 +1043,42 @@ export default function Dashboard() {
                 <span>Camera Stream</span>
               </div>
 
-              <button 
-                className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
-                onClick={cameraActive ? stopCamera : startCamera}
-                disabled={!mediaPipeLoaded || isInitializingCamera}
-              >
-                {isInitializingCamera ? (
-                  <RefreshCw className="animate-spin" size={16} />
-                ) : cameraActive ? (
-                  <>
-                    <VideoOff size={16} />
-                    <span>Stop Video</span>
-                  </>
-                ) : (
-                  <>
-                    <CameraIcon size={16} />
-                    <span>Start Video</span>
-                  </>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {cameraActive && hasMultipleCameras && (
+                  <button
+                    className="btn-primary btn-sm"
+                    style={{ background: "var(--color-primary-muted)", border: "1px solid var(--color-primary)", display: "flex", alignItems: "center", gap: "6px" }}
+                    onClick={toggleCamera}
+                    disabled={isInitializingCamera}
+                  >
+                    <RefreshCw size={16} />
+                    <span>Swap Camera</span>
+                  </button>
                 )}
-              </button>
+
+                <button 
+                  className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""}`}
+                  onClick={cameraActive ? stopCamera : () => startCamera()}
+                  disabled={!mediaPipeLoaded || isInitializingCamera}
+                >
+                  {isInitializingCamera ? (
+                    <RefreshCw className="animate-spin" size={16} />
+                  ) : cameraActive ? (
+                    <>
+                      <VideoOff size={16} />
+                      <span>Stop Video</span>
+                    </>
+                  ) : (
+                    <>
+                      <CameraIcon size={16} />
+                      <span>Start Video</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
-            <div className="camera-frame">
+            <div className="camera-frame" style={{ position: "relative" }}>
               <video 
                 ref={videoRef} 
                 className="camera-video-element"
@@ -948,6 +1091,34 @@ export default function Dashboard() {
                 height={480} 
                 className="camera-canvas"
               />
+              {cameraActive && calibrationState === "calibrating" && (
+                <div style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(10, 15, 30, 0.7)",
+                  backdropFilter: "blur(4px)",
+                  borderRadius: "12px",
+                  zIndex: 10,
+                  color: "#fff",
+                  textAlign: "center"
+                }}>
+                  <div style={{
+                    padding: "24px 32px",
+                    borderRadius: "16px",
+                    background: "rgba(255, 255, 255, 0.1)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
+                  }}>
+                    <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "spin 3s linear infinite" }} size={40} />
+                    <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
+                    <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
+                    <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
+                  </div>
+                </div>
+              )}
               {cameraActive && (
                 <div className="camera-live-badge">
                   <div className="live-dot" />

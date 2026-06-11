@@ -26,7 +26,7 @@ export function useYogaPipeline({
   // Buffers and timers
   const coordBuffer = useRef<number[][]>([]); // Holds 60 frames of coordinates [60, 99]
   const lastCorrectionTime = useRef<number>(0);
-  const DEBOUNCE_MS = 4000; // 4 second throttle for audio guidance
+  const DEBOUNCE_MS = 10000; // 10 second throttle for audio guidance
 
   const processFrame = async (rawLandmarks: number[][], currentAngles: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
