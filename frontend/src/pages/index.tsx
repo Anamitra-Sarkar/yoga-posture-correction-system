@@ -19,6 +19,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
+  Maximize2,
+  X,
   Globe,
   Gauge
 } from "lucide-react";
@@ -228,6 +230,7 @@ export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
   const [langDropOpen, setLangDropOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activePreset, setActivePreset] = useState<"warrior_2" | "plank" | "tree_pose">("warrior_2");
   const [speechEnabled, setSpeechEnabled] = useState(true);
   // Digital Twin Calibration States
@@ -381,6 +384,17 @@ export default function Dashboard() {
       });
     }
   }, []);
+
+  // Fullscreen escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   const calibrationStateRef = useRef<"idle" | "calibrating" | "complete">("idle");
 
@@ -1061,6 +1075,25 @@ export default function Dashboard() {
                     </button>
                   )}
 
+                  {cameraActive && (
+                    <button
+                      className="btn-primary btn-sm"
+                      style={{
+                        background: 'var(--color-surface-offset)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      onClick={() => setIsFullscreen(true)}
+                      title="Enter fullscreen yoga mode"
+                    >
+                      <Maximize2 size={16} />
+                      <span>Focus Mode</span>
+                    </button>
+                  )}
+
                   <button 
                     className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""} ${isInitializingCamera ? "btn-loading" : ""}`}
                     onClick={cameraActive ? stopCamera : () => startCamera()}
@@ -1083,60 +1116,89 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="camera-frame" style={{ position: "relative" }}>
-                <video 
-                  ref={videoRef} 
-                  className="camera-video-element"
-                  playsInline 
-                  muted 
-                />
-                <canvas 
-                  ref={canvasRef} 
-                  width={640} 
-                  height={480} 
-                  className="camera-canvas"
-                />
-                {cameraActive && calibrationState === "calibrating" && (
-                  <div style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "rgba(10, 15, 30, 0.7)",
-                    backdropFilter: "blur(4px)",
-                    borderRadius: "12px",
-                    zIndex: 10,
-                    color: "#fff",
-                    textAlign: "center"
-                  }}>
+              <div className={`camera-frame-wrapper ${isFullscreen ? 'yoga-fullscreen' : ''}`}>
+                <div className="camera-frame" style={{ position: "relative" }}>
+                  <video 
+                    ref={videoRef} 
+                    className="camera-video-element"
+                    playsInline 
+                    muted 
+                  />
+                  <canvas 
+                    ref={canvasRef} 
+                    width={640} 
+                    height={480} 
+                    className="camera-canvas"
+                  />
+                  {cameraActive && calibrationState === "calibrating" && (
                     <div style={{
-                      padding: "24px 32px",
-                      borderRadius: "16px",
-                      background: "rgba(255, 255, 255, 0.1)",
-                      border: "1px solid rgba(255, 255, 255, 0.2)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(10, 15, 30, 0.7)",
+                      backdropFilter: "blur(4px)",
+                      borderRadius: "12px",
+                      zIndex: 10,
+                      color: "#fff",
+                      textAlign: "center"
                     }}>
-                      <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
-                      <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
-                      <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
-                      <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
+                      <div style={{
+                        padding: "24px 32px",
+                        borderRadius: "16px",
+                        background: "rgba(255, 255, 255, 0.1)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
+                      }}>
+                        <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
+                        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
+                        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
+                        <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {cameraActive && (
-                  <div className="camera-live-badge">
-                    <div className="live-dot" />
-                    <span>LIVE</span>
-                  </div>
-                )}
-                {!cameraActive && (
-                  <div className="camera-placeholder">
-                    <div className="camera-empty-icon">
-                      <VideoOff size={32} />
+                  )}
+                  {cameraActive && (
+                    <div className="camera-live-badge">
+                      <div className="live-dot" />
+                      <span>LIVE</span>
                     </div>
-                    <p>Camera is inactive. Click "Start Video" to begin.</p>
-                  </div>
+                  )}
+                  {!cameraActive && (
+                    <div className="camera-placeholder">
+                      <div className="camera-empty-icon">
+                        <VideoOff size={32} />
+                      </div>
+                      <p>Camera is inactive. Click "Start Video" to begin.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Fullscreen-only overlays */}
+                {isFullscreen && (
+                  <>
+                    {/* Exit button */}
+                    <button
+                      className="fullscreen-exit-btn"
+                      onClick={() => setIsFullscreen(false)}
+                      aria-label="Exit fullscreen"
+                    >
+                      <X size={16} />
+                      <span>Exit</span>
+                    </button>
+
+                    {/* Score badge */}
+                    <div className={`fullscreen-score-badge ${correctness >= 0.75 ? 'good' : 'warn'}`}>
+                      {Math.round(correctness * 100)}%
+                    </div>
+
+                    {/* Caption bar */}
+                    <div className="fullscreen-caption-bar" key={correctionText}>
+                      <span className={correctionText ? 'caption-text active' : 'caption-text placeholder'}>
+                        {correctionText || 'Align your body with the camera...'}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
