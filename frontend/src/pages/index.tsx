@@ -136,12 +136,10 @@ const FEATURE_NAMES_ORDER = [
   "neck", "hip_abduct_l", "hip_abduct_r"
 ];
 
-const getSanskritName = (poseId: string) => {
-  if (!poseId) return "Transition/Unknown";
-  const cleanId = poseId.toLowerCase().split('/').pop() || "";
-  const key = cleanId.replace("_pose", "").replace("pose_", "").trim();
-  
-  const nameMap: { [key: string]: string } = {
+const SANSKRIT_NAMES: {
+  [lang: string]: { [key: string]: string }
+} = {
+  en: {
     "warrior_2": "Virabhadrasana II",
     "warrior_ii": "Virabhadrasana II",
     "warrior_1": "Virabhadrasana I",
@@ -157,12 +155,99 @@ const getSanskritName = (poseId: string) => {
     "mountain_pose": "Tadasana",
     "chair": "Utkatasana",
     "chair_pose": "Utkatasana",
+    "chaturanga": "Chaturanga Dandasana",
+    "child_pose": "Balasana",
+    "corpse": "Savasana",
+    "halfway_lift": "Ardha Uttanasana",
+    "lunge_pose": "Anjaneyasana",
+    "seated_easy_pose": "Sukhasana",
+    "seated_forward": "Paschimottanasana",
+    "seated_staff": "Dandasana",
+    "standing_forward_fold": "Uttanasana",
+    "standing_pose": "Tadasana",
+    "table_top": "Bharmanasana",
+    "triangle": "Trikonasana",
+    "upward_dog": "Urdhva Mukha Svanasana",
+    "upward_salute": "Urdhva Hastasana",
     "transition/unknown": "Transition/Unknown",
     "unknown": "Transition/Unknown"
-  };
+  },
+  hi: {
+    "warrior_2": "वीरभद्रासन २",
+    "warrior_ii": "वीरभद्रासन २",
+    "warrior_1": "वीरभद्रासन १",
+    "warrior_i": "वीरभद्रासन १",
+    "plank": "फलकासन",
+    "tree": "वृक्षासन",
+    "tree_pose": "वृक्षासन",
+    "downward_dog": "अधोमुख श्वानासन",
+    "downward_facing_dog": "अधोमुख श्वानासन",
+    "cobra": "भुजंगासन",
+    "cobra_pose": "भुजंगासन",
+    "mountain": "ताड़ासन",
+    "mountain_pose": "ताड़ासन",
+    "chair": "उत्कटासन",
+    "chair_pose": "उत्कटासन",
+    "chaturanga": "चतुरंग दंडासन",
+    "child_pose": "बालासन",
+    "corpse": "शवासन",
+    "halfway_lift": "अर्ध उत्तानासन",
+    "lunge_pose": "अंजनेयासन",
+    "seated_easy_pose": "सुखासन",
+    "seated_forward": "पश्चिमॉत्तानासन",
+    "seated_staff": "दंडासन",
+    "standing_forward_fold": "उत्तानासन",
+    "standing_pose": "ताड़ासन",
+    "table_top": "भरमनासन",
+    "triangle": "त्रिकोणासन",
+    "upward_dog": "ऊर्ध्वमुख श्वानासन",
+    "upward_salute": "ऊर्ध्व हस्तोत्तानासन",
+    "transition/unknown": "परिवर्तन/अज्ञात",
+    "unknown": "परिवर्तन/अज्ञात"
+  },
+  bn: {
+    "warrior_2": "বীরভদ্রাসন ২",
+    "warrior_ii": "বীরভদ্রাসন ২",
+    "warrior_1": "বীরভদ্রাসন ১",
+    "warrior_i": "বীরভদ্রাসন ১",
+    "plank": "ফলকাসন",
+    "tree": "বৃক্ষাসন",
+    "tree_pose": "বৃক্ষাসন",
+    "downward_dog": "অধোমুখ শ্বানাসন",
+    "downward_facing_dog": "অধোমুখ শ্বানাসন",
+    "cobra": "ভুজঙ্গাসন",
+    "cobra_pose": "ভুজঙ্গাসন",
+    "mountain": "তাড়াসন",
+    "mountain_pose": "তাড়াসন",
+    "chair": "উত্কটাসন",
+    "chair_pose": "উত্কটাসন",
+    "chaturanga": "চতুরঙ্গ দণ্ডাসন",
+    "child_pose": "বালাসন",
+    "corpse": "শবাসন",
+    "halfway_lift": "অর্ধ উত্তানাসন",
+    "lunge_pose": "অঞ্জনীয়াসন",
+    "seated_easy_pose": "সুখাসন",
+    "seated_forward": "পশ্চিমোত্তানাসন",
+    "seated_staff": "দণ্ডাসন",
+    "standing_forward_fold": "উত্তানাসন",
+    "standing_pose": "তাড়াসন",
+    "table_top": "ভার্মানাসন",
+    "triangle": "ত্রিকোণাসন",
+    "upward_dog": "ঊর্ধ্বমুখ শ্বানাসন",
+    "upward_salute": "উর্ধ্ব হস্তোত্তানাসন",
+    "transition/unknown": "পরিবর্তন/অজানা",
+    "unknown": "পরিবর্তন/অজানা"
+  }
+};
 
-  if (nameMap[cleanId]) return nameMap[cleanId];
-  if (nameMap[key]) return nameMap[key];
+const getSanskritName = (poseId: string, lang: "en" | "hi" | "bn" = "en") => {
+  if (!poseId) return lang === "hi" ? "परिवर्तन/अज्ञात" : lang === "bn" ? "পরিবর্তন/অজানা" : "Transition/Unknown";
+  const cleanId = poseId.toLowerCase().split('/').pop() || "";
+  const key = cleanId.replace("_pose", "").replace("pose_", "").trim();
+  
+  const dict = SANSKRIT_NAMES[lang] || SANSKRIT_NAMES.en;
+  if (dict[cleanId]) return dict[cleanId];
+  if (dict[key]) return dict[key];
   
   return cleanId.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
@@ -496,6 +581,7 @@ export default function Dashboard() {
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<any>(null);
   const poseRef = useRef<any>(null);
+  const onPoseResultsRef = useRef<any>(null);
   const lastSpokenText = useRef("");
   const lastSpokenTime = useRef<number>(0);
   const lastApiCallTime = useRef<number>(0);
@@ -863,7 +949,9 @@ export default function Dashboard() {
       minTrackingConfidence: 0.5
     });
 
-    pose.onResults(onPoseResults);
+    pose.onResults((results: any) => {
+      onPoseResultsRef.current?.(results);
+    });
     poseRef.current = pose;
   };
 
@@ -1084,6 +1172,10 @@ export default function Dashboard() {
     canvasCtx.restore();
   };
 
+  useEffect(() => {
+    onPoseResultsRef.current = onPoseResults;
+  }, [onPoseResults]);
+
   // Drawing method for Canvas Overlay
   const drawSkeletonOverlay = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
     const cw = ctx.canvas.width;
@@ -1177,7 +1269,7 @@ export default function Dashboard() {
 
       <div className={`app-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
         <Head>
-          <title>{TRANSLATIONS[lang].appTitle}</title>
+          <title>AsanaAI — Smart Yoga Coach</title>
         </Head>
 
         <header className="app-header">
@@ -1319,7 +1411,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span className="pose-card-icon">🧘</span>
-                  <span className="pose-card-label">Virabhadrasana II</span>
+                  <span className="pose-card-label">{getSanskritName("warrior_2", lang)}</span>
                 </div>
                 <div 
                   className={`pose-card ${activePreset === "plank" ? "active" : ""}`}
@@ -1329,7 +1421,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span className="pose-card-icon">🏋️</span>
-                  <span className="pose-card-label">Phalakasana</span>
+                  <span className="pose-card-label">{getSanskritName("plank", lang)}</span>
                 </div>
                 <div 
                   className={`pose-card ${activePreset === "tree_pose" ? "active" : ""}`}
@@ -1339,7 +1431,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span className="pose-card-icon">🌲</span>
-                  <span className="pose-card-label">Vrikshasana</span>
+                  <span className="pose-card-label">{getSanskritName("tree_pose", lang)}</span>
                 </div>
               </div>
             </div>
@@ -1379,34 +1471,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Group 3: API Configuration */}
-          <div className="sidebar-group">
-            <div className="sidebar-group-header" onClick={() => setOpenGroupConfig(!openGroupConfig)}>
-              <span>{TRANSLATIONS[lang].apiConfig}</span>
-              <ChevronDown size={16} className={`chevron-icon ${!openGroupConfig ? "collapsed" : ""}`} />
-            </div>
-            <div className={`sidebar-group-body ${!openGroupConfig ? "collapsed" : ""}`}>
-              <div className="input-group">
-                <label className="input-label">{TRANSLATIONS[lang].backendApiUrl}</label>
-                <input
-                  type="text"
-                  className="groq-config-input"
-                  style={{ width: "100%", padding: "6px 10px", fontSize: "13px" }}
-                  value={apiURL}
-                  onChange={(e) => {
-                    setApiURL(e.target.value);
-                    if (typeof window !== "undefined") {
-                      (window as any).customApiUrl = e.target.value;
-                    }
-                  }}
-                  placeholder="http://localhost:8000/api"
-                />
-                <p className="text-muted" style={{ fontSize: "11px", marginTop: "4px" }}>
-                  {TRANSLATIONS[lang].apiUrlHelper}
-                </p>
-              </div>
-            </div>
-          </div>
 
         </aside>
 
@@ -1592,7 +1656,7 @@ export default function Dashboard() {
                   </div>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].detectedPose}</span>
-                    <span className="kpi-value">{activePose === "transition/unknown" ? "—" : getSanskritName(activePose)}</span>
+                    <span className="kpi-value">{activePose === "transition/unknown" ? "—" : getSanskritName(activePose, lang)}</span>
                     <span className="kpi-sub">{flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : TRANSLATIONS[lang].flowMode}</span>
                   </div>
                   <div className="kpi-card">
@@ -1622,13 +1686,13 @@ export default function Dashboard() {
                 <div className="deviation-item m-0">
                   <span className="deviation-name">{TRANSLATIONS[lang].detectedPose}</span>
                   <span className="metric-value primary">
-                    {getSanskritName(activePose)}
+                    {getSanskritName(activePose, lang)}
                   </span>
                 </div>
                 <div className="deviation-item m-0">
                   <span className="deviation-name">{TRANSLATIONS[lang].sequenceFlow}</span>
                   <span className="metric-value">
-                    {flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : getSanskritName(flowPose)}
+                    {flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : getSanskritName(flowPose, lang)}
                   </span>
                 </div>
                 <div className="deviation-item m-0">
@@ -1702,7 +1766,7 @@ export default function Dashboard() {
 
                   return (
                     <div className="deviation-item" key={joint}>
-                      <span className="deviation-name">{translatedLabel} ({TRANSLATIONS[lang].targetFor.replace('{target}', target.toString()).replace('{pose}', getSanskritName(activePose))})</span>
+                      <span className="deviation-name">{translatedLabel} ({TRANSLATIONS[lang].targetFor.replace('{target}', target.toString()).replace('{pose}', getSanskritName(activePose, lang))})</span>
                       <div className="deviation-row-detail">
                         <div className="deviation-bar-bg">
                           <div 

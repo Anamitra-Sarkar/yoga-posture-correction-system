@@ -44,6 +44,75 @@ BIOMECHANICAL_TEMPLATES = {
                 "bn": "আপনার ঘাড় সোজা করুন এবং সামনের দিকে তাকান, কাঁধ শিথিল রাখুন।"
             }
         }
+    },
+    "plank": {
+        "elbow_l": {
+            "issue_low": {
+                "en": "Extend your left elbow to keep your arm straight.",
+                "hi": "अपने बाएं हाथ को सीधा रखने के लिए अपनी बाईं कोहनी को फैलाएं।",
+                "bn": "আপনার বাম হাত সোজা রাখতে বাম কনুই প্রসারিত করুন।"
+            }
+        },
+        "elbow_r": {
+            "issue_low": {
+                "en": "Extend your right elbow to keep your arm straight.",
+                "hi": "अपने दाएं हाथ को सीधा रखने के लिए अपनी दाईं कोहनी को फैलाएं।",
+                "bn": "আপনার ডান হাত সোজা রাখতে ডান কনুই প্রসারিত করুন।"
+            }
+        },
+        "trunk_l": {
+            "issue_low": {
+                "en": "Keep your spine and body in a straight line, do not let your hips sag.",
+                "hi": "अपनी रीढ़ और शरीर को एक सीधी रेखा में रखें, अपने नितंबों को नीचे न झुकने दें।",
+                "bn": "আপনার মেরুদণ্ড এবং শরীর সোজা রাখুন, নিতম্ব ঝুলে যেতে দেবেন না।"
+            }
+        }
+    },
+    "tree_pose": {
+        "knee_l": {
+            "issue_low": {
+                "en": "Bend your left knee more and place your foot on your inner thigh.",
+                "hi": "अपने बाएं घुटने को अधिक मोड़ें और अपने पैर को अपनी आंतरिक जांघ पर रखें।",
+                "bn": "আপনার বাম হাঁটু আরও বাঁকুন এবং পায়ের পাতাটি উরুর ভেতরের দিকে রাখুন।"
+            }
+        },
+        "hip_abduct_l": {
+            "issue_low": {
+                "en": "Open your left hip outward to bring your knee to the side.",
+                "hi": "अपने बाएं कूल्हे को बाहर की ओर खोलें ताकि आपका घुटना बगल की ओर हो सके।",
+                "bn": "আপনার বাম হাঁটু পাশের দিকে আনতে বাম হিপ বাইরের দিকে প্রসারিত করুন।"
+            }
+        },
+        "knee_r": {
+            "issue_low": {
+                "en": "Keep your standing right leg fully straight and strong.",
+                "hi": "अपने खड़े हुए दाएं पैर को पूरी तरह से सीधा और मजबूत रखें।",
+                "bn": "দাঁড়িয়ে থাকা ডান পা সম্পূর্ণ সোজা এবং শক্ত রাখুন।"
+            }
+        }
+    },
+    "mountain_pose": {
+        "knee_l": {
+            "issue_low": {
+                "en": "Keep your left leg straight and engage your thigh muscles.",
+                "hi": "अपने बाएं पैर को सीधा रखें और अपनी जांघ की मांसपेशियों को सक्रिय करें।",
+                "bn": "আপনার বাম পা সোজা রাখুন এবং উরুর পেশী সক্রিয় করুন।"
+            }
+        },
+        "knee_r": {
+            "issue_low": {
+                "en": "Keep your right leg straight and engage your thigh muscles.",
+                "hi": "अपने दाएं पैर को सीधा रखें और अपनी जांघ की मांसपेशियों को सक्रिय करें।",
+                "bn": "আপনার ডান পা সোজা রাখুন এবং উরুর পেশী সক্রিয় করুন।"
+            }
+        },
+        "trunk_l": {
+            "issue_low": {
+                "en": "Lengthen your spine and stand tall with shoulders relaxed.",
+                "hi": "अपनी रीढ़ को लंबा करें और कंधों को आराम देते हुए सीधे खड़े हों।",
+                "bn": "মেরুদণ্ড সোজা করে বুক টানটান করে দাঁড়ান এবং কাঁধ শিথিল রাখুন।"
+            }
+        }
     }
 }
 
@@ -92,12 +161,16 @@ def generate_safe_correction(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
+            # Map language code to full language name to instruct the LLM
+            lang_names = {"en": "English", "hi": "Hindi", "bn": "Bengali"}
+            target_lang_name = lang_names.get(language, "English")
+            
             payload = {
                 "model": "llama3-8b-8192",
                 "messages": [
                     {
                         "role": "system",
-                        "content": f"You are a professional yoga instructor. Translate or paraphrase the following instruction: '{correction_text}'. Do NOT suggest stretching further or pushing deeper. Keep it safe and under 15 words."
+                        "content": f"You are a professional yoga instructor. Translate or paraphrase the following instruction: '{correction_text}' into {target_lang_name}. Do NOT suggest stretching further or pushing deeper. Keep it safe, concise (under 15 words), and respond ONLY in the {target_lang_name} language."
                     }
                 ],
                 "temperature": 0.2
