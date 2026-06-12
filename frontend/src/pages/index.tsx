@@ -136,6 +136,242 @@ const FEATURE_NAMES_ORDER = [
   "neck", "hip_abduct_l", "hip_abduct_r"
 ];
 
+const getSanskritName = (poseId: string) => {
+  if (!poseId) return "Transition/Unknown";
+  const cleanId = poseId.toLowerCase().split('/').pop() || "";
+  const key = cleanId.replace("_pose", "").replace("pose_", "").trim();
+  
+  const nameMap: { [key: string]: string } = {
+    "warrior_2": "Virabhadrasana II",
+    "warrior_ii": "Virabhadrasana II",
+    "warrior_1": "Virabhadrasana I",
+    "warrior_i": "Virabhadrasana I",
+    "plank": "Phalakasana",
+    "tree": "Vrikshasana",
+    "tree_pose": "Vrikshasana",
+    "downward_dog": "Adho Mukha Svanasana",
+    "downward_facing_dog": "Adho Mukha Svanasana",
+    "cobra": "Bhujangasana",
+    "cobra_pose": "Bhujangasana",
+    "mountain": "Tadasana",
+    "mountain_pose": "Tadasana",
+    "chair": "Utkatasana",
+    "chair_pose": "Utkatasana",
+    "transition/unknown": "Transition/Unknown",
+    "unknown": "Transition/Unknown"
+  };
+
+  if (nameMap[cleanId]) return nameMap[cleanId];
+  if (nameMap[key]) return nameMap[key];
+  
+  return cleanId.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+const TRANSLATIONS: {
+  [lang: string]: { [key: string]: string }
+} = {
+  en: {
+    appTitle: "AsanaAI — Smart Yoga Coach",
+    newSession: "New Session",
+    targetPose: "Target Pose",
+    digitalTwinProfile: "Digital Twin Profile",
+    activeProfile: "✓ Active Calibration Profile",
+    uncalibratedTwin: "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges.",
+    calibratingTwin: "Calibrating... recording joint ranges.",
+    apiConfig: "API Configuration",
+    backendApiUrl: "Backend API URL",
+    apiUrlHelper: "Point to localhost or your Hugging Face Space URL.",
+    cameraStream: "Camera Stream",
+    swapCamera: "Swap Camera",
+    focusMode: "Focus Mode",
+    stopVideo: "Stop Video",
+    startVideo: "Start Video",
+    calibratingProgress: "Calibrating Digital Twin",
+    stayInView: "Stay in camera view...",
+    cameraInactive: "Camera is inactive. Click 'Start Video' to begin.",
+    alignBody: "Align your body with the camera...",
+    exit: "Exit",
+    postureScore: "Posture Score",
+    onTarget: "✓ On target",
+    needsAdjustment: "Needs adjustment",
+    detectedPose: "Detected Pose",
+    fusing: "Fusing",
+    occlusionActive: "Occlusion active",
+    allVisible: "All visible",
+    staticMode: "Static Check",
+    flowMode: "Flow mode",
+    feedbackHub: "Real-Time Feedback Hub",
+    correctnessScore: "Correctness Score",
+    sequenceFlow: "Sequence Flow",
+    occlusionFusing: "Occlusion Fusing",
+    active: "Active",
+    inactive: "Inactive",
+    fusingOccluded: "Fusing Occluded landmarks:",
+    mirroredCoordinates: "(Coordinate mirrored dynamically from twin joint)",
+    systemStatus: "System Status",
+    detectingPose: "Detecting pose... Align your body with the camera.",
+    safetyCorrection: "Safety Correction Voice Guidance",
+    alignmentCorrect: "Pose Alignment Correct",
+    alignmentCorrectDesc: "Joint angle alignment is correct. Keep breathing steadily.",
+    angleDetails: "Angle Alignment Details",
+    assumePosePrompt: "Assume a target yoga pose to view real-time joint angle alignments and corrections.",
+    targetFor: "Target: {target}° for {pose}",
+    diff: "Diff:"
+  },
+  hi: {
+    appTitle: "असनएआई — स्मार्ट योग कोच",
+    newSession: "नया सत्र",
+    targetPose: "लक्ष्य मुद्रा",
+    digitalTwinProfile: "डिजिटल ट्विन प्रोफ़ाइल",
+    activeProfile: "✓ सक्रिय अंशांकन प्रोफ़ाइल",
+    uncalibratedTwin: "डिजिटल ट्विन अंशांकित नहीं है। एक मुद्रा चुनें और अपनी संयुक्त सीमाओं को अंशांकित करने के लिए कैमरा स्ट्रीम शुरू करें।",
+    calibratingTwin: "अंशांकन हो रहा है... संयुक्त सीमाओं को रिकॉर्ड किया जा रहा है।",
+    apiConfig: "एपीआई कॉन्फ़िगरेशन",
+    backendApiUrl: "बैकएंड एपीआई यूआरएल",
+    apiUrlHelper: "लोकलहोस्ट या अपने हगिंग फेस स्पेस यूआरएल को इंगित करें।",
+    cameraStream: "कैमरा स्ट्रीम",
+    swapCamera: "कैमरा बदलें",
+    focusMode: "फ़ोकस मोड",
+    stopVideo: "वीडियो रोकें",
+    startVideo: "वीडियो शुरू करें",
+    calibratingProgress: "डिजिटल ट्विन का अंशांकन",
+    stayInView: "कैमरे के सामने बने रहें...",
+    cameraInactive: "कैमरा निष्क्रिय है। शुरू करने के लिए 'वीडियो शुरू करें' पर क्लिक करें।",
+    alignBody: "कैमरे के साथ अपने शरीर को संरेखित करें...",
+    exit: "बाहर निकलें",
+    postureScore: "मुद्रा स्कोर",
+    onTarget: "✓ सही संरेखण",
+    needsAdjustment: "समायोजन की आवश्यकता है",
+    detectedPose: "पहचानी गई मुद्रा",
+    fusing: "फ्यूज़िंग",
+    occlusionActive: "अस्पष्टता सक्रिय",
+    allVisible: "सभी दृश्यमान",
+    staticMode: "स्थिर जाँच",
+    flowMode: "प्रवाह मोड",
+    feedbackHub: "रीयल-टाइम फीडबैक हब",
+    correctnessScore: "सटीकता स्कोर",
+    sequenceFlow: "अनुक्रम प्रवाह",
+    occlusionFusing: "अस्पष्टता फ्यूज़िंग",
+    active: "सक्रिय",
+    inactive: "निष्क्रिय",
+    fusingOccluded: "अस्पष्ट अंगों को फ्यूज करना:",
+    mirroredCoordinates: "(ट्विन जोड़ से गतिशील रूप से प्रतिबिंबित समन्वयक)",
+    systemStatus: "सिस्टम की स्थिति",
+    detectingPose: "मुद्रा खोजी जा रही है... अपने शरीर को कैमरे के साथ संरेखित करें।",
+    safetyCorrection: "सुरक्षा सुधार वॉयस गाइडेंस",
+    alignmentCorrect: "आसन संरेखण सही है",
+    alignmentCorrectDesc: "जोड़ों का संरेखण बिल्कुल सही है। लगातार सांस लेते रहें।",
+    angleDetails: "कोण संरेखण विवरण",
+    assumePosePrompt: "वास्तविक समय में जोड़ों के संरेखण और सुधार देखने के लिए एक लक्ष्य योग मुद्रा धारण करें।",
+    targetFor: "लक्ष्य: {pose} के लिए {target}°",
+    diff: "अंतर:"
+  },
+  bn: {
+    appTitle: "আসনএআই — স্মার্ট যোগ কোচ",
+    newSession: "নতুন সেশন",
+    targetPose: "লক্ষ্য আসন",
+    digitalTwinProfile: "ডিজিটাল টুইন প্রোফাইল",
+    activeProfile: "✓ সক্রিয় ক্যালিব্রেশন প্রোফাইল",
+    uncalibratedTwin: "ডিজিটাল টুইন ক্যালিব্রেট করা নেই। একটি আসন নির্বাচন করুন এবং আপনার জয়েন্ট সীমা ক্যালিব্রেট করতে ক্যামেরা স্ট্রীম শুরু করুন।",
+    calibratingTwin: "ক্যালিব্রেট করা হচ্ছে... জয়েন্ট রেঞ্জ রেকর্ড করা হচ্ছে।",
+    apiConfig: "এপিআই কনফিগারেশন",
+    backendApiUrl: "ব্যাকএন্ড এপিআই ইউআরএল",
+    apiUrlHelper: "লোকালহোস্ট বা আপনার হাগিং ফেস স্পেস ইউআরএল নির্দেশ করুন।",
+    cameraStream: "ক্যামেরা স্ট্রীম",
+    swapCamera: "ক্যামেরা পরিবর্তন",
+    focusMode: "ফোকাস মোড",
+    stopVideo: "ভিডিও বন্ধ করুন",
+    startVideo: "ভিডিও চালু করুন",
+    calibratingProgress: "ডিজিটাল টুইন ক্যালিব্রেট হচ্ছে",
+    stayInView: "ক্যামেরার সামনে থাকুন...",
+    cameraInactive: "ক্যামেরা নিষ্ক্রিয় আছে। শুরু করতে 'ভিডিও চালু করুন' ক্লিক করুন।",
+    alignBody: "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন...",
+    exit: "প্রস্থান",
+    postureScore: "আসন স্কোর",
+    onTarget: "✓ সঠিক সারিবদ্ধকরণ",
+    needsAdjustment: "সংশোধন প্রয়োজন",
+    detectedPose: "শনাক্ত আসন",
+    fusing: "ফিউজিং",
+    occlusionActive: "অস্পষ্টতা সক্রিয়",
+    allVisible: "সব দৃশ্যমান",
+    staticMode: "স্থির পরীক্ষা",
+    flowMode: "প্রবাহ মোড",
+    feedbackHub: "রিয়েল-টাইম ফিডব্যাক হাব",
+    correctnessScore: "সঠিকতা স্কোর",
+    sequenceFlow: "সিকোয়েন্স ফ্লো",
+    occlusionFusing: "অস্পষ্টতা ফিউজিং",
+    active: "সক্রিয়",
+    inactive: "নিষ্ক্রিয়",
+    fusingOccluded: "অস্পষ্ট জয়েন্ট ফিউজ করা হচ্ছে:",
+    mirroredCoordinates: "(টুইন জয়েন্ট থেকে গতিশীলভাবে মিরর করা স্থানাঙ্ক)",
+    systemStatus: "সিস্টেমের অবস্থা",
+    detectingPose: "আসন শনাক্ত করা হচ্ছে... ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন।",
+    safetyCorrection: "সুরক্ষা সংশোধন ভয়েস গাইডেন্স",
+    alignmentCorrect: "আসন ভঙ্গি সঠিক আছে",
+    alignmentCorrectDesc: "জয়েন্ট অ্যালাইনমেন্ট সঠিক আছে। স্বাভাবিক শ্বাস-প্রশ্বাস বজায় রাখুন।",
+    angleDetails: "কোণ সারিবদ্ধকরণ বিবরণ",
+    assumePosePrompt: "রিয়েল-টাইম জয়েন্ট অ্যালাইনমেন্ট এবং সংশোধন দেখতে একটি লক্ষ্য যোগাসন অনুশীলন করুন।",
+    targetFor: "{pose} এর জন্য লক্ষ্য কোণ {target}°",
+    diff: "পার্থক্য:"
+  }
+};
+
+const JOINT_TRANSLATIONS: {
+  [lang: string]: { [joint: string]: string }
+} = {
+  en: {
+    "knee_l": "Left Knee Angle",
+    "shoulder_l": "Left Shoulder Angle",
+    "knee_r": "Right Knee Angle",
+    "shoulder_r": "Right Shoulder Angle",
+    "hip_l": "Left Hip Bend",
+    "hip_r": "Right Hip Bend",
+    "neck": "Neck Extension",
+    "trunk_l": "Left Spine Straightness",
+    "trunk_r": "Right Spine Straightness",
+    "elbow_l": "Left Elbow Extension",
+    "elbow_r": "Right Elbow Extension",
+    "hip_abduct_l": "Left Hip Abduction",
+    "hip_abduct_r": "Right Hip Abduction",
+    "ankle_l": "Left Ankle Angle",
+    "ankle_r": "Right Ankle Angle"
+  },
+  hi: {
+    "knee_l": "बायां घुटना कोण",
+    "shoulder_l": "बायां कंधा कोण",
+    "knee_r": "दायां घुटना कोण",
+    "shoulder_r": "दायां कंधा कोण",
+    "hip_l": "बायां कूल्हा झुकाव",
+    "hip_r": "दायां कूल्हा झुकाव",
+    "neck": "गर्दन विस्तार",
+    "trunk_l": "बायां रीढ़ संरेखण",
+    "trunk_r": "दायां रीढ़ संरेखण",
+    "elbow_l": "बायां कोहनी विस्तार",
+    "elbow_r": "दायां कोहनी विस्तार",
+    "hip_abduct_l": "बायां कूल्हा अपवर्तन",
+    "hip_abduct_r": "दायां कूल्हा अपवर्तन",
+    "ankle_l": "बायां टखना कोण",
+    "ankle_r": "दायां टखना कोण"
+  },
+  bn: {
+    "knee_l": "বাম হাঁটু কোণ",
+    "shoulder_l": "বাম কাঁধ কোণ",
+    "knee_r": "ডান হাঁটু কোণ",
+    "shoulder_r": "ডান কাঁধ কোণ",
+    "hip_l": "বাম হিপ বাঁক",
+    "hip_r": "ডান হিপ বাঁক",
+    "neck": "ঘাড়ের প্রসারণ",
+    "trunk_l": "বাম মেরুদণ্ড সোজা",
+    "trunk_r": "ডান মেরুদণ্ড সোজা",
+    "elbow_l": "বাম কনুই প্রসারণ",
+    "elbow_r": "ডান কনুই প্রসারণ",
+    "hip_abduct_l": "বাম হিপ অপহরণ",
+    "hip_abduct_r": "ডান হিপ অপহরণ",
+    "ankle_l": "বাম গোড়ালি কোণ",
+    "ankle_r": "ডান গোড়ালি কোণ"
+  }
+};
+
 const getPoseJoints = (poseId: string) => {
   const cleanId = poseId.toLowerCase().split('/').pop() || "";
   if (POSE_TARGET_ANGLES[cleanId]) {
@@ -433,37 +669,50 @@ export default function Dashboard() {
   const announceTTS = (text: string) => {
     if (!speechEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
     
-    // Resume if paused (happens when tab goes to background on Chrome)
+    // Unpause / reset speech synthesis on desktop
+    window.speechSynthesis.cancel();
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
-    
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'bn' ? 'bn-IN' : 'en-US';
-    utterance.rate = 0.92;   // Slightly slower for yoga instruction clarity
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    
-    // Chrome bug: long utterances silently stop after ~15s. Split and chain.
-    const MAX_CHUNK = 180;
-    if (text.length > MAX_CHUNK) {
-      const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
-      let idx = 0;
-      const speakNext = () => {
-        if (idx >= sentences.length || !speechEnabled) return;
-        const u = new SpeechSynthesisUtterance(sentences[idx].trim());
-        u.lang = utterance.lang;
-        u.rate = utterance.rate;
-        u.onend = () => { idx++; speakNext(); };
-        window.speechSynthesis.speak(u);
-      };
-      speakNext();
-      return;
-    }
-    
-    window.speechSynthesis.speak(utterance);
+
+    // Small delay to allow cancel/resume to register in browser engine
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Find voice matching the language if possible (improves desktop synthesis quality)
+      if (window.speechSynthesis.getVoices) {
+        const voices = window.speechSynthesis.getVoices();
+        const langCode = lang === 'hi' ? 'hi-IN' : lang === 'bn' ? 'bn-IN' : 'en-US';
+        const voice = voices.find(v => v.lang.includes(langCode) || v.lang.startsWith(lang === 'hi' ? 'hi' : lang === 'bn' ? 'bn' : 'en'));
+        if (voice) {
+          utterance.voice = voice;
+        }
+      }
+      utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'bn' ? 'bn-IN' : 'en-US';
+      utterance.rate = 0.92;   // Slightly slower for yoga instruction clarity
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      // Chrome bug: long utterances silently stop after ~15s. Split and chain.
+      const MAX_CHUNK = 180;
+      if (text.length > MAX_CHUNK) {
+        const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+        let idx = 0;
+        const speakNext = () => {
+          if (idx >= sentences.length || !speechEnabled) return;
+          const u = new SpeechSynthesisUtterance(sentences[idx].trim());
+          u.lang = utterance.lang;
+          if (utterance.voice) u.voice = utterance.voice;
+          u.rate = utterance.rate;
+          u.onend = () => { idx++; speakNext(); };
+          window.speechSynthesis.speak(u);
+        };
+        speakNext();
+        return;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   };
 
   const startCalibration = () => {
@@ -928,7 +1177,7 @@ export default function Dashboard() {
 
       <div className={`app-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
         <Head>
-          <title>AsanaAI — Smart Yoga Coach</title>
+          <title>{TRANSLATIONS[lang].appTitle}</title>
         </Head>
 
         <header className="app-header">
@@ -1039,7 +1288,7 @@ export default function Dashboard() {
             </button>
 
             <button className="btn-primary btn-sm" onClick={resetPipeline}>
-              New Session
+              {TRANSLATIONS[lang].newSession}
             </button>
           </div>
         </header>
@@ -1057,7 +1306,7 @@ export default function Dashboard() {
           {/* Group 2: Target Pose Cards Selector */}
           <div className="sidebar-group">
             <div className="sidebar-group-header" onClick={() => setOpenGroupPose(!openGroupPose)}>
-              <span>Target Pose</span>
+              <span>{TRANSLATIONS[lang].targetPose}</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupPose ? "collapsed" : ""}`} />
             </div>
             <div className={`sidebar-group-body ${!openGroupPose ? "collapsed" : ""}`}>
@@ -1070,7 +1319,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span className="pose-card-icon">🧘</span>
-                  <span className="pose-card-label">Warrior II</span>
+                  <span className="pose-card-label">Virabhadrasana II</span>
                 </div>
                 <div 
                   className={`pose-card ${activePreset === "plank" ? "active" : ""}`}
@@ -1080,7 +1329,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span className="pose-card-icon">🏋️</span>
-                  <span className="pose-card-label">Plank</span>
+                  <span className="pose-card-label">Phalakasana</span>
                 </div>
                 <div 
                   className={`pose-card ${activePreset === "tree_pose" ? "active" : ""}`}
@@ -1090,7 +1339,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span className="pose-card-icon">🌲</span>
-                  <span className="pose-card-label">Tree Pose</span>
+                  <span className="pose-card-label">Vrikshasana</span>
                 </div>
               </div>
             </div>
@@ -1100,18 +1349,18 @@ export default function Dashboard() {
           {/* Group 4: Digital Twin Profile */}
           <div className="sidebar-group">
             <div className="sidebar-group-header" onClick={() => setOpenGroupTwin(!openGroupTwin)}>
-              <span>Digital Twin Profile</span>
+              <span>{TRANSLATIONS[lang].digitalTwinProfile}</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupTwin ? "collapsed" : ""}`} />
             </div>
             <div className={`sidebar-group-body ${!openGroupTwin ? "collapsed" : ""}`}>
               {calibratedProfile ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "200px", overflowY: "auto", paddingRight: "4px" }}>
                   <div style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500", marginBottom: "4px" }}>
-                    ✓ Active Calibration Profile
+                    {TRANSLATIONS[lang].activeProfile}
                   </div>
                   {Object.keys(calibratedProfile).map((joint) => (
                     <div key={joint} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "4px" }}>
-                      <span style={{ color: "rgba(255,255,255,0.7)" }}>{joint.replace('_', ' ').toUpperCase()}</span>
+                      <span style={{ color: "rgba(255,255,255,0.7)" }}>{(JOINT_TRANSLATIONS[lang][joint] || joint.replace('_', ' ')).toUpperCase()}</span>
                       <span style={{ fontWeight: "600" }}>
                         {calibratedProfile[joint].min}° – {calibratedProfile[joint].max}°
                       </span>
@@ -1121,9 +1370,9 @@ export default function Dashboard() {
               ) : (
                 <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", lineHeight: "1.5" }}>
                   {calibrationState === "calibrating" ? (
-                    <span style={{ color: "var(--color-warning)" }}>Calibrating... recording joint ranges.</span>
+                    <span style={{ color: "var(--color-warning)" }}>{TRANSLATIONS[lang].calibratingTwin}</span>
                   ) : (
-                    "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges."
+                    TRANSLATIONS[lang].uncalibratedTwin
                   )}
                 </div>
               )}
@@ -1133,12 +1382,12 @@ export default function Dashboard() {
           {/* Group 3: API Configuration */}
           <div className="sidebar-group">
             <div className="sidebar-group-header" onClick={() => setOpenGroupConfig(!openGroupConfig)}>
-              <span>API Configuration</span>
+              <span>{TRANSLATIONS[lang].apiConfig}</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupConfig ? "collapsed" : ""}`} />
             </div>
             <div className={`sidebar-group-body ${!openGroupConfig ? "collapsed" : ""}`}>
               <div className="input-group">
-                <label className="input-label">Backend API URL</label>
+                <label className="input-label">{TRANSLATIONS[lang].backendApiUrl}</label>
                 <input
                   type="text"
                   className="groq-config-input"
@@ -1153,7 +1402,7 @@ export default function Dashboard() {
                   placeholder="http://localhost:8000/api"
                 />
                 <p className="text-muted" style={{ fontSize: "11px", marginTop: "4px" }}>
-                  Point to localhost or your Hugging Face Space URL.
+                  {TRANSLATIONS[lang].apiUrlHelper}
                 </p>
               </div>
             </div>
@@ -1170,7 +1419,7 @@ export default function Dashboard() {
               <div className="camera-panel-header">
                 <div className="camera-panel-title">
                   <CameraIcon size={18} />
-                  <span>Camera Stream</span>
+                  <span>{TRANSLATIONS[lang].cameraStream}</span>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1182,7 +1431,7 @@ export default function Dashboard() {
                       disabled={isInitializingCamera}
                     >
                       <RefreshCw size={16} />
-                      <span>Swap Camera</span>
+                      <span>{TRANSLATIONS[lang].swapCamera}</span>
                     </button>
                   )}
 
@@ -1201,7 +1450,7 @@ export default function Dashboard() {
                       title="Enter fullscreen yoga mode"
                     >
                       <Maximize2 size={16} />
-                      <span>Focus Mode</span>
+                      <span>{TRANSLATIONS[lang].focusMode}</span>
                     </button>
                   )}
 
@@ -1215,12 +1464,12 @@ export default function Dashboard() {
                     ) : cameraActive ? (
                       <>
                         <VideoOff size={16} />
-                        <span>Stop Video</span>
+                        <span>{TRANSLATIONS[lang].stopVideo}</span>
                       </>
                     ) : (
                       <>
                         <CameraIcon size={16} />
-                        <span>Start Video</span>
+                        <span>{TRANSLATIONS[lang].startVideo}</span>
                       </>
                     )}
                   </button>
@@ -1261,8 +1510,8 @@ export default function Dashboard() {
                         boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
                       }}>
                         <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
-                        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Calibrating Digital Twin</h3>
-                        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>Stay in camera view...</p>
+                        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>{TRANSLATIONS[lang].calibratingProgress}</h3>
+                        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>{TRANSLATIONS[lang].stayInView}</p>
                         <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
                       </div>
                     </div>
@@ -1270,7 +1519,7 @@ export default function Dashboard() {
                   {cameraActive && (
                     <div className="camera-live-badge">
                       <div className="live-dot" />
-                      <span>LIVE</span>
+                      <span>{lang === 'hi' ? "लाइव" : lang === 'bn' ? "লাইভ" : "LIVE"}</span>
                     </div>
                   )}
                   {!cameraActive && (
@@ -1278,7 +1527,7 @@ export default function Dashboard() {
                       <div className="camera-empty-icon">
                         <VideoOff size={32} />
                       </div>
-                      <p>Camera is inactive. Click "Start Video" to begin.</p>
+                      <p>{TRANSLATIONS[lang].cameraInactive}</p>
                     </div>
                   )}
                 </div>
@@ -1287,7 +1536,7 @@ export default function Dashboard() {
                 {cameraActive && (
                   <div className="fullscreen-caption-bar" key={correctionText}>
                     <span className={correctionText ? 'caption-text active' : 'caption-text placeholder'}>
-                      {correctionText || (lang === "hi" ? "कैमरे के साथ अपने शरीर को संरेखित करें..." : lang === "bn" ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..." : "Align your body with the camera...")}
+                      {correctionText || TRANSLATIONS[lang].alignBody}
                     </span>
                   </div>
                 )}
@@ -1302,7 +1551,7 @@ export default function Dashboard() {
                       aria-label="Exit fullscreen"
                     >
                       <X size={16} />
-                      <span>Exit</span>
+                      <span>{TRANSLATIONS[lang].exit}</span>
                     </button>
 
                     {/* Score badge */}
@@ -1337,19 +1586,19 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="kpi-card">
-                    <span className="kpi-label">Posture Score</span>
+                    <span className="kpi-label">{TRANSLATIONS[lang].postureScore}</span>
                     <span className="kpi-value">{Math.round(correctness * 100)}%</span>
-                    <span className="kpi-sub">{correctness >= 0.75 ? "✓ On target" : "Needs adjustment"}</span>
+                    <span className="kpi-sub">{correctness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
                   </div>
                   <div className="kpi-card">
-                    <span className="kpi-label">Detected Pose</span>
-                    <span className="kpi-value">{activePose === "transition/unknown" ? "—" : activePose.split('/').pop()?.toUpperCase()}</span>
-                    <span className="kpi-sub">{flowPose === "transition/unknown" ? "Static" : "Flow mode"}</span>
+                    <span className="kpi-label">{TRANSLATIONS[lang].detectedPose}</span>
+                    <span className="kpi-value">{activePose === "transition/unknown" ? "—" : getSanskritName(activePose)}</span>
+                    <span className="kpi-sub">{flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : TRANSLATIONS[lang].flowMode}</span>
                   </div>
                   <div className="kpi-card">
-                    <span className="kpi-label">Fusing</span>
+                    <span className="kpi-label">{TRANSLATIONS[lang].fusing}</span>
                     <span className="kpi-value">{recoveredJoints.length > 0 ? recoveredJoints.length : "—"}</span>
-                    <span className="kpi-sub">{recoveredJoints.length > 0 ? "Occlusion active" : "All visible"}</span>
+                    <span className="kpi-sub">{recoveredJoints.length > 0 ? TRANSLATIONS[lang].occlusionActive : TRANSLATIONS[lang].allVisible}</span>
                   </div>
                 </>
               )}
@@ -1360,32 +1609,32 @@ export default function Dashboard() {
           <div className="glass-panel">
             <h2 className="section-title">
               <Gauge size={20} />
-              <span>Real-Time Feedback Hub</span>
+              <span>{TRANSLATIONS[lang].feedbackHub}</span>
             </h2>
 
             <div className="feedback-grid">
               <div className="gauge-container glass-panel">
                 <ScoreRing correctness={correctness} />
-                <span className="gauge-label">Correctness Score</span>
+                <span className="gauge-label">{TRANSLATIONS[lang].correctnessScore}</span>
               </div>
 
               <div className="metrics-list">
                 <div className="deviation-item m-0">
-                  <span className="deviation-name">Detected Pose</span>
+                  <span className="deviation-name">{TRANSLATIONS[lang].detectedPose}</span>
                   <span className="metric-value primary">
-                    {activePose === "transition/unknown" ? "Transition/Unknown" : activePose.toUpperCase()}
+                    {getSanskritName(activePose)}
                   </span>
                 </div>
                 <div className="deviation-item m-0">
-                  <span className="deviation-name">Sequence Flow</span>
+                  <span className="deviation-name">{TRANSLATIONS[lang].sequenceFlow}</span>
                   <span className="metric-value">
-                    {flowPose === "transition/unknown" ? "Static Check" : flowPose.toUpperCase()}
+                    {flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : getSanskritName(flowPose)}
                   </span>
                 </div>
                 <div className="deviation-item m-0">
-                  <span className="deviation-name">Occlusion Fusing</span>
+                  <span className="deviation-name">{TRANSLATIONS[lang].occlusionFusing}</span>
                   <span className={`metric-value ${recoveredJoints.length > 0 ? "warning" : "success"}`}>
-                    {recoveredJoints.length > 0 ? `Active (${recoveredJoints.length})` : "Inactive"}
+                    {recoveredJoints.length > 0 ? `${TRANSLATIONS[lang].active} (${recoveredJoints.length})` : TRANSLATIONS[lang].inactive}
                   </span>
                 </div>
               </div>
@@ -1396,7 +1645,7 @@ export default function Dashboard() {
               <div className="occlusion-alert">
                 <p className="occlusion-alert-text">
                   <ShieldAlert size={14} />
-                  <span><strong>Fusing Occluded landmarks:</strong> {recoveredJoints.join(", ")} (Coordinate mirrored dynamically from twin joint)</span>
+                  <span><strong>{TRANSLATIONS[lang].fusingOccluded}</strong> {recoveredJoints.map(j => JOINT_TRANSLATIONS[lang][j] || j).join(", ")} {TRANSLATIONS[lang].mirroredCoordinates}</span>
                 </p>
               </div>
             )}
@@ -1406,15 +1655,15 @@ export default function Dashboard() {
               <div className="guidance-box info" key="waiting-pose">
                 <Activity size={24} />
                 <div className="guidance-content">
-                  <span className="guidance-label-text">System Status</span>
-                  <span className="guidance-text">Detecting pose... Align your body with the camera.</span>
+                  <span className="guidance-label-text">{TRANSLATIONS[lang].systemStatus}</span>
+                  <span className="guidance-text">{TRANSLATIONS[lang].detectingPose}</span>
                 </div>
               </div>
             ) : correctionText ? (
               <div className="guidance-box" key={correctionText}>
                 <Volume2 size={24} />
                 <div className="guidance-content">
-                  <span className="guidance-label-text">Safety Correction Voice Guidance</span>
+                  <span className="guidance-label-text">{TRANSLATIONS[lang].safetyCorrection}</span>
                   <span className="guidance-text">{correctionText}</span>
                 </div>
               </div>
@@ -1422,8 +1671,8 @@ export default function Dashboard() {
               <div className="guidance-box success" key="alignment-correct">
                 <CheckCircle2 size={24} />
                 <div className="guidance-content">
-                  <span className="guidance-label-text">Pose Alignment Correct</span>
-                  <span className="guidance-text">Joint angle alignment is correct. Keep breathing steadily.</span>
+                  <span className="guidance-label-text">{TRANSLATIONS[lang].alignmentCorrect}</span>
+                  <span className="guidance-text">{TRANSLATIONS[lang].alignmentCorrectDesc}</span>
                 </div>
               </div>
             )}
@@ -1433,12 +1682,12 @@ export default function Dashboard() {
           <div className="glass-panel">
             <h2 className="section-title">
               <HelpCircle size={20} />
-              <span>Angle Alignment Details</span>
+              <span>{TRANSLATIONS[lang].angleDetails}</span>
             </h2>
             
             {activePose === "transition/unknown" ? (
               <div className="angle-placeholder-text">
-                <p>Assume a target yoga pose to view real-time joint angle alignments and corrections.</p>
+                <p>{TRANSLATIONS[lang].assumePosePrompt}</p>
               </div>
             ) : (
               <>
@@ -1449,10 +1698,11 @@ export default function Dashboard() {
                     : (joint === "knee_l" ? currentKneeAngle : (joint === "shoulder_l" ? currentShoulderAngle : 180));
                   const diff = currentAngle - target;
                   const isDeviating = Math.abs(diff) > tolerance;
+                  const translatedLabel = JOINT_TRANSLATIONS[lang][joint] || label;
 
                   return (
                     <div className="deviation-item" key={joint}>
-                      <span className="deviation-name">{label} (Target: {target}° for {activePose.split('/').pop()?.toUpperCase()})</span>
+                      <span className="deviation-name">{translatedLabel} ({TRANSLATIONS[lang].targetFor.replace('{target}', target.toString()).replace('{pose}', getSanskritName(activePose))})</span>
                       <div className="deviation-row-detail">
                         <div className="deviation-bar-bg">
                           <div 
@@ -1463,7 +1713,7 @@ export default function Dashboard() {
                           />
                         </div>
                         <span className={`deviation-value ${isDeviating ? "error" : "success"}`}>
-                          {currentAngle}° (Diff: {diff > 0 ? "+" : ""}{diff}°)
+                          {currentAngle}° ({TRANSLATIONS[lang].diff} {diff > 0 ? "+" : ""}{diff}°)
                         </span>
                       </div>
                     </div>

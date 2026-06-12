@@ -145,6 +145,26 @@ export function useYogaPipeline({
     }
   };
 
+  useEffect(() => {
+    if (activePose !== "transition/unknown") {
+      if (correctness >= correctnessThreshold) {
+        const successMsg = language === "hi"
+          ? "अंग संरेखण सही है। निरंतर सांस लेते रहें।"
+          : language === "bn"
+          ? "আসন ভঙ্গি সঠিক আছে। স্বাভাবিক শ্বাস-প্রশ্বাস বজায় রাখুন।"
+          : "Pose alignment correct. Keep breathing steadily.";
+        setCorrectionText(successMsg);
+      }
+    } else {
+      const alignMsg = language === "hi"
+        ? "कैमरे के साथ अपने शरीर को संरेखित करें..."
+        : language === "bn"
+        ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..."
+        : "Align your body with the camera...";
+      setCorrectionText(alignMsg);
+    }
+  }, [language, activePose, correctness, correctnessThreshold]);
+
   const resetPipeline = () => {
     coordBuffer.current = [];
     setActivePose("transition/unknown");
