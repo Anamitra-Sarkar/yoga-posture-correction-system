@@ -134,7 +134,11 @@ export function useYogaPipeline({
         setCorrectionText(alignMsg);
       }
       
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "AbortError" || (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError") || error.message?.includes("aborted") || error.message?.includes("AbortError")) {
+        // Silently ignore aborted requests since a newer frame was sent
+        return;
+      }
       console.error("Error running yoga posture pipeline:", error);
     } finally {
       setIsLoading(false);
