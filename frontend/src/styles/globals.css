@@ -222,6 +222,16 @@ p, li {
   }
 }
 
+@media (max-width: 480px) {
+  .status-pill {
+    display: none !important;
+  }
+  /* Already hiding session-timer at 374px — extend to 480px */
+  .session-timer {
+    display: none !important;
+  }
+}
+
 @media (max-width: 639px) {
   .language-select-native {
     padding-right: 0;
@@ -569,10 +579,10 @@ p, li {
   color: var(--color-primary);
 }
 
-/* ─── CAMERA FRAME: 16/9 ratio, wider & shorter ─── */
+/* ─── CAMERA FRAME: 4/3 ratio ─── */
 .camera-frame {
   background: #0a0a0a;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -606,6 +616,13 @@ p, li {
   }
 }
 
+@media (max-width: 639px) {
+  .camera-frame {
+    aspect-ratio: 3 / 4;   /* Taller on portrait mobile for full body */
+    max-height: 60dvh;
+  }
+}
+
 /* The raw video feed should be invisible — canvas handles display */
 .camera-video-element {
   position: absolute !important;
@@ -623,7 +640,7 @@ p, li {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;   /* Changed from cover to contain — prevents body crop */
   transform: scaleX(-1); /* mirror for natural selfie view */
   display: block;
 }
@@ -1469,6 +1486,8 @@ button,
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   border-top-color: transparent !important;
+  contain: layout;
+  overflow: hidden;
 }
 
 /* 3. ChevronDown rotation on collapsed groups */
@@ -1696,6 +1715,32 @@ select:focus-visible {
   background: #000 !important;
 }
 
+.yoga-fullscreen:fullscreen,
+.yoga-fullscreen:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100dvh !important;
+  background: #000 !important;
+}
+
+/* Ensure overlays are visible inside native fullscreen */
+:fullscreen .fullscreen-caption-bar,
+:-webkit-full-screen .fullscreen-caption-bar,
+:fullscreen .fullscreen-exit-btn,
+:-webkit-full-screen .fullscreen-exit-btn,
+:fullscreen .fullscreen-score-badge,
+:-webkit-full-screen .fullscreen-score-badge,
+:fullscreen .camera-live-badge,
+:-webkit-full-screen .camera-live-badge {
+  z-index: 2147483647 !important;
+}
+
+:fullscreen .camera-canvas,
+:-webkit-full-screen .camera-canvas {
+  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .yoga-fullscreen .camera-frame {
   width: 100% !important;
   height: 100% !important;
@@ -1705,7 +1750,7 @@ select:focus-visible {
 }
 
 .yoga-fullscreen .camera-canvas {
-  object-fit: cover;
+  object-fit: contain;
   width: 100% !important;
   height: 100% !important;
 }
@@ -1713,8 +1758,8 @@ select:focus-visible {
 /* Exit button */
 .fullscreen-exit-btn {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: max(20px, env(safe-area-inset-top) + 8px);
+  right: max(20px, env(safe-area-inset-right) + 8px);
   z-index: 10001;
   display: inline-flex;
   align-items: center;
@@ -1740,8 +1785,8 @@ select:focus-visible {
 /* Score badge */
 .fullscreen-score-badge {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: max(20px, env(safe-area-inset-top) + 8px);
+  left: max(20px, env(safe-area-inset-left) + 8px);
   z-index: 10001;
   padding: 8px 16px;
   background: rgba(0, 0, 0, 0.55);
@@ -1766,26 +1811,28 @@ select:focus-visible {
 /* Caption bar */
 .fullscreen-caption-bar {
   position: absolute;
-  bottom: 36px;
+  bottom: max(36px, env(safe-area-inset-bottom) + 16px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10001;
-  max-width: min(720px, 90vw);
-  width: max-content;
+  z-index: 2147483647;  /* Maximum z-index to beat fullscreen stacking context */
+  max-width: min(720px, 92vw);
+  width: auto;          /* Remove max-content — allow wrapping */
   padding: 14px 28px;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-xl);
   text-align: center;
+  pointer-events: none; /* Let touches pass through caption to canvas */
 }
 
 .caption-text {
   display: block;
-  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-size: clamp(0.95rem, 2.2vw, 1.25rem);
   font-weight: 500;
   line-height: 1.5;
+  white-space: normal;   /* Allow text to wrap on small screens */
   animation: caption-appear 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

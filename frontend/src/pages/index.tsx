@@ -257,6 +257,7 @@ export default function Dashboard() {
   // References
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<any>(null);
   const poseRef = useRef<any>(null);
   const lastSpokenText = useRef("");
@@ -264,6 +265,7 @@ export default function Dashboard() {
   const lastApiCallTime = useRef<number>(0);
   const API_THROTTLE_MS = 500;
   const abortControllerRef = useRef<AbortController | null>(null);
+  const speechUnlockedRef = useRef(false);
   
   // Dynamic metrics computed in real-time
   const [currentKneeAngle, setCurrentKneeAngle] = useState(180);
@@ -308,6 +310,26 @@ export default function Dashboard() {
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  // Unlock speech on first user gesture (required for iOS Safari)
+  useEffect(() => {
+    const unlockSpeech = () => {
+      if (speechUnlockedRef.current) return;
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        // Speak a silent utterance to unlock the API
+        const unlock = new SpeechSynthesisUtterance('');
+        unlock.volume = 0;
+        window.speechSynthesis.speak(unlock);
+        speechUnlockedRef.current = true;
+      }
+    };
+    window.addEventListener('touchstart', unlockSpeech, { once: true });
+    window.addEventListener('click', unlockSpeech, { once: true });
+    return () => {
+      window.removeEventListener('touchstart', unlockSpeech);
+      window.removeEventListener('click', unlockSpeech);
+    };
   }, []);
 
   // Intercept window.fetch to support request cancellation (AbortController)
@@ -386,16 +408,20 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Fullscreen escape key listener
+  // Listen to native fullscreen change event (handles Esc key automatically)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isFullscreen) {
+    const onFSChange = () => {
+      if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
         setIsFullscreen(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen]);
+    document.addEventListener('fullscreenchange', onFSChange);
+    document.addEventListener('webkitfullscreenchange', onFSChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFSChange);
+      document.removeEventListener('webkitfullscreenchange', onFSChange);
+    };
+  }, []);
 
   const calibrationStateRef = useRef<"idle" | "calibrating" | "complete">("idle");
 
@@ -405,18 +431,39 @@ export default function Dashboard() {
   };
 
   const announceTTS = (text: string) => {
-    if (speechEnabled && typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      if (lang === "hi") {
-        utterance.lang = "hi-IN";
-      } else if (lang === "bn") {
-        utterance.lang = "bn-IN";
-      } else {
-        utterance.lang = "en-US";
-      }
-      window.speechSynthesis.speak(utterance);
+    if (!speechEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
+    
+    // Resume if paused (happens when tab goes to background on Chrome)
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
     }
+    
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'bn' ? 'bn-IN' : 'en-US';
+    utterance.rate = 0.92;   // Slightly slower for yoga instruction clarity
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    // Chrome bug: long utterances silently stop after ~15s. Split and chain.
+    const MAX_CHUNK = 180;
+    if (text.length > MAX_CHUNK) {
+      const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+      let idx = 0;
+      const speakNext = () => {
+        if (idx >= sentences.length || !speechEnabled) return;
+        const u = new SpeechSynthesisUtterance(sentences[idx].trim());
+        u.lang = utterance.lang;
+        u.rate = utterance.rate;
+        u.onend = () => { idx++; speakNext(); };
+        window.speechSynthesis.speak(u);
+      };
+      speakNext();
+      return;
+    }
+    
+    window.speechSynthesis.speak(utterance);
   };
 
   const startCalibration = () => {
@@ -513,21 +560,22 @@ export default function Dashboard() {
       
       // Speak if it's a new instruction (and at least 5s has passed to avoid rapid overlaps) or if 30s has passed for repetition
       if ((isNewText && timeSinceLastSpoke > 5000) || timeSinceLastSpoke > 30000) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(correctionText);
-        if (lang === "hi") {
-          utterance.lang = "hi-IN";
-        } else if (lang === "bn") {
-          utterance.lang = "bn-IN";
-        } else {
-          utterance.lang = "en-US";
-        }
-        window.speechSynthesis.speak(utterance);
+        announceTTS(correctionText);
         lastSpokenText.current = correctionText;
         lastSpokenTime.current = now;
       }
     }
   }, [correctionText, speechEnabled, lang]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && window.speechSynthesis?.paused) {
+        window.speechSynthesis.resume();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
 
   // Handle checking scripts loading
@@ -592,8 +640,9 @@ export default function Dashboard() {
       const constraints = {
         video: {
           facingMode: mode,
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 60 }
         }
       };
 
@@ -659,11 +708,59 @@ export default function Dashboard() {
     startCamera(nextMode);
   };
 
+  const enterFullscreen = async () => {
+    const el = fullscreenContainerRef.current;
+    if (!el) return;
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen();
+      else if ((el as any).mozRequestFullScreen) await (el as any).mozRequestFullScreen();
+      setIsFullscreen(true);
+      // Lock to landscape on mobile if supported
+      if (screen.orientation && (screen.orientation as any).lock) {
+        try { await (screen.orientation as any).lock('landscape'); } catch(_) {}
+      }
+    } catch (err) {
+      // Fallback to CSS fullscreen if API fails (e.g. iOS Safari)
+      setIsFullscreen(true);
+    }
+  };
+
+  const exitFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if ((document as any).webkitFullscreenElement) {
+        await (document as any).webkitExitFullscreen();
+      }
+      if (screen.orientation && (screen.orientation as any).unlock) {
+        try { (screen.orientation as any).unlock(); } catch(_) {}
+      }
+    } catch(_) {}
+    setIsFullscreen(false);
+  };
+
   // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
+  }, []);
+
+  // Resize canvas to match its container dynamically
+  useEffect(() => {
+    const resizeCanvas = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    return () => window.removeEventListener('resize', resizeCanvas);
   }, []);
 
   // MediaPipe Result processing callback
@@ -676,7 +773,9 @@ export default function Dashboard() {
     // Draw raw camera frame onto canvas
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+    const cw = canvasElement.width;
+    const ch = canvasElement.height;
+    canvasCtx.drawImage(results.image, 0, 0, cw, ch);
 
     if (results.poseLandmarks) {
       // 1. Draw joints skeleton overlay (with clinical palette aesthetics)
@@ -738,13 +837,16 @@ export default function Dashboard() {
 
   // Drawing method for Canvas Overlay
   const drawSkeletonOverlay = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
+    const cw = ctx.canvas.width;
+    const ch = ctx.canvas.height;
+
     const drawLine = (idx1: number, idx2: number, color = "#edecea", width = 3) => {
       const pt1 = landmarks[idx1];
       const pt2 = landmarks[idx2];
       if (pt1 && pt2) {
         ctx.beginPath();
-        ctx.moveTo(pt1.x * 640, pt1.y * 480);
-        ctx.lineTo(pt2.x * 640, pt2.y * 480);
+        ctx.moveTo(pt1.x * cw, pt1.y * ch);
+        ctx.lineTo(pt2.x * cw, pt2.y * ch);
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
         ctx.lineCap = "round";
@@ -778,7 +880,7 @@ export default function Dashboard() {
     landmarks.forEach((pt: any, i: number) => {
       if (pt.visibility > 0.5 && [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].includes(i)) {
         ctx.beginPath();
-        ctx.arc(pt.x * 640, pt.y * 480, i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
+        ctx.arc(pt.x * cw, pt.y * ch, i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
         ctx.fillStyle = i === 25 && isKneeDeviating ? "#b03060" : "#437a22";
         ctx.fill();
       }
@@ -1095,7 +1197,7 @@ export default function Dashboard() {
                         alignItems: 'center',
                         gap: '6px'
                       }}
-                      onClick={() => setIsFullscreen(true)}
+                      onClick={enterFullscreen}
                       title="Enter fullscreen yoga mode"
                     >
                       <Maximize2 size={16} />
@@ -1125,7 +1227,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={`camera-frame-wrapper ${isFullscreen ? 'yoga-fullscreen' : ''}`}>
+              <div ref={fullscreenContainerRef} className={`camera-frame-wrapper ${isFullscreen ? 'yoga-fullscreen' : ''}`}>
                 <div className="camera-frame" style={{ position: "relative" }}>
                   <video 
                     ref={videoRef} 
@@ -1135,8 +1237,6 @@ export default function Dashboard() {
                   />
                   <canvas 
                     ref={canvasRef} 
-                    width={640} 
-                    height={480} 
                     className="camera-canvas"
                   />
                   {cameraActive && calibrationState === "calibrating" && (
@@ -1198,7 +1298,7 @@ export default function Dashboard() {
                     {/* Exit button */}
                     <button
                       className="fullscreen-exit-btn"
-                      onClick={() => setIsFullscreen(false)}
+                      onClick={exitFullscreen}
                       aria-label="Exit fullscreen"
                     >
                       <X size={16} />
