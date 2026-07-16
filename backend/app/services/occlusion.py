@@ -39,6 +39,15 @@ def fuse_and_recover_occlusions(
         return fused.tolist(), recovered_joints, "Two-Stream Fusion (MediaPipe + CLIFF)"
         
     # Case 2: Fallback to local 3D Symmetric Kinematic solver
+    # Estimate the body's sagittal midline x-coordinate from visible hip/shoulder
+    # landmarks (MediaPipe coords are normalized image-space [0,1], so the
+    # midline is NOT at x=0 — it must be measured from the visible torso).
+    midline_candidates = []
+    for l_idx, r_idx in [(23, 24), (11, 12)]:  # hips, then shoulders
+        if mp_arr[l_idx, 3] >= visibility_threshold and mp_arr[r_idx, 3] >= visibility_threshold:
+            midline_candidates.append((mp_arr[l_idx, 0] + mp_arr[r_idx, 0]) / 2.0)
+    center_x = midline_candidates[0] if midline_candidates else 0.5
+
     for idx in occluded_indices:
         # Map symmetrical joints to query partner information
         partner_map = {
@@ -49,9 +58,11 @@ def fuse_and_recover_occlusions(
         }
         if idx in partner_map:
             partner_idx = partner_map[idx]
-            # Mirror the partner's coordinate space along body midplane (invert X)
+            # Mirror the partner's coordinate space by reflecting about the
+            # body midline (not negating raw x, which would place the joint
+            # in the wrong half of the frame entirely).
             if mp_arr[partner_idx, 3] >= visibility_threshold:
-                fused[idx, 0] = -mp_arr[partner_idx, 0]
+                fused[idx, 0] = 2 * center_x - mp_arr[partner_idx, 0]
                 fused[idx, 1] = mp_arr[partner_idx, 1]
                 fused[idx, 2] = mp_arr[partner_idx, 2]
                 fused[idx, 3] = 0.8 # Confidence flag

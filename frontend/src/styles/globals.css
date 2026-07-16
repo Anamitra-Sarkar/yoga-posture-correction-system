@@ -871,7 +871,7 @@ button, [role="button"] { user-select: none; }
   width: 100%;
 }
 
-@media (max-width: 374px) {
+@media (max-width: 480px) {
   .kpi-row {
     grid-template-columns: 1fr 1fr;
   }
@@ -1238,6 +1238,9 @@ button, [role="button"] { user-select: none; }
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   font-weight: 500;
+  overflow-wrap: break-word;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .deviation-bar-bg {
@@ -1357,6 +1360,17 @@ button, [role="button"] { user-select: none; }
   color: var(--color-text-muted);
   font-weight: 600;
   letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.safety-verified-icon {
+  color: var(--color-success);
+}
+
+.safety-flagged-icon {
+  color: var(--color-warning);
 }
 
 .guidance-text {

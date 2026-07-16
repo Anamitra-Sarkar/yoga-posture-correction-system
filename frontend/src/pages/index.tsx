@@ -6,10 +6,8 @@ import {
   VolumeX, 
   Settings, 
   RefreshCw, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Sliders, 
-  Compass, 
+  ShieldCheck,
+  ShieldAlert,
   Activity,
   CheckCircle2, 
   HelpCircle,
@@ -28,68 +26,9 @@ import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
 import { extractAnglesFromLandmarks } from "../utils/geometry";
 
-// Preset poses for the simulation mode fallback
-const PRESET_POSES = {
-  warrior_2: {
-    name: "Warrior II (Virabhadrasana II)",
-    angles: [165, 160, 90, 95, 95, 105, 120, 175, 90, 88, 85, 87, 180, 85, 88],
-    landmarks: [
-      [0.0, -0.6, 0.0, 0.95],   // Nose
-      [0.18, -0.4, -0.05, 0.9], // Shoulder L
-      [-0.18, -0.4, 0.05, 0.9], // Shoulder R
-      [0.4, -0.4, -0.08, 0.9],  // Elbow L
-      [-0.4, -0.4, 0.08, 0.9],  // Elbow R
-      [0.6, -0.4, -0.1, 0.9],   // Wrist L
-      [-0.6, -0.4, 0.1, 0.9],   // Wrist R
-      [0.12, 0.1, -0.05, 0.9],  // Hip L
-      [-0.12, 0.1, 0.05, 0.9],  // Hip R
-      [0.35, 0.4, -0.05, 0.9],  // Knee L
-      [-0.45, 0.35, 0.05, 0.9], // Knee R
-      [0.35, 0.8, -0.05, 0.9],  // Ankle L
-      [-0.75, 0.65, 0.05, 0.9]  // Ankle R
-    ]
-  },
-  plank: {
-    name: "Plank Pose (Phalakasana)",
-    angles: [175, 177, 88, 90, 175, 176, 178, 179, 90, 90, 180, 180, 180, 0, 0],
-    landmarks: [
-      [-0.5, -0.2, 0.0, 0.95],
-      [-0.3, -0.1, -0.05, 0.9],
-      [-0.3, -0.1, 0.05, 0.9],
-      [-0.3, 0.2, -0.05, 0.9],
-      [-0.3, 0.2, 0.05, 0.9],
-      [-0.3, 0.5, -0.05, 0.9],
-      [-0.3, 0.5, 0.05, 0.9],
-      [0.1, -0.12, -0.05, 0.9],
-      [0.1, -0.12, 0.05, 0.9],
-      [0.45, -0.15, -0.05, 0.9],
-      [0.45, -0.15, 0.05, 0.9],
-      [0.8, -0.18, -0.05, 0.9],
-      [0.8, -0.18, 0.05, 0.9]
-    ]
-  },
-  tree_pose: {
-    name: "Tree Pose (Vrikshasana)",
-    angles: [175, 175, 15, 15, 125, 175, 45, 178, 90, 90, 178, 178, 180, 45, 0],
-    landmarks: [
-      [0.0, -0.7, 0.0, 0.95],
-      [0.15, -0.5, -0.05, 0.9],
-      [-0.15, -0.5, 0.05, 0.9],
-      [0.25, -0.3, -0.05, 0.9],
-      [-0.25, -0.3, 0.05, 0.9],
-      [0.18, -0.1, -0.05, 0.9],
-      [-0.18, -0.1, 0.05, 0.9],
-      [0.12, -0.05, -0.05, 0.9],
-      [-0.12, -0.05, 0.05, 0.9],
-      [0.28, -0.15, -0.05, 0.9],
-      [-0.12, 0.3, 0.05, 0.9],
-      [0.12, 0.2, -0.05, 0.9],
-      [-0.12, 0.65, 0.05, 0.9]
-    ]
-  }
-};
-
 /* eslint-disable */
+type PresetPoseId = "warrior_2" | "plank" | "tree_pose" | "chair_pose" | "cobra_pose" | "mountain_pose";
+
 const POSE_TARGET_ANGLES: {
   [poseId: string]: {
     joint: string;
@@ -150,13 +89,45 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
     { icon: "👁️", cue: "Fix gaze on a still point (Drishti)" },
     { icon: "💪", cue: "Hands in Anjali or raised overhead" },
   ],
+  chair_pose: [
+    { icon: "🪑", cue: "Sit hips back like lowering into a chair" },
+    { icon: "🦵", cue: "Knees tracking over ankles, not past toes" },
+    { icon: "💪", cue: "Arms reach forward or overhead" },
+    { icon: "🦴", cue: "Weight rooted through the heels" },
+  ],
+  cobra_pose: [
+    { icon: "🐍", cue: "Hands under shoulders, elbows close to ribs" },
+    { icon: "🦴", cue: "Lift chest with back muscles, not just arms" },
+    { icon: "🧘", cue: "Hips and thighs stay grounded" },
+    { icon: "👁️", cue: "Gaze forward, neck long and neutral" },
+  ],
+  mountain_pose: [
+    { icon: "🦶", cue: "Feet grounded, weight evenly balanced" },
+    { icon: "🦴", cue: "Spine tall, shoulders stacked over hips" },
+    { icon: "💪", cue: "Arms relaxed at sides" },
+    { icon: "👁️", cue: "Gaze steady, breathing calm" },
+  ],
 };
 
 const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
-  warrior_2:  { level: "Intermediate", color: "var(--color-warning)" },
-  plank:      { level: "Beginner",     color: "var(--color-success)" },
-  tree_pose:  { level: "Intermediate", color: "var(--color-warning)" },
+  warrior_2:    { level: "Intermediate", color: "var(--color-warning)" },
+  plank:        { level: "Beginner",     color: "var(--color-success)" },
+  tree_pose:    { level: "Intermediate", color: "var(--color-warning)" },
+  chair_pose:   { level: "Beginner",     color: "var(--color-success)" },
+  cobra_pose:   { level: "Beginner",     color: "var(--color-success)" },
+  mountain_pose:{ level: "Beginner",     color: "var(--color-success)" },
 };
+
+// Poses selectable in the sidebar "Target Pose" grid — all 6 have backend
+// correction templates + target-angle rules, so every one is fully live.
+const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
+  { id: "warrior_2", icon: "🧘" },
+  { id: "plank", icon: "🏋️" },
+  { id: "tree_pose", icon: "🌲" },
+  { id: "chair_pose", icon: "🪑" },
+  { id: "cobra_pose", icon: "🐍" },
+  { id: "mountain_pose", icon: "⛰️" },
+];
 
 
 const FEATURE_NAMES_ORDER = [
@@ -582,7 +553,7 @@ export default function Dashboard() {
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
   const [langDropOpen, setLangDropOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activePreset, setActivePreset] = useState<"warrior_2" | "plank" | "tree_pose">("warrior_2");
+  const [activePreset, setActivePreset] = useState<PresetPoseId>("warrior_2");
   const [speechEnabled, setSpeechEnabled] = useState(true);
   // Digital Twin Calibration States
   const [calibrationState, setCalibrationState] = useState<"idle" | "calibrating" | "complete">("idle");
@@ -638,7 +609,6 @@ export default function Dashboard() {
   // Collapsible Groups states
   const [openGroupPose, setOpenGroupPose] = useState(true);
   const [openGroupTwin, setOpenGroupTwin] = useState(true);
-  const [openGroupConfig, setOpenGroupConfig] = useState(true);
   const [openGroupPoseGuide, setOpenGroupPoseGuide] = useState(true);
   const [openGroupSession, setOpenGroupSession] = useState(true);
 
@@ -1005,6 +975,7 @@ export default function Dashboard() {
     flowPose,
     flowConfidence,
     correctionText,
+    correctionIsSafe,
     recoveredJoints,
     isLoading,
     processFrame,
@@ -1533,36 +1504,19 @@ export default function Dashboard() {
             </div>
             <div className={`sidebar-group-body ${!openGroupPose ? "collapsed" : ""}`}>
               <div className="pose-card-grid">
-                <div 
-                  className={`pose-card ${activePreset === "warrior_2" ? "active" : ""}`}
-                  onClick={() => {
-                    setActivePreset("warrior_2");
-                    setSidebarOpen(false);
-                  }}
-                >
-                  <span className="pose-card-icon">🧘</span>
-                  <span className="pose-card-label">{getSanskritName("warrior_2", lang)}</span>
-                </div>
-                <div 
-                  className={`pose-card ${activePreset === "plank" ? "active" : ""}`}
-                  onClick={() => {
-                    setActivePreset("plank");
-                    setSidebarOpen(false);
-                  }}
-                >
-                  <span className="pose-card-icon">🏋️</span>
-                  <span className="pose-card-label">{getSanskritName("plank", lang)}</span>
-                </div>
-                <div 
-                  className={`pose-card ${activePreset === "tree_pose" ? "active" : ""}`}
-                  onClick={() => {
-                    setActivePreset("tree_pose");
-                    setSidebarOpen(false);
-                  }}
-                >
-                  <span className="pose-card-icon">🌲</span>
-                  <span className="pose-card-label">{getSanskritName("tree_pose", lang)}</span>
-                </div>
+                {POSE_SELECTOR_OPTIONS.map(({ id, icon }) => (
+                  <div
+                    key={id}
+                    className={`pose-card ${activePreset === id ? "active" : ""}`}
+                    onClick={() => {
+                      setActivePreset(id);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <span className="pose-card-icon">{icon}</span>
+                    <span className="pose-card-label">{getSanskritName(id, lang)}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -2005,7 +1959,14 @@ export default function Dashboard() {
               <div className="guidance-box" key={correctionText}>
                 <Volume2 size={24} />
                 <div className="guidance-content">
-                  <span className="guidance-label-text">{TRANSLATIONS[lang].safetyCorrection}</span>
+                  <span className="guidance-label-text">
+                    {TRANSLATIONS[lang].safetyCorrection}
+                    {correctionIsSafe ? (
+                      <ShieldCheck size={13} className="safety-verified-icon" aria-label="AI-verified safe" />
+                    ) : (
+                      <ShieldAlert size={13} className="safety-flagged-icon" aria-label="Fell back to reviewed template" />
+                    )}
+                  </span>
                   <span className="guidance-text">{correctionText}</span>
                 </div>
               </div>

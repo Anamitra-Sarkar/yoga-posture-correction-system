@@ -1,6 +1,9 @@
 import os
+import logging
 import requests
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 # Biomechanical knowledge graph templates
 BIOMECHANICAL_TEMPLATES = {
@@ -185,7 +188,7 @@ def generate_safe_correction(
                     correction_text = candidate_text
                 else:
                     is_safe = False # Flag candidate as unsafe; fallback to rule-based template
-        except Exception:
-            pass # Fallback to pre-approved templates
+        except Exception as e:
+            logger.warning(f"Groq correction call failed, falling back to template: {e}")
             
     return correction_text, is_safe

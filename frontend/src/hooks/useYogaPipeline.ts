@@ -20,6 +20,7 @@ export function useYogaPipeline({
   const [flowPose, setFlowPose] = useState<string>("transition/unknown");
   const [flowConfidence, setFlowConfidence] = useState<number>(0.0);
   const [correctionText, setCorrectionText] = useState<string>("");
+  const [correctionIsSafe, setCorrectionIsSafe] = useState<boolean>(true);
   const [recoveredJoints, setRecoveredJoints] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
@@ -113,6 +114,7 @@ export function useYogaPipeline({
               groq_api_key: groqApiKey
             });
             setCorrectionText(corrRes.correction_text);
+            setCorrectionIsSafe(corrRes.is_safe);
             lastCorrectionTime.current = now;
           }
         } else {
@@ -123,6 +125,7 @@ export function useYogaPipeline({
             ? "আসন ভঙ্গি সঠিক আছে। স্বাভাবিক শ্বাস-প্রশ্বাস বজায় রাখুন।"
             : "Pose alignment correct. Keep breathing steadily.";
           setCorrectionText(successMsg);
+          setCorrectionIsSafe(true);
         }
       } else {
         // Transition/Unknown - prompt user to align body visually in real-time
@@ -132,8 +135,9 @@ export function useYogaPipeline({
           ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..."
           : "Align your body with the camera...";
         setCorrectionText(alignMsg);
+        setCorrectionIsSafe(true);
       }
-      
+
     } catch (error: any) {
       if (error.name === "AbortError" || (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError") || error.message?.includes("aborted") || error.message?.includes("AbortError")) {
         // Silently ignore aborted requests since a newer frame was sent
@@ -154,6 +158,7 @@ export function useYogaPipeline({
           ? "আসন ভঙ্গি সঠিক আছে। স্বাভাবিক শ্বাস-প্রশ্বাস বজায় রাখুন।"
           : "Pose alignment correct. Keep breathing steadily.";
         setCorrectionText(successMsg);
+        setCorrectionIsSafe(true);
       }
     } else {
       const alignMsg = language === "hi"
@@ -162,6 +167,7 @@ export function useYogaPipeline({
         ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..."
         : "Align your body with the camera...";
       setCorrectionText(alignMsg);
+      setCorrectionIsSafe(true);
     }
   }, [language, activePose, correctness, correctnessThreshold]);
 
@@ -172,6 +178,7 @@ export function useYogaPipeline({
     setFlowPose("transition/unknown");
     setFlowConfidence(0.0);
     setCorrectionText("");
+    setCorrectionIsSafe(true);
     setRecoveredJoints([]);
   };
 
@@ -181,6 +188,7 @@ export function useYogaPipeline({
     flowPose,
     flowConfidence,
     correctionText,
+    correctionIsSafe,
     recoveredJoints,
     isLoading,
     processFrame,

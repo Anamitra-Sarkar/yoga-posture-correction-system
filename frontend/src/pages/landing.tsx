@@ -15,8 +15,7 @@ import {
   Cloud, 
   HelpCircle,
   Smartphone,
-  CheckCircle2,
-  Sliders
+  CheckCircle2
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -194,11 +193,11 @@ export default function LandingPage() {
           </div>
 
           <div className="landing-feature-card">
-            <Sliders className="feature-icon" size={20} />
-            <span className="landing-feature-category">Simulator</span>
-            <h3 className="landing-feature-title">Offline Simulation Mode</h3>
+            <Layers className="feature-icon" size={20} />
+            <span className="landing-feature-category">Poses</span>
+            <h3 className="landing-feature-title">6-Pose Guided Library</h3>
             <p className="landing-feature-desc">
-              Practice and test target asana coordinates using the slider simulator without camera access or internet.
+              Warrior II, Plank, Tree, Chair, Cobra, and Mountain pose, each with dedicated alignment cues and biomechanical correction rules.
             </p>
           </div>
         </div>
@@ -214,7 +213,7 @@ export default function LandingPage() {
             <div className="step-number">01</div>
             <div className="step-text">
               <h3 className="step-name">Capture</h3>
-              <p className="step-desc">Webcam frame or simulation input coordinates received by client.</p>
+              <p className="step-desc">Webcam frame captured and landmarked in the browser via MediaPipe.</p>
             </div>
           </div>
 

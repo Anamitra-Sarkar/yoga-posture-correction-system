@@ -45,7 +45,7 @@ def analyse_frame(data: FrameInput):
             
             # Scale deviations back to degrees
             devs_deg = (deviations_pred[0].cpu().numpy() * 180.0).tolist()
-            devs_dict = {FEATURE_NAMES[idx]: max(0.0, float(devs_deg[idx])) for idx in range(15)}
+            devs_dict = {FEATURE_NAMES[idx]: min(180.0, max(0.0, float(devs_deg[idx]))) for idx in range(15)}
             
         return FrameResponse(
             pose_id=predicted_pose,

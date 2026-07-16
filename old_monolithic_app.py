@@ -483,6 +483,14 @@ def occlusion_recovery(data: OcclusionInput):
     else:
         # Fallback 3D Kinematic Solver: Reconstruct occluded joints using bone-length symmetry & anatomical constraints
         method = "Symmetric Kinematic solver (4GB RAM Optimization Fallback)"
+        # Estimate the body's sagittal midline x from visible hip/shoulder landmarks
+        # (MediaPipe coords are normalized image-space [0,1]; the midline is not x=0).
+        midline_candidates = []
+        for l_idx, r_idx in [(23, 24), (11, 12)]:  # hips, then shoulders
+            if mp_arr[l_idx, 3] >= 0.5 and mp_arr[r_idx, 3] >= 0.5:
+                midline_candidates.append((mp_arr[l_idx, 0] + mp_arr[r_idx, 0]) / 2.0)
+        center_x = midline_candidates[0] if midline_candidates else 0.5
+
         for idx in occluded_indices:
             partner_map = {
                 13: 14, 14: 13, # elbow l/r
@@ -493,7 +501,7 @@ def occlusion_recovery(data: OcclusionInput):
             if idx in partner_map:
                 partner_idx = partner_map[idx]
                 if mp_arr[partner_idx, 3] >= 0.5:
-                    fused[idx, 0] = -mp_arr[partner_idx, 0] # invert X relative to center
+                    fused[idx, 0] = 2 * center_x - mp_arr[partner_idx, 0]  # reflect about body midline
                     fused[idx, 1] = mp_arr[partner_idx, 1]  # keep Y
                     fused[idx, 2] = mp_arr[partner_idx, 2]  # keep Z
                     fused[idx, 3] = 0.8
