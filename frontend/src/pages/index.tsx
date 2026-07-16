@@ -1480,8 +1480,14 @@ export default function Dashboard() {
               {speechEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             </button>
 
-            <button className="btn-primary btn-sm" onClick={resetPipeline}>
-              {TRANSLATIONS[lang].newSession}
+            <button
+              className="btn-primary btn-sm new-session-btn"
+              onClick={resetPipeline}
+              aria-label={TRANSLATIONS[lang].newSession}
+              title={TRANSLATIONS[lang].newSession}
+            >
+              <RefreshCw size={14} className="new-session-icon" />
+              <span className="new-session-label">{TRANSLATIONS[lang].newSession}</span>
             </button>
           </div>
         </header>

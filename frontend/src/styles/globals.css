@@ -389,6 +389,19 @@ body::after {
   .session-timer  { display: none !important; }
 }
 
+/* Header content (menu btn + logo + language + speech toggle + new-session
+   button) can exceed narrow viewport widths with no wrap; since html/body
+   clip horizontal overflow, that content was getting cut off on the right
+   instead of shrinking. Tighten spacing and collapse the New Session
+   button to icon-only so everything fits within the viewport. */
+@media (max-width: 480px) {
+  .app-header { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-2); }
+  .header-actions { gap: 6px; }
+  .language-selector-trigger { padding: 4px var(--space-2); }
+  .new-session-label { display: none; }
+  .new-session-btn { padding: 0; width: 40px; min-width: 40px; }
+}
+
 /* ── Session Timer ───────────────────────────────────────── */
 .session-timer {
   font-family: var(--font-mono);
