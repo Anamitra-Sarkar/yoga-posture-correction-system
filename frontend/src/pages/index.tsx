@@ -89,6 +89,7 @@ const PRESET_POSES = {
   }
 };
 
+/* eslint-disable */
 const POSE_TARGET_ANGLES: {
   [poseId: string]: {
     joint: string;
@@ -128,6 +129,35 @@ const POSE_TARGET_ANGLES: {
     { joint: "trunk_l", label: "Left Spine Straightness", target: 180, tolerance: 10 }
   ]
 };
+
+// Static alignment cues per pose — displayed in the Pose Guide sidebar section
+const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
+  warrior_2: [
+    { icon: "🦵", cue: "Front knee at 90° over ankle" },
+    { icon: "💪", cue: "Arms parallel, shoulder height" },
+    { icon: "👁️", cue: "Gaze over front fingertips" },
+    { icon: "🦴", cue: "Hips open to the long side" },
+  ],
+  plank: [
+    { icon: "💪", cue: "Wrists under shoulders, arms straight" },
+    { icon: "🦴", cue: "Body forms one straight line" },
+    { icon: "🧘", cue: "Core + glutes fully engaged" },
+    { icon: "👁️", cue: "Neck neutral, gaze at floor" },
+  ],
+  tree_pose: [
+    { icon: "🦶", cue: "Root foot flat, press into ground" },
+    { icon: "🦵", cue: "Bent knee open to the side" },
+    { icon: "👁️", cue: "Fix gaze on a still point (Drishti)" },
+    { icon: "💪", cue: "Hands in Anjali or raised overhead" },
+  ],
+};
+
+const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
+  warrior_2:  { level: "Intermediate", color: "var(--color-warning)" },
+  plank:      { level: "Beginner",     color: "var(--color-success)" },
+  tree_pose:  { level: "Intermediate", color: "var(--color-warning)" },
+};
+
 
 const FEATURE_NAMES_ORDER = [
   "elbow_l", "elbow_r", "shoulder_l", "shoulder_r",
@@ -510,17 +540,17 @@ function ScoreRing({ correctness }: ScoreRingProps) {
   }, [percentage]);
 
   const isSuccess = correctness >= 0.75;
-  const radius = 34;
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
     <div className="gauge-circle">
-      <svg width="80" height="80" style={{ transform: "rotate(-90deg)" }}>
+      <svg width="100" height="100" style={{ transform: "rotate(-90deg)" }}>
         {/* Track */}
         <circle
-          cx="40"
-          cy="40"
+          cx="50"
+          cy="50"
           r={radius}
           fill="transparent"
           stroke={isSuccess ? "var(--color-success-muted)" : "var(--color-warning-muted)"}
@@ -528,8 +558,8 @@ function ScoreRing({ correctness }: ScoreRingProps) {
         />
         {/* Fill */}
         <circle
-          cx="40"
-          cy="40"
+          cx="50"
+          cy="50"
           r={radius}
           fill="transparent"
           stroke={isSuccess ? "var(--color-success)" : "var(--color-warning)"}
@@ -567,6 +597,15 @@ export default function Dashboard() {
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
 
+  // ── Zoom feature ─────────────────────────────────────────
+  const [zoomLevel, setZoomLevel] = useState(1);         // current zoom (0.5 – 10)
+  const [showZoomBar, setShowZoomBar] = useState(false); // show slider on demand
+  const [zoomCapable, setZoomCapable] = useState(false); // hw zoom available
+  const zoomHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Pinch gesture tracking
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1);
+
   // Dynamic metrics computed in real-time
   const [allCurrentAngles, setAllCurrentAngles] = useState<number[]>(new Array(15).fill(180));
 
@@ -600,6 +639,97 @@ export default function Dashboard() {
   const [openGroupPose, setOpenGroupPose] = useState(true);
   const [openGroupTwin, setOpenGroupTwin] = useState(true);
   const [openGroupConfig, setOpenGroupConfig] = useState(true);
+  const [openGroupPoseGuide, setOpenGroupPoseGuide] = useState(true);
+  const [openGroupSession, setOpenGroupSession] = useState(true);
+
+  // ── Apply zoom (hw first, CSS transform fallback) ─────────
+  const applyZoom = (level: number) => {
+    const clamped = Math.min(10, Math.max(0.5, level));
+    setZoomLevel(clamped);
+
+    // --- Hardware zoom (Chrome on Android / iOS Safari 17.4+) ---
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      if (track) {
+        const caps = track.getCapabilities?.() as any;
+        if (caps?.zoom) {
+          const hwMin = caps.zoom.min ?? 1;
+          const hwMax = caps.zoom.max ?? 1;
+          const hwZoom = Math.min(hwMax, Math.max(hwMin, clamped));
+          track.applyConstraints({ advanced: [{ zoom: hwZoom } as any] }).catch(() => {});
+          return; // hw zoom applied — no CSS transform needed
+        }
+      }
+    }
+
+    // --- CSS canvas transform fallback ---
+    if (canvasRef.current) {
+      if (clamped === 1) {
+        canvasRef.current.style.transform = 'scaleX(-1)'; // preserve mirror
+      } else {
+        canvasRef.current.style.transform = `scaleX(-1) scale(${clamped})`;
+      }
+    }
+  };
+
+  // Auto-detect zoom capability when stream starts
+  useEffect(() => {
+    if (!cameraActive || !streamRef.current) { setZoomCapable(false); return; }
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) { setZoomCapable(false); return; }
+    const caps = track.getCapabilities?.() as any;
+    setZoomCapable(!!(caps?.zoom));
+    // Reset zoom to 1x on new camera start
+    setZoomLevel(1);
+    if (canvasRef.current) canvasRef.current.style.transform = 'scaleX(-1)';
+  }, [cameraActive]);
+
+  // Auto-hide zoom bar after 3s of inactivity
+  const showZoomBarBriefly = () => {
+    setShowZoomBar(true);
+    if (zoomHideTimerRef.current) clearTimeout(zoomHideTimerRef.current);
+    zoomHideTimerRef.current = setTimeout(() => setShowZoomBar(false), 3000);
+  };
+
+  // Pinch-to-zoom handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartDistRef.current = Math.hypot(dx, dy);
+      pinchStartZoomRef.current = zoomLevel;
+      showZoomBarBriefly();
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const ratio = dist / pinchStartDistRef.current;
+      const newZoom = Math.min(10, Math.max(0.5, pinchStartZoomRef.current * ratio));
+      applyZoom(newZoom);
+      showZoomBarBriefly();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    pinchStartDistRef.current = null;
+  };
+
+  // Update slider CSS variable for teal fill progress
+  useEffect(() => {
+    const slider = document.querySelector('.zoom-slider-vertical') as HTMLInputElement | null;
+    if (slider) {
+      const min = parseFloat(slider.min) || 0.5;
+      const max = parseFloat(slider.max) || 10;
+      const percent = ((zoomLevel - min) / (max - min)) * 100;
+      slider.style.setProperty('--zoom-fill', `${percent}%`);
+    }
+  }, [zoomLevel, showZoomBar]);
+
 
   // Session timer hook
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -1471,8 +1601,101 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Group 5: Pose Guide — alignment cues for the selected pose */}
+          {(() => {
+            const cues = POSE_GUIDE[activePreset];
+            const diff = POSE_DIFFICULTY[activePreset];
+            const joints = (POSE_TARGET_ANGLES[activePreset] || []).slice(0, 3);
+            return cues ? (
+              <div className="sidebar-group">
+                <div className="sidebar-group-header" onClick={() => setOpenGroupPoseGuide(!openGroupPoseGuide)}>
+                  <span>Pose Guide</span>
+                  <ChevronDown size={16} className={`chevron-icon ${!openGroupPoseGuide ? "collapsed" : ""}`} />
+                </div>
+                <div className={`sidebar-group-body ${!openGroupPoseGuide ? "collapsed" : ""}`}>
+                  {/* Difficulty badge */}
+                  {diff && (
+                    <div className="pose-guide-diff">
+                      <span className="pose-guide-diff-dot" style={{ background: diff.color }} />
+                      <span className="pose-guide-diff-label" style={{ color: diff.color }}>{diff.level}</span>
+                      <span className="pose-guide-diff-name">{getSanskritName(activePreset, lang)}</span>
+                    </div>
+                  )}
+
+                  {/* Alignment cue list */}
+                  <div className="pose-guide-cues">
+                    {cues.map((c, i) => (
+                      <div key={i} className="pose-guide-cue-row">
+                        <span className="pose-guide-cue-icon">{c.icon}</span>
+                        <span className="pose-guide-cue-text">{c.cue}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Target joints being measured */}
+                  {joints.length > 0 && (
+                    <div className="pose-guide-joints">
+                      <span className="pose-guide-joints-label">AI measures:</span>
+                      <div className="pose-guide-joint-chips">
+                        {joints.map((j, i) => (
+                          <span key={i} className="pose-guide-chip">{j.label.replace(" Angle", "").replace(" Extension", "")}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null;
+          })()}
+
+          {/* Group 6: Session Overview — live status strip */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-header" onClick={() => setOpenGroupSession(!openGroupSession)}>
+              <span>Session Overview</span>
+              <ChevronDown size={16} className={`chevron-icon ${!openGroupSession ? "collapsed" : ""}`} />
+            </div>
+            <div className={`sidebar-group-body ${!openGroupSession ? "collapsed" : ""}`}>
+              <div className="session-overview-grid">
+                {/* Camera */}
+                <div className="session-stat-row">
+                  <div className={`session-stat-dot ${cameraActive ? "active" : ""}`} />
+                  <span className="session-stat-label">Camera</span>
+                  <span className={`session-stat-val ${cameraActive ? "on" : "off"}`}>
+                    {cameraActive ? "Active" : "Off"}
+                  </span>
+                </div>
+                {/* Calibration */}
+                <div className="session-stat-row">
+                  <div className={`session-stat-dot ${calibratedProfile ? "calibrated" : calibrationState === "calibrating" ? "calibrating-anim" : ""}`} />
+                  <span className="session-stat-label">Digital Twin</span>
+                  <span className={`session-stat-val ${
+                    calibratedProfile ? "on" : calibrationState === "calibrating" ? "warn" : "off"
+                  }`}>
+                    {calibratedProfile ? "Calibrated" : calibrationState === "calibrating" ? "Calibrating…" : "Uncalibrated"}
+                  </span>
+                </div>
+                {/* Voice */}
+                <div className="session-stat-row">
+                  <div className={`session-stat-dot ${speechEnabled ? "active" : ""}`} />
+                  <span className="session-stat-label">Voice</span>
+                  <span className={`session-stat-val ${speechEnabled ? "on" : "off"}`}>
+                    {speechEnabled ? "On" : "Muted"}
+                  </span>
+                </div>
+                {/* Pose */}
+                <div className="session-stat-row">
+                  <div className="session-stat-dot active" />
+                  <span className="session-stat-label">Target Pose</span>
+                  <span className="session-stat-val on" style={{ fontFamily: "var(--font-mono)", fontSize: "0.68rem" }}>
+                    {getSanskritName(activePreset, "en").split(" ")[0]}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
         </aside>
+
 
         {/* RIGHT COLUMN: MAIN CONTENT */}
         <main className="app-content">
@@ -1540,8 +1763,18 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div ref={fullscreenContainerRef} className={`camera-frame-wrapper ${isFullscreen ? 'yoga-fullscreen' : ''}`}>
-                <div className="camera-frame" style={{ position: "relative" }}>
+              <div
+                ref={fullscreenContainerRef}
+                className={`camera-frame-wrapper ${isFullscreen ? 'yoga-fullscreen' : ''}`}
+              >
+                <div
+                  className="camera-frame"
+                  style={{ position: "relative" }}
+                  onTouchStart={cameraActive ? handleTouchStart : undefined}
+                  onTouchMove={cameraActive ? handleTouchMove : undefined}
+                  onTouchEnd={cameraActive ? handleTouchEnd : undefined}
+                  onClick={cameraActive ? showZoomBarBriefly : undefined}
+                >
                   <video 
                     ref={videoRef} 
                     className="camera-video-element"
@@ -1586,6 +1819,51 @@ export default function Dashboard() {
                       <span>{lang === 'hi' ? "लाइव" : lang === 'bn' ? "লাইভ" : "LIVE"}</span>
                     </div>
                   )}
+
+                  {/* Zoom level badge — top right, always visible while zoomed */}
+                  {cameraActive && zoomLevel !== 1 && (
+                    <div className="zoom-badge">
+                      {zoomLevel < 1 ? `${zoomLevel.toFixed(1)}×` : zoomLevel >= 10 ? '10×' : `${zoomLevel.toFixed(1)}×`}
+                    </div>
+                  )}
+
+                  {/* Transparent Vertical Zoom Control — always visible */}
+                  {cameraActive && (
+                    <div className="zoom-vertical-control" onClick={(e) => e.stopPropagation()}>
+                      <button 
+                        className="zoom-btn"
+                        onClick={() => applyZoom(zoomLevel + 0.5)}
+                        aria-label="Zoom in"
+                      >
+                        +
+                      </button>
+                      
+                      <div className="zoom-vertical-slider-container">
+                        <input
+                          type="range"
+                          className="zoom-slider-vertical"
+                          min={0.5}
+                          max={10}
+                          step={0.1}
+                          value={zoomLevel}
+                          onChange={(e) => applyZoom(parseFloat(e.target.value))}
+                        />
+                      </div>
+
+                      <button 
+                        className="zoom-btn"
+                        onClick={() => applyZoom(zoomLevel - 0.5)}
+                        aria-label="Zoom out"
+                      >
+                        −
+                      </button>
+                      
+                      {zoomCapable && (
+                        <span className="zoom-hw-dot" title="Hardware Zoom Active" />
+                      )}
+                    </div>
+                  )}
+
                   {!cameraActive && (
                     <div className="camera-placeholder">
                       <div className="camera-empty-icon">
