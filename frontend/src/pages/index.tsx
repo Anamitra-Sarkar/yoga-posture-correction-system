@@ -592,6 +592,8 @@ export default function Dashboard() {
   const cameraRef = useRef<any>(null);
   const poseRef = useRef<any>(null);
   const onPoseResultsRef = useRef<any>(null);
+  const inferenceTimesRef = useRef<number[]>([]);
+  const hasDowngradedModelRef = useRef(false);
   const lastSpokenText = useRef("");
   const lastSpokenTime = useRef<number>(0);
   const lastApiCallTime = useRef<number>(0);
@@ -1097,12 +1099,44 @@ export default function Dashboard() {
       setCameraActive(true);
       setFacingMode(mode);
 
-      // Start custom rendering loop tick to feed MediaPipe
+      // Reset performance tracking for the new camera session
+      inferenceTimesRef.current = [];
+      hasDowngradedModelRef.current = false;
+
+      // Start custom rendering loop tick to feed MediaPipe. This self-paces
+      // to however fast the device can actually run inference (it only
+      // schedules the next frame once the previous one finishes), so weak
+      // devices never queue up a growing backlog of frames — but the model
+      // itself was always running the heaviest "Full" complexity regardless
+      // of device. On slow/low-end hardware that means each frame can take
+      // several hundred ms, which reads as a stuck/laggy camera and can make
+      // it look like poses aren't being scanned properly. Measure the first
+      // ~20 frames after camera start and drop to the lighter "Lite" model
+      // automatically if the device can't keep up.
       const tick = async () => {
         if (!stream.active || !videoRef.current) return;
         if (videoRef.current.readyState >= 3) {
           if (poseRef.current) {
+            const t0 = performance.now();
             await poseRef.current.send({ image: videoRef.current });
+            const elapsed = performance.now() - t0;
+
+            if (!hasDowngradedModelRef.current) {
+              inferenceTimesRef.current.push(elapsed);
+              if (inferenceTimesRef.current.length >= 20) {
+                const avg = inferenceTimesRef.current.reduce((a, b) => a + b, 0) / inferenceTimesRef.current.length;
+                if (avg > 120) {
+                  // Device is struggling (< ~8fps) — switch to the Lite model
+                  poseRef.current.setOptions({
+                    modelComplexity: 0,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                  });
+                }
+                hasDowngradedModelRef.current = true;
+              }
+            }
           }
         }
         animationFrameIdRef.current = requestAnimationFrame(tick);
@@ -1208,16 +1242,29 @@ export default function Dashboard() {
     const canvasCtx = canvasElement.getContext("2d");
     if (!canvasCtx) return;
 
-    // Draw raw camera frame onto canvas
+    // Draw raw camera frame onto canvas, preserving its native aspect ratio
+    // (letterboxed to fit) instead of stretching it to the box's fixed
+    // aspect-ratio — a plain stretch distorts the whole picture whenever the
+    // camera's native resolution doesn't match the CSS box (nearly always,
+    // since real cameras are commonly 16:9 or 4:3 while the box is fixed),
+    // making it hard to tell if the user's full body is actually in frame.
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     const cw = canvasElement.width;
     const ch = canvasElement.height;
-    canvasCtx.drawImage(results.image, 0, 0, cw, ch);
+    const srcW = results.image.videoWidth || results.image.width || cw;
+    const srcH = results.image.videoHeight || results.image.height || ch;
+    const fitScale = Math.min(cw / srcW, ch / srcH);
+    const fitW = srcW * fitScale;
+    const fitH = srcH * fitScale;
+    const fitX = (cw - fitW) / 2;
+    const fitY = (ch - fitH) / 2;
+    canvasCtx.drawImage(results.image, fitX, fitY, fitW, fitH);
 
     if (results.poseLandmarks) {
-      // 1. Draw joints skeleton overlay (with clinical palette aesthetics)
-      drawSkeletonOverlay(canvasCtx, results.poseLandmarks);
+      // 1. Draw joints skeleton overlay (with clinical palette aesthetics),
+      // mapped through the same letterbox transform as the background frame
+      drawSkeletonOverlay(canvasCtx, results.poseLandmarks, fitX, fitY, fitW, fitH);
 
       // 2. Format landmarks for API pipeline: [33 joints, [x, y, z, visibility]]
       const rawLandmarks = results.poseLandmarks.map((pt: any) => [
@@ -1278,17 +1325,24 @@ export default function Dashboard() {
   }, [onPoseResults]);
 
   // Drawing method for Canvas Overlay
-  const drawSkeletonOverlay = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
-    const cw = ctx.canvas.width;
-    const ch = ctx.canvas.height;
+  const drawSkeletonOverlay = (
+    ctx: CanvasRenderingContext2D,
+    landmarks: any[],
+    fitX: number,
+    fitY: number,
+    fitW: number,
+    fitH: number
+  ) => {
+    const toX = (nx: number) => fitX + nx * fitW;
+    const toY = (ny: number) => fitY + ny * fitH;
 
     const drawLine = (idx1: number, idx2: number, color = "#edecea", width = 3) => {
       const pt1 = landmarks[idx1];
       const pt2 = landmarks[idx2];
       if (pt1 && pt2) {
         ctx.beginPath();
-        ctx.moveTo(pt1.x * cw, pt1.y * ch);
-        ctx.lineTo(pt2.x * cw, pt2.y * ch);
+        ctx.moveTo(toX(pt1.x), toY(pt1.y));
+        ctx.lineTo(toX(pt2.x), toY(pt2.y));
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
         ctx.lineCap = "round";
@@ -1322,7 +1376,7 @@ export default function Dashboard() {
     landmarks.forEach((pt: any, i: number) => {
       if (pt.visibility > 0.5 && [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].includes(i)) {
         ctx.beginPath();
-        ctx.arc(pt.x * cw, pt.y * ch, i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
+        ctx.arc(toX(pt.x), toY(pt.y), i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
         ctx.fillStyle = i === 25 && isKneeDeviating ? "#b03060" : "#437a22";
         ctx.fill();
       }
