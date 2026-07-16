@@ -8,8 +8,8 @@ export default function App({ Component, pageProps }: AppProps) {
       <Head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#01696f" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#01696f" />
+        <meta name="theme-color" content="#0f0c29" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0f0c29" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
