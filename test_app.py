@@ -68,9 +68,14 @@ def test_backend():
         print("\n5. Testing '/api/occlusion_recovery' endpoint...")
         # Create 33 dummy points, setting left elbow (index 13) visibility to 0.1 (occluded)
         # while right elbow (index 14) visibility is 1.0 (visible)
+        # Symmetrically position hips (23, 24) and shoulders (11, 12) around x=0
         dummy_landmarks = [[1.0, 2.0, 3.0, 1.0]] * 33
-        dummy_landmarks[13] = [0.0, 0.0, 0.0, 0.1] # Left elbow occluded
-        dummy_landmarks[14] = [2.0, 2.0, 2.0, 1.0] # Right elbow visible at (2,2,2)
+        dummy_landmarks[11] = [-1.0, 2.0, 3.0, 1.0] # Left shoulder
+        dummy_landmarks[12] = [1.0, 2.0, 3.0, 1.0]  # Right shoulder
+        dummy_landmarks[23] = [-1.0, 2.0, 3.0, 1.0] # Left hip
+        dummy_landmarks[24] = [1.0, 2.0, 3.0, 1.0]  # Right hip
+        dummy_landmarks[13] = [0.0, 0.0, 0.0, 0.1]  # Left elbow occluded
+        dummy_landmarks[14] = [2.0, 2.0, 2.0, 1.0]  # Right elbow visible at (2,2,2)
         
         response = client.post("/api/occlusion_recovery", json={"mp_landmarks": dummy_landmarks})
         assert response.status_code == 200

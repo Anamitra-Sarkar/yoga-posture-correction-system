@@ -1336,49 +1336,210 @@ export default function Dashboard() {
     const toX = (nx: number) => fitX + nx * fitW;
     const toY = (ny: number) => fitY + ny * fitH;
 
-    const drawLine = (idx1: number, idx2: number, color = "#edecea", width = 3) => {
+    const FEATURE_NAMES_ORDER = [
+      "elbow_l", "elbow_r", "shoulder_l", "shoulder_r",
+      "hip_l", "hip_r", "knee_l", "knee_r",
+      "ankle_l", "ankle_r", "trunk_l", "trunk_r",
+      "neck", "hip_abduct_l", "hip_abduct_r"
+    ];
+
+    const getJointStatus = (joint: string) => {
+      if (activePose === "transition/unknown") return "neutral";
+      const targets = POSE_TARGET_ANGLES[activePose] || [];
+      const targetObj = targets.find(t => t.joint === joint);
+      if (!targetObj) return "neutral";
+      
+      const idx = FEATURE_NAMES_ORDER.indexOf(joint);
+      if (idx === -1) return "neutral";
+      
+      const current = allCurrentAngles[idx];
+      const diff = Math.abs(current - targetObj.target);
+      
+      if (diff > targetObj.tolerance) {
+        return "deviating";
+      } else if (diff > targetObj.tolerance - 7) {
+        return "warning";
+      }
+      return "correct";
+    };
+
+    const getNodeJointNames = (nodeIdx: number): string[] => {
+      if (nodeIdx === 11) return ["shoulder_l", "trunk_l"];
+      if (nodeIdx === 12) return ["shoulder_r", "trunk_r"];
+      if (nodeIdx === 13) return ["elbow_l"];
+      if (nodeIdx === 14) return ["elbow_r"];
+      if (nodeIdx === 23) return ["hip_l", "hip_abduct_l"];
+      if (nodeIdx === 24) return ["hip_r", "hip_abduct_r"];
+      if (nodeIdx === 25) return ["knee_l"];
+      if (nodeIdx === 26) return ["knee_r"];
+      if (nodeIdx === 27) return ["ankle_l"];
+      if (nodeIdx === 28) return ["ankle_r"];
+      return [];
+    };
+
+    const getNodeStatus = (nodeIdx: number) => {
+      const joints = getNodeJointNames(nodeIdx);
+      if (joints.length === 0) return "neutral";
+      
+      let hasDeviation = false;
+      let hasWarning = false;
+      let hasCorrect = false;
+      
+      for (const joint of joints) {
+        const status = getJointStatus(joint);
+        if (status === "deviating") hasDeviation = true;
+        if (status === "warning") hasWarning = true;
+        if (status === "correct") hasCorrect = true;
+      }
+      
+      if (hasDeviation) return "deviating";
+      if (hasWarning) return "warning";
+      if (hasCorrect) return "correct";
+      return "neutral";
+    };
+
+    const getLineColor = (idx1: number, idx2: number) => {
+      const status1 = getNodeStatus(idx1);
+      const status2 = getNodeStatus(idx2);
+      
+      if (status1 === "deviating" || status2 === "deviating") return "#ff2d55"; // neon red
+      if (status1 === "warning" || status2 === "warning") return "#ff9500"; // neon orange
+      if (status1 === "correct" || status2 === "correct") return "#34c759"; // neon green
+      
+      // Neutral colors based on body side
+      const leftNodes = [11, 13, 15, 23, 25, 27, 29, 31];
+      const rightNodes = [12, 14, 16, 24, 26, 28, 30, 32];
+      
+      if (leftNodes.includes(idx1) && leftNodes.includes(idx2)) {
+        return "#00f0ff"; // neon cyan
+      }
+      if (rightNodes.includes(idx1) && rightNodes.includes(idx2)) {
+        return "#ff007f"; // neon pink
+      }
+      return "rgba(255, 255, 255, 0.8)"; // white for cross-connections (shoulders, hips)
+    };
+
+    const drawLine = (idx1: number, idx2: number, width = 4) => {
       const pt1 = landmarks[idx1];
       const pt2 = landmarks[idx2];
       if (pt1 && pt2) {
+        const color = getLineColor(idx1, idx2);
+        
+        ctx.save();
         ctx.beginPath();
         ctx.moveTo(toX(pt1.x), toY(pt1.y));
         ctx.lineTo(toX(pt2.x), toY(pt2.y));
+        
+        // Premium Neon Glow Effect
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
         ctx.lineCap = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
         ctx.stroke();
+        ctx.restore();
       }
     };
 
+    // 0. Torso Shading (Digital Twin Hull)
+    const pShoulderL = landmarks[11];
+    const pShoulderR = landmarks[12];
+    const pHipR = landmarks[24];
+    const pHipL = landmarks[23];
+    
+    if (pShoulderL && pShoulderR && pHipR && pHipL) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(toX(pShoulderL.x), toY(pShoulderL.y));
+      ctx.lineTo(toX(pShoulderR.x), toY(pShoulderR.y));
+      ctx.lineTo(toX(pHipR.x), toY(pHipR.y));
+      ctx.lineTo(toX(pHipL.x), toY(pHipL.y));
+      ctx.closePath();
+      
+      // Determine overall pose correctness color for torso fill
+      let torsoColor = "rgba(0, 240, 255, 0.06)"; // neutral cyan fill
+      if (activePose !== "transition/unknown") {
+        if (correctness >= 0.70) {
+          torsoColor = "rgba(52, 199, 89, 0.06)"; // green fill
+        } else {
+          torsoColor = "rgba(255, 45, 85, 0.06)"; // red fill
+        }
+      }
+      
+      ctx.fillStyle = torsoColor;
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Connections:
     // Shoulders
-    drawLine(11, 12, "#01696f", 4);
+    drawLine(11, 12, 5);
     // Left Arm
-    drawLine(11, 13, "#edecea", 3);
-    drawLine(13, 15, "#edecea", 3);
+    drawLine(11, 13, 4);
+    drawLine(13, 15, 4);
     // Right Arm
-    drawLine(12, 14, "#edecea", 3);
-    drawLine(14, 16, "#edecea", 3);
-    // Hips
-    drawLine(23, 24, "#01696f", 4);
-    drawLine(11, 23, "#edecea", 3);
-    drawLine(12, 24, "#edecea", 3);
+    drawLine(12, 14, 4);
+    drawLine(14, 16, 4);
+    // Hips & Spine
+    drawLine(23, 24, 5);
+    drawLine(11, 23, 4);
+    drawLine(12, 24, 4);
     // Left Leg
-    drawLine(23, 25, "#edecea", 3);
-    // Color code left knee connection if alert triggered
-    const isKneeDeviating = Math.abs(currentKneeAngle - 90) > 15 && activePose === "warrior_2";
-    drawLine(25, 27, isKneeDeviating ? "#b03060" : "#edecea", isKneeDeviating ? 5 : 3);
+    drawLine(23, 25, 4);
+    drawLine(25, 27, 4);
     // Right Leg
-    drawLine(24, 26, "#edecea", 3);
-    drawLine(26, 28, "#edecea", 3);
+    drawLine(24, 26, 4);
+    drawLine(26, 28, 4);
 
-    // Draw joints and circle
+    // Draw joints with glowing indicators and white inner core
     landmarks.forEach((pt: any, i: number) => {
       if (pt.visibility > 0.5 && [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].includes(i)) {
+        const status = getNodeStatus(i);
+        const x = toX(pt.x);
+        const y = toY(pt.y);
+        
+        let color = "#ffffff";
+        let r = 5;
+        
+        if (status === "deviating") {
+          color = "#ff2d55";
+          r = 7;
+        } else if (status === "warning") {
+          color = "#ff9500";
+          r = 6;
+        } else if (status === "correct") {
+          color = "#34c759";
+          r = 6;
+        } else {
+          // Neutral side colors
+          const leftNodes = [11, 13, 15, 23, 25, 27];
+          color = leftNodes.includes(i) ? "#00f0ff" : "#ff007f";
+        }
+        
+        ctx.save();
+        
+        // Draw outer translucent halo
         ctx.beginPath();
-        ctx.arc(toX(pt.x), toY(pt.y), i === 25 && isKneeDeviating ? 8 : 5, 0, 2 * Math.PI);
-        ctx.fillStyle = i === 25 && isKneeDeviating ? "#b03060" : "#437a22";
+        ctx.arc(x, y, r + 3, 0, 2 * Math.PI);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
         ctx.fill();
+        
+        // Draw main colored circle
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        
+        // Draw inner white core
+        ctx.beginPath();
+        ctx.arc(x, y, r * 0.4, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+        
+        ctx.restore();
       }
     });
   };
