@@ -6,27 +6,6 @@ colorTo: purple
 sdk: docker
 app_port: 7860
 pinned: false
-model-index:
-  - name: Yoga-Posture-Correction-System
-    results:
-      - task:
-          type: pose-classification
-        dataset:
-          name: yoga-pose-features-dataset
-          type: yoga-pose-features-dataset
-        metrics:
-          - name: Pose Accuracy
-            type: accuracy
-            value: 93.38
-          - name: Correctness Accuracy
-            type: accuracy
-            value: 96.81
-          - name: Sequence Accuracy
-            type: accuracy
-            value: 75.25
-        source:
-          name: Hugging Face Repository
-          url: https://huggingface.co/Arko007/yoga-posture-models
 ---
 
 # Smart Yoga Posture Correction System
