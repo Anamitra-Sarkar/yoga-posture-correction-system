@@ -169,14 +169,15 @@ def generate_safe_correction(
             target_lang_name = lang_names.get(language, "English")
             
             payload = {
-                "model": "llama3-8b-8192",
+                "model": "qwen/qwen3.6-27b",
                 "messages": [
                     {
                         "role": "system",
                         "content": f"You are a professional yoga instructor. Translate or paraphrase the following instruction: '{correction_text}' into {target_lang_name}. Do NOT suggest stretching further or pushing deeper. Keep it safe, concise (under 15 words), and respond ONLY in the {target_lang_name} language."
                     }
                 ],
-                "temperature": 0.2
+                "temperature": 0.2,
+                "reasoning_format": "hidden"
             }
             response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=5)
             if response.status_code == 200:
