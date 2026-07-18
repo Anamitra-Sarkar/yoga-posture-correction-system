@@ -7,6 +7,7 @@ interface UseYogaPipelineProps {
   groqApiKey?: string;
   calibrationProfile?: CalibrationProfile;
   correctnessThreshold?: number; // e.g. 0.70
+  targetPose?: string; // user-selected practice pose id, e.g. "warrior_2"
 }
 
 export function useYogaPipeline({
@@ -14,6 +15,7 @@ export function useYogaPipeline({
   groqApiKey,
   calibrationProfile,
   correctnessThreshold = 0.70,
+  targetPose,
 }: UseYogaPipelineProps = {}) {
   const [activePose, setActivePose] = useState<string>("transition/unknown");
   const [correctness, setCorrectness] = useState<number>(1.0);
@@ -21,34 +23,46 @@ export function useYogaPipeline({
   const [flowConfidence, setFlowConfidence] = useState<number>(0.0);
   const [correctionText, setCorrectionText] = useState<string>("");
   const [correctionIsSafe, setCorrectionIsSafe] = useState<boolean>(true);
+  const [poseMismatch, setPoseMismatch] = useState<boolean>(false);
   const [recoveredJoints, setRecoveredJoints] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  
+  const [predictionTimestamp, setPredictionTimestamp] = useState<number>(0);
+
   // Buffers and timers
   const coordBuffer = useRef<number[][]>([]); // Holds 60 frames of coordinates [60, 99]
   const lastCorrectionTime = useRef<number>(0);
   const DEBOUNCE_MS = 30000; // 30 second throttle for LLM guidance API calls
+  const lastPredictionTime = useRef<number>(0);
+  const PREDICTION_INTERVAL_MS = 10000; // Real-time monitoring predicts/speaks at most once every 10s
 
   const processFrame = async (rawLandmarks: number[][], currentAngles: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
     if (rawLandmarks.length !== 33) return;
-    
+
     setIsLoading(true);
     try {
-      // 1. Stage 4: Occlusion Handling
+      // 1. Stage 4: Occlusion Handling — always kept fresh so the 60-frame
+      // sequence buffer isn't stretched thin by the slower prediction cadence below.
       const occRes = await recoverOcclusion({ mp_landmarks: rawLandmarks });
       setRecoveredJoints(occRes.occluded_joints_recovered);
       const fusedCoords = occRes.fused_landmarks; // Shape [33, 4]
-      
+
       // Flatten fused coordinate space [33 joints * 3 coordinates] to 99 values
       const flatFrameCoords = fusedCoords.map(pt => pt.slice(0, 3)).flat(); // Length 99
-      
+
       // Update rolling sequence buffer (Stage 5)
       coordBuffer.current.push(flatFrameCoords);
       if (coordBuffer.current.length > 60) {
         coordBuffer.current.shift();
       }
-      
+
+      // Gate the heavier classification/LLM/speech cycle to once per PREDICTION_INTERVAL_MS
+      const nowTick = Date.now();
+      if (nowTick - lastPredictionTime.current < PREDICTION_INTERVAL_MS) {
+        return;
+      }
+      lastPredictionTime.current = nowTick;
+
       let fallbackRequired = true;
       
       // 2. Stage 7: Sequence Flow Analysis (requires complete 60 frame window)
@@ -102,9 +116,21 @@ export function useYogaPipeline({
         });
       }
       
-      // 5. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
+      // 5. Target-pose reconciliation: the pose_head classifies whatever pose is
+      // actually being performed, independent of what the user selected to
+      // practice. Without this check, selecting one asana and performing a
+      // completely different one would still show a high correctness score,
+      // since that score only ever describes form quality for the DETECTED
+      // pose, never whether it matches the user's chosen target.
+      const isMismatch = !!targetPose && currentPoseId !== "transition/unknown" && currentPoseId !== targetPose;
+      setPoseMismatch(isMismatch);
+
+      // 6. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
       const now = Date.now();
-      if (currentPoseId !== "transition/unknown") {
+      if (isMismatch) {
+        // Wrong pose entirely — form-correction guidance would be meaningless here.
+        // The UI layer overrides the displayed/spoken text with a mismatch message.
+      } else if (currentPoseId !== "transition/unknown") {
         if (currentCorrectness < correctnessThreshold) {
           if (now - lastCorrectionTime.current > DEBOUNCE_MS) {
             const corrRes = await generateCorrection({
@@ -138,6 +164,10 @@ export function useYogaPipeline({
         setCorrectionIsSafe(true);
       }
 
+      // Mark this prediction cycle complete — drives the 10s speech cadence
+      // even when the displayed text is unchanged from the prior cycle.
+      setPredictionTimestamp(nowTick);
+
     } catch (error: any) {
       if (error.name === "AbortError" || (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError") || error.message?.includes("aborted") || error.message?.includes("AbortError")) {
         // Silently ignore aborted requests since a newer frame was sent
@@ -150,6 +180,9 @@ export function useYogaPipeline({
   };
 
   useEffect(() => {
+    // Mismatch messaging is owned by the UI layer (it has the pose display-name
+    // lookup); don't let this reactive re-translation effect stomp on it.
+    if (poseMismatch) return;
     if (activePose !== "transition/unknown") {
       if (correctness >= correctnessThreshold) {
         const successMsg = language === "hi"
@@ -169,16 +202,18 @@ export function useYogaPipeline({
       setCorrectionText(alignMsg);
       setCorrectionIsSafe(true);
     }
-  }, [language, activePose, correctness, correctnessThreshold]);
+  }, [language, activePose, correctness, correctnessThreshold, poseMismatch]);
 
   const resetPipeline = () => {
     coordBuffer.current = [];
+    lastPredictionTime.current = 0;
     setActivePose("transition/unknown");
     setCorrectness(1.0);
     setFlowPose("transition/unknown");
     setFlowConfidence(0.0);
     setCorrectionText("");
     setCorrectionIsSafe(true);
+    setPoseMismatch(false);
     setRecoveredJoints([]);
   };
 
@@ -189,6 +224,8 @@ export function useYogaPipeline({
     flowConfidence,
     correctionText,
     correctionIsSafe,
+    poseMismatch,
+    predictionTimestamp,
     recoveredJoints,
     isLoading,
     processFrame,

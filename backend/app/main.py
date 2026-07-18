@@ -39,6 +39,7 @@ app.include_router(pose.router, prefix="/api", tags=["Pose Analysis"])
 app.include_router(correction.router, prefix="/api", tags=["Postural Corrections"])
 
 @app.get("/")
+@app.get("/health")
 def health_check():
     return {
         "status": "healthy",

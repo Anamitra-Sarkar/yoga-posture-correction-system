@@ -302,7 +302,9 @@ const TRANSLATIONS: {
     angleDetails: "Angle Alignment Details",
     assumePosePrompt: "Assume a target yoga pose to view real-time joint angle alignments and corrections.",
     targetFor: "Target: {target}° for {pose}",
-    diff: "Diff:"
+    diff: "Diff:",
+    wrongPoseDetected: "This looks like {detected}, not your selected {target}. Adjust into {target} to get scored.",
+    wrongPoseBadge: "Wrong Pose"
   },
   hi: {
     appTitle: "असनएआई — स्मार्ट योग कोच",
@@ -350,7 +352,9 @@ const TRANSLATIONS: {
     angleDetails: "कोण संरेखण विवरण",
     assumePosePrompt: "वास्तविक समय में जोड़ों के संरेखण और सुधार देखने के लिए एक लक्ष्य योग मुद्रा धारण करें।",
     targetFor: "लक्ष्य: {pose} के लिए {target}°",
-    diff: "अंतर:"
+    diff: "अंतर:",
+    wrongPoseDetected: "यह {detected} जैसा लग रहा है, आपकी चुनी हुई {target} नहीं। स्कोर पाने के लिए {target} में आएं।",
+    wrongPoseBadge: "गलत मुद्रा"
   },
   bn: {
     appTitle: "আসনএআই — স্মার্ট যোগ কোচ",
@@ -398,7 +402,9 @@ const TRANSLATIONS: {
     angleDetails: "কোণ সারিবদ্ধকরণ বিবরণ",
     assumePosePrompt: "রিয়েল-টাইম জয়েন্ট অ্যালাইনমেন্ট এবং সংশোধন দেখতে একটি লক্ষ্য যোগাসন অনুশীলন করুন।",
     targetFor: "{pose} এর জন্য লক্ষ্য কোণ {target}°",
-    diff: "পার্থক্য:"
+    diff: "পার্থক্য:",
+    wrongPoseDetected: "এটি {detected} বলে মনে হচ্ছে, আপনার নির্বাচিত {target} নয়। স্কোর পেতে {target} ভঙ্গিতে আসুন।",
+    wrongPoseBadge: "ভুল আসন"
   }
 };
 
@@ -594,8 +600,6 @@ export default function Dashboard() {
   const onPoseResultsRef = useRef<any>(null);
   const inferenceTimesRef = useRef<number[]>([]);
   const hasDowngradedModelRef = useRef(false);
-  const lastSpokenText = useRef("");
-  const lastSpokenTime = useRef<number>(0);
   const lastApiCallTime = useRef<number>(0);
   const API_THROTTLE_MS = 500;
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -978,6 +982,8 @@ export default function Dashboard() {
     flowConfidence,
     correctionText,
     correctionIsSafe,
+    poseMismatch,
+    predictionTimestamp,
     recoveredJoints,
     isLoading,
     processFrame,
@@ -986,24 +992,29 @@ export default function Dashboard() {
     language: lang,
     groqApiKey: undefined,
     calibrationProfile: calibratedProfile || undefined,
-    correctnessThreshold: 0.75
+    correctnessThreshold: 0.75,
+    targetPose: activePreset
   });
 
-  // Audio speech synthesis loop
+  // When the detected pose doesn't match what the user selected to practice,
+  // the raw correctness score (which only measures form quality for whatever
+  // pose was detected) would be misleading to show — override both the
+  // displayed guidance text and the effective score in that case.
+  const displayCorrectionText = poseMismatch
+    ? TRANSLATIONS[lang].wrongPoseDetected
+        .replace('{detected}', getSanskritName(activePose, lang))
+        .replace(/{target}/g, getSanskritName(activePreset, lang))
+    : correctionText;
+  const effectiveCorrectness = poseMismatch ? 0 : correctness;
+
+  // Audio speech synthesis loop — tied to the pipeline's own ~10s prediction
+  // cadence (predictionTimestamp only changes once per real classification
+  // cycle) so spoken feedback never gets ahead of what's actually been re-analyzed.
   useEffect(() => {
-    const now = Date.now();
-    if (speechEnabled && correctionText) {
-      const isNewText = correctionText !== lastSpokenText.current;
-      const timeSinceLastSpoke = now - lastSpokenTime.current;
-      
-      // Speak if it's a new instruction (and at least 5s has passed to avoid rapid overlaps) or if 30s has passed for repetition
-      if ((isNewText && timeSinceLastSpoke > 5000) || timeSinceLastSpoke > 30000) {
-        announceTTS(correctionText);
-        lastSpokenText.current = correctionText;
-        lastSpokenTime.current = now;
-      }
+    if (speechEnabled && displayCorrectionText && predictionTimestamp > 0) {
+      announceTTS(displayCorrectionText);
     }
-  }, [correctionText, speechEnabled, lang]);
+  }, [predictionTimestamp, speechEnabled, lang]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1459,7 +1470,7 @@ export default function Dashboard() {
       // Determine overall pose correctness color for torso fill
       let torsoColor = "rgba(0, 240, 255, 0.06)"; // neutral cyan fill
       if (activePose !== "transition/unknown") {
-        if (correctness >= 0.70) {
+        if (effectiveCorrectness >= 0.70) {
           torsoColor = "rgba(52, 199, 89, 0.06)"; // green fill
         } else {
           torsoColor = "rgba(255, 45, 85, 0.06)"; // red fill
@@ -2051,9 +2062,9 @@ export default function Dashboard() {
 
                 {/* Caption bar visible inside the camera frame wrapper unconditionally */}
                 {cameraActive && (
-                  <div className="fullscreen-caption-bar" key={correctionText}>
-                    <span className={correctionText ? 'caption-text active' : 'caption-text placeholder'}>
-                      {correctionText || TRANSLATIONS[lang].alignBody}
+                  <div className="fullscreen-caption-bar" key={displayCorrectionText}>
+                    <span className={displayCorrectionText ? 'caption-text active' : 'caption-text placeholder'}>
+                      {displayCorrectionText || TRANSLATIONS[lang].alignBody}
                     </span>
                   </div>
                 )}
@@ -2072,8 +2083,8 @@ export default function Dashboard() {
                     </button>
 
                     {/* Score badge */}
-                    <div className={`fullscreen-score-badge ${correctness >= 0.75 ? 'good' : 'warn'}`}>
-                      {Math.round(correctness * 100)}%
+                    <div className={`fullscreen-score-badge ${effectiveCorrectness >= 0.75 ? 'good' : 'warn'}`}>
+                      {poseMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}
                     </div>
                   </>
                 )}
@@ -2104,8 +2115,8 @@ export default function Dashboard() {
                 <>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].postureScore}</span>
-                    <span className="kpi-value">{Math.round(correctness * 100)}%</span>
-                    <span className="kpi-sub">{correctness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
+                    <span className="kpi-value">{poseMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}</span>
+                    <span className="kpi-sub">{effectiveCorrectness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
                   </div>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].detectedPose}</span>
@@ -2131,7 +2142,7 @@ export default function Dashboard() {
 
             <div className="feedback-grid">
               <div className="gauge-container glass-panel">
-                <ScoreRing correctness={correctness} />
+                <ScoreRing correctness={effectiveCorrectness} />
                 <span className="gauge-label">{TRANSLATIONS[lang].correctnessScore}</span>
               </div>
 
@@ -2176,6 +2187,14 @@ export default function Dashboard() {
                   <span className="guidance-text">{TRANSLATIONS[lang].detectingPose}</span>
                 </div>
               </div>
+            ) : poseMismatch ? (
+              <div className="guidance-box" key="pose-mismatch">
+                <ShieldAlert size={24} />
+                <div className="guidance-content">
+                  <span className="guidance-label-text">{TRANSLATIONS[lang].wrongPoseBadge}</span>
+                  <span className="guidance-text">{displayCorrectionText}</span>
+                </div>
+              </div>
             ) : correctionText ? (
               <div className="guidance-box" key={correctionText}>
                 <Volume2 size={24} />
@@ -2212,6 +2231,10 @@ export default function Dashboard() {
             {activePose === "transition/unknown" ? (
               <div className="angle-placeholder-text">
                 <p>{TRANSLATIONS[lang].assumePosePrompt}</p>
+              </div>
+            ) : poseMismatch ? (
+              <div className="angle-placeholder-text">
+                <p>{displayCorrectionText}</p>
               </div>
             ) : (
               <>
