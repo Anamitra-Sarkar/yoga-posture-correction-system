@@ -130,7 +130,10 @@ def recover_occluded_joints(mp_landmarks, occluded_indices, visibility_threshold
 
     try:
         joints = _fit_smpl_to_visible_joints(target_idx_list, target_xyz_np)
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"SMPL fit unavailable, falling back to mirror-only recovery: {e}", flush=True)
+        traceback.print_exc()
         return {}
 
     return {mp_idx: joints[smpl_idx].tolist() for mp_idx, smpl_idx in OCCLUDABLE_JOINTS.items() if mp_idx in occluded_set}
