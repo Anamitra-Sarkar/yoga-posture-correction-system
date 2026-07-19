@@ -1186,8 +1186,16 @@ button, [role="button"] { user-select: none; }
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transform: scaleX(-1);
   display: block;
+}
+
+/* Mirroring only makes sense for the front/selfie camera (acts like a
+   mirror, matching what the user expects to see of themselves). The rear
+   camera shows the world, not the user, so it must never be flipped --
+   it was being mirrored unconditionally regardless of which camera was
+   active. */
+.camera-canvas.mirrored {
+  transform: scaleX(-1);
 }
 
 .camera-placeholder {

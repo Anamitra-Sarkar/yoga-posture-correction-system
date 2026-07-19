@@ -663,12 +663,14 @@ export default function Dashboard() {
     }
 
     // --- CSS canvas transform fallback ---
+    // Mirror (scaleX(-1)) only applies to the front camera -- the rear
+    // camera must never be flipped, it was being mirrored unconditionally
+    // here regardless of which camera was active.
     if (canvasRef.current) {
-      if (clamped === 1) {
-        canvasRef.current.style.transform = 'scaleX(-1)'; // preserve mirror
-      } else {
-        canvasRef.current.style.transform = `scaleX(-1) scale(${clamped})`;
-      }
+      const mirror = facingMode === "user" ? "scaleX(-1) " : "";
+      canvasRef.current.style.transform = clamped === 1
+        ? `${mirror}scale(1)`.trim()
+        : `${mirror}scale(${clamped})`.trim();
     }
   };
 
@@ -681,8 +683,10 @@ export default function Dashboard() {
     setZoomCapable(!!(caps?.zoom));
     // Reset zoom to 1x on new camera start
     setZoomLevel(1);
-    if (canvasRef.current) canvasRef.current.style.transform = 'scaleX(-1)';
-  }, [cameraActive]);
+    if (canvasRef.current) {
+      canvasRef.current.style.transform = facingMode === "user" ? "scaleX(-1)" : "scale(1)";
+    }
+  }, [cameraActive, facingMode]);
 
   // Auto-hide zoom bar after 3s of inactivity
   const showZoomBarBriefly = () => {
@@ -1168,19 +1172,13 @@ export default function Dashboard() {
                     minDetectionConfidence: 0.5,
                     minTrackingConfidence: 0.5
                   });
-                } else if (avg < 40) {
-                  // Device has plenty of headroom (> ~25fps at "Full") —
-                  // upgrade to MediaPipe's most accurate "Heavy" model for
-                  // better landmark/skeleton precision. Purely additive: the
-                  // existing downgrade path above is untouched, and this only
-                  // triggers for devices that already proved they're fast.
-                  poseRef.current.setOptions({
-                    modelComplexity: 2,
-                    smoothLandmarks: true,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                  });
                 }
+                // NOTE: an auto-upgrade to modelComplexity 2 ("Heavy") for fast
+                // devices was tried here and reverted -- it was a one-time,
+                // irreversible decision based on only the first 20 frames at
+                // startup, with no way back down if "Heavy" turned out too slow
+                // under sustained real-world load. Not worth the lag risk for
+                // a speculative accuracy gain.
                 hasDowngradedModelRef.current = true;
               }
             }
@@ -2030,9 +2028,9 @@ export default function Dashboard() {
                     playsInline 
                     muted 
                   />
-                  <canvas 
-                    ref={canvasRef} 
-                    className="camera-canvas"
+                  <canvas
+                    ref={canvasRef}
+                    className={`camera-canvas ${facingMode === "user" ? "mirrored" : ""}`}
                   />
                   {cameraActive && calibrationState === "calibrating" && (
                     <div style={{
