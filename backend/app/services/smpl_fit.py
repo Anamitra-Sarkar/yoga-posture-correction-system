@@ -58,7 +58,7 @@ def _load_smpl_model():
 
 
 @spaces.GPU
-def _fit_smpl_to_visible_joints(target_idx_list, target_xyz_np, num_iters=150):
+def _fit_smpl_to_visible_joints(target_idx_list, target_xyz_np, num_iters=60):
     """
     Optimizes SMPL pose/translation/scale so its regressed joints match the
     visible MediaPipe joints, then returns ALL 24 SMPL joint positions. Runs
@@ -77,6 +77,7 @@ def _fit_smpl_to_visible_joints(target_idx_list, target_xyz_np, num_iters=150):
     scale = torch.ones((1,), device=device, requires_grad=True)
 
     optimizer = torch.optim.Adam([body_pose, global_orient, transl, scale], lr=0.05)
+    prev_loss = float("inf")
     for _ in range(num_iters):
         optimizer.zero_grad()
         out = model(body_pose=body_pose, global_orient=global_orient)
@@ -84,6 +85,14 @@ def _fit_smpl_to_visible_joints(target_idx_list, target_xyz_np, num_iters=150):
         loss = torch.nn.functional.mse_loss(joints[target_idx], target_xyz)
         loss.backward()
         optimizer.step()
+
+        # This is a small (6-12 joint) MSE fit, not a full-scene optimization —
+        # it typically converges well before num_iters on CPU, so stop early
+        # once improvement stalls instead of always paying the full budget.
+        loss_val = loss.item()
+        if abs(prev_loss - loss_val) < 1e-6:
+            break
+        prev_loss = loss_val
 
     with torch.no_grad():
         out = model(body_pose=body_pose, global_orient=global_orient)

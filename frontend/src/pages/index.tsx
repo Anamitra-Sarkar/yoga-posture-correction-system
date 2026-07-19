@@ -601,8 +601,13 @@ export default function Dashboard() {
   const inferenceTimesRef = useRef<number[]>([]);
   const hasDowngradedModelRef = useRef(false);
   const lastApiCallTime = useRef<number>(0);
+  // Measured real round-trip on the free CPU HF Space is ~1.2-2.2s even for a
+  // trivial route (network + HF's own reverse-proxy hop, not our compute).
+  // 500ms used to abort every still-in-flight cycle before it could finish,
+  // so the ST-GCN sequence buffer never received a completed frame.
   const API_THROTTLE_MS = 500;
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isProcessingRef = useRef(false);
   const speechUnlockedRef = useRef(false);
   
   // Dynamic metrics computed in real-time
@@ -1314,15 +1319,25 @@ export default function Dashboard() {
         canvasCtx.restore();
         return; // skip calling backend — too soon since last call
       }
-      lastApiCallTime.current = now;
-
-      // Abort any pending in-flight requests before starting new ones
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      // Skip firing a new cycle while the previous one is still in flight,
+      // rather than aborting it — real round-trip latency on the free CPU
+      // Space (~1.2-2.2s) is well over this 500ms tick, so aborting on every
+      // tick was cancelling every occlusion-recovery call before it could
+      // complete, which meant the ST-GCN sequence buffer never filled.
+      if (isProcessingRef.current) {
+        canvasCtx.restore();
+        return;
       }
-      abortControllerRef.current = new AbortController();
+      lastApiCallTime.current = now;
+      isProcessingRef.current = true;
 
-      processFrame(rawLandmarks, angles);
+      if (!abortControllerRef.current) {
+        abortControllerRef.current = new AbortController();
+      }
+
+      processFrame(rawLandmarks, angles).finally(() => {
+        isProcessingRef.current = false;
+      });
     } else {
       // Clear angles when body is out of frame
       setCurrentKneeAngle(180);
