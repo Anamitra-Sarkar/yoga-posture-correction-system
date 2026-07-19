@@ -6,6 +6,7 @@ from typing import List, Dict, Optional
 from app.config import settings
 from app.services.hf_loader import get_mlp_model, get_stgcn_model
 from app.utils.geometry import FEATURE_NAMES, normalize_coordinate_sequence
+from app.utils.rules_classifier import classify_pose, score_pose
 
 router = APIRouter()
 
@@ -26,12 +27,10 @@ class SequenceResponse(BaseModel):
     confidence: float
     requires_static_fallback: bool
 
-# Default fallback threshold is 0.70. child_pose gets a lower one: it has
-# only 33 static training frames (vs 15k+ for most poses), so the static
-# MLP classifier reliably misclassifies it -- but the sequence model
-# handles it fine (962 training sequences, ~0.62 confidence on real
-# held-out data). Trusting the sequence model down to 0.55 here avoids
-# routing to the known-weak static fallback for this one specific pose.
+# Default fallback threshold is 0.70. child_pose gets a lower one: the
+# sequence model handles it well (962 training sequences, ~0.62 confidence
+# on real held-out data), so trusting it down to 0.55 avoids routing to the
+# static single-frame fallback for this pose specifically.
 SEQUENCE_FALLBACK_THRESHOLDS = {
     "child_pose": 0.55,
 }
@@ -41,23 +40,39 @@ DEFAULT_SEQUENCE_FALLBACK_THRESHOLD = 0.70
 def analyse_frame(data: FrameInput):
     if len(data.angles) != 15:
         raise HTTPException(status_code=400, detail="Frame inputs must contain exactly 15 angle features.")
-        
+
     try:
+        angles_dict = {FEATURE_NAMES[idx]: data.angles[idx] for idx in range(15)}
+
         model, classes = get_mlp_model()
         x_tensor = torch.tensor([data.angles], dtype=torch.float32).to(settings.DEVICE)
-        
+
         with torch.no_grad():
             pose_logits, correctness_logit, deviations_pred = model(x_tensor)
-            
             _, pose_idx = pose_logits.max(1)
-            predicted_pose = classes[pose_idx.item()]
-            
-            correctness_prob = torch.sigmoid(correctness_logit).item()
-            
-            # Scale deviations back to degrees
+            mlp_pose = classes[pose_idx.item()]
+            mlp_correctness = torch.sigmoid(correctness_logit).item()
             devs_deg = (deviations_pred[0].cpu().numpy() * 180.0).tolist()
-            devs_dict = {FEATURE_NAMES[idx]: min(180.0, max(0.0, float(devs_deg[idx]))) for idx in range(15)}
-            
+            mlp_devs = {FEATURE_NAMES[idx]: min(180.0, max(0.0, float(devs_deg[idx]))) for idx in range(15)}
+
+        # Deterministic rule engine as a real-time sanity check on the MLP's
+        # pose call (see Section "Real-World Generalization Gap" in the paper):
+        # the MLP is trained on 3D angle features whose z-depth component is
+        # only reliable at the camera framing of training video, not arbitrary
+        # webcam/photo distances. When the rule engine -- which never depended
+        # on that unreliable z signal -- disagrees with the MLP's pose call,
+        # its independently-derived answer is trusted instead. When they
+        # agree, the MLP's richer learned correctness/deviation output is kept.
+        rule_pose = classify_pose(angles_dict)
+
+        if rule_pose == mlp_pose:
+            predicted_pose = mlp_pose
+            correctness_prob = mlp_correctness
+            devs_dict = mlp_devs
+        else:
+            predicted_pose = rule_pose
+            correctness_prob, devs_dict = score_pose(rule_pose, angles_dict)
+
         return FrameResponse(
             pose_id=predicted_pose,
             correctness_score=correctness_prob,
