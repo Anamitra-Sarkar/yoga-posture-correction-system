@@ -25,6 +25,47 @@ def calculate_angle_3d(a, b, c):
     angle = np.arccos(cosine_angle)
     return float(np.degrees(angle))
 
+SHOULDER_L, SHOULDER_R = 11, 12
+ELBOW_L, ELBOW_R = 13, 14
+WRIST_L, WRIST_R = 15, 16
+HIP_L, HIP_R = 23, 24
+KNEE_L, KNEE_R = 25, 26
+ANKLE_L, ANKLE_R = 27, 28
+HEEL_L, HEEL_R = 29, 30
+NOSE = 0
+
+def extract_angles_from_landmarks(points: np.ndarray) -> list:
+    """
+    Mirrors frontend/src/utils/geometry.ts's extractAnglesFromLandmarks, so the
+    Gradio demo (which runs MediaPipe server-side on an uploaded/webcam image)
+    computes the exact same 15 biomechanical features, in the same order as
+    FEATURE_NAMES, that the client-side pipeline sends to /api/analyse_frame.
+    points shape: [33, 3] (x, y, z per MediaPipe landmark)
+    """
+    if points.shape[0] < 31:
+        return [0.0] * 15
+
+    shoulder_mid = (points[SHOULDER_L] + points[SHOULDER_R]) / 2.0
+    hip_mid = (points[HIP_L] + points[HIP_R]) / 2.0
+
+    return [
+        calculate_angle_3d(points[SHOULDER_L], points[ELBOW_L], points[WRIST_L]),
+        calculate_angle_3d(points[SHOULDER_R], points[ELBOW_R], points[WRIST_R]),
+        calculate_angle_3d(points[HIP_L], points[SHOULDER_L], points[ELBOW_L]),
+        calculate_angle_3d(points[HIP_R], points[SHOULDER_R], points[ELBOW_R]),
+        calculate_angle_3d(points[SHOULDER_L], points[HIP_L], points[KNEE_L]),
+        calculate_angle_3d(points[SHOULDER_R], points[HIP_R], points[KNEE_R]),
+        calculate_angle_3d(points[HIP_L], points[KNEE_L], points[ANKLE_L]),
+        calculate_angle_3d(points[HIP_R], points[KNEE_R], points[ANKLE_R]),
+        calculate_angle_3d(points[KNEE_L], points[ANKLE_L], points[HEEL_L]),
+        calculate_angle_3d(points[KNEE_R], points[ANKLE_R], points[HEEL_R]),
+        calculate_angle_3d(points[SHOULDER_L], points[HIP_L], points[HIP_R]),
+        calculate_angle_3d(points[SHOULDER_R], points[HIP_R], points[HIP_L]),
+        calculate_angle_3d(points[NOSE], shoulder_mid, hip_mid),
+        calculate_angle_3d(points[HIP_R], points[HIP_L], points[KNEE_L]),
+        calculate_angle_3d(points[HIP_L], points[HIP_R], points[KNEE_R]),
+    ]
+
 def normalize_coordinate_sequence(coords: np.ndarray) -> np.ndarray:
     """
     Translates joints to be pelvis-centered (midpoint of left and right hips)

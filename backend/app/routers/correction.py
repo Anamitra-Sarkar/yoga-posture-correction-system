@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 from app.services.correction import generate_safe_correction
 from app.services.occlusion import fuse_and_recover_occlusions
+from app.services.smpl_fit import recover_occluded_joints
 
 router = APIRouter()
 
@@ -52,6 +53,23 @@ def occlusion_recovery(data: OcclusionInput):
             mp_landmarks=data.mp_landmarks,
             cliff_landmarks=data.cliff_landmarks
         )
+
+        # If no precomputed 3D mesh coordinates were supplied (the normal live
+        # path) and some joints only got the simpler mirror-reflection fallback,
+        # try to improve those specific joints with a genuine SMPL kinematic
+        # fit against the still-visible joints. Falls through silently (keeping
+        # the mirror result) if SMPL is unavailable, under-constrained for this
+        # frame, or ZeroGPU quota is exhausted.
+        if data.cliff_landmarks is None and recovered:
+            occluded_indices = [i for i in range(33) if data.mp_landmarks[i][3] < 0.5]
+            smpl_recovered = recover_occluded_joints(data.mp_landmarks, occluded_indices)
+            for mp_idx, xyz in smpl_recovered.items():
+                fused[mp_idx][0] = xyz[0]
+                fused[mp_idx][1] = xyz[1]
+                fused[mp_idx][2] = xyz[2]
+            if smpl_recovered:
+                method = f"{method} + SMPL kinematic fit ({len(smpl_recovered)} joints)"
+
         return OcclusionResponse(
             fused_landmarks=fused,
             occluded_joints_recovered=recovered,
