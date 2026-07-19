@@ -120,14 +120,33 @@ const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
 
 // Poses selectable in the sidebar "Target Pose" grid — all 6 have backend
 // correction templates + target-angle rules, so every one is fully live.
+// Icons are thematic only (never a human-figure emoji depicting a specific
+// body position) — a wrong body-position emoji invites users to physically
+// copy an incorrect pose. warrior_2 used to show 🧘 (a seated meditation
+// figure), which is a completely different pose from the standing Warrior II
+// lunge; the reference photo below is now the actual "how do I do this"
+// source of truth.
 const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
-  { id: "warrior_2", icon: "🧘" },
+  { id: "warrior_2", icon: "⚔️" },
   { id: "plank", icon: "🏋️" },
   { id: "tree_pose", icon: "🌲" },
   { id: "chair_pose", icon: "🪑" },
   { id: "cobra_pose", icon: "🐍" },
   { id: "mountain_pose", icon: "⛰️" },
 ];
+
+// Real reference photographs for each practice-able pose, shown in the Pose
+// Guide panel so users don't have to guess correct form from an emoji.
+// All CC-BY / CC-BY-SA licensed from Wikimedia Commons; attribution shown
+// inline per license terms.
+const POSE_REFERENCE_IMAGES: { [key: string]: { src: string; credit: string } } = {
+  warrior_2: { src: "/pose-images/warrior_2.jpg", credit: "lululemon athletica, CC BY 2.0, via Wikimedia Commons" },
+  plank: { src: "/pose-images/plank.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
+  tree_pose: { src: "/pose-images/tree_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
+  chair_pose: { src: "/pose-images/chair_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
+  cobra_pose: { src: "/pose-images/cobra_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
+  mountain_pose: { src: "/pose-images/mountain_pose.jpg", credit: "Witold Fitz-Simon, CC BY-SA 2.5, via Wikimedia Commons" },
+};
 
 
 const FEATURE_NAMES_ORDER = [
@@ -1149,6 +1168,18 @@ export default function Dashboard() {
                     minDetectionConfidence: 0.5,
                     minTrackingConfidence: 0.5
                   });
+                } else if (avg < 40) {
+                  // Device has plenty of headroom (> ~25fps at "Full") —
+                  // upgrade to MediaPipe's most accurate "Heavy" model for
+                  // better landmark/skeleton precision. Purely additive: the
+                  // existing downgrade path above is untouched, and this only
+                  // triggers for devices that already proved they're fast.
+                  poseRef.current.setOptions({
+                    modelComplexity: 2,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                  });
                 }
                 hasDowngradedModelRef.current = true;
               }
@@ -1814,6 +1845,23 @@ export default function Dashboard() {
                   <ChevronDown size={16} className={`chevron-icon ${!openGroupPoseGuide ? "collapsed" : ""}`} />
                 </div>
                 <div className={`sidebar-group-body ${!openGroupPoseGuide ? "collapsed" : ""}`}>
+                  {/* Reference photo — the actual source of truth for what this
+                      pose should look like, since a single emoji can't show
+                      correct body position and (as warrior_2's old 🧘 icon
+                      proved) a wrong one can teach the wrong form entirely. */}
+                  {POSE_REFERENCE_IMAGES[activePreset] && (
+                    <div className="pose-guide-reference">
+                      <img
+                        src={POSE_REFERENCE_IMAGES[activePreset].src}
+                        alt={`Correct form for ${getSanskritName(activePreset, "en")}`}
+                        className="pose-guide-reference-img"
+                      />
+                      <span className="pose-guide-reference-credit">
+                        {POSE_REFERENCE_IMAGES[activePreset].credit}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Difficulty badge */}
                   {diff && (
                     <div className="pose-guide-diff">

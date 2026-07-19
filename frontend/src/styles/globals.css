@@ -2110,6 +2110,28 @@ body:has(.yoga-fullscreen) { overflow: hidden; }
 }
 
 /* ── Pose Guide Sidebar Section ──────────────────────────── */
+.pose-guide-reference {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.pose-guide-reference-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: block;
+}
+
+.pose-guide-reference-credit {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: right;
+}
+
 .pose-guide-diff {
   display: flex;
   align-items: center;
