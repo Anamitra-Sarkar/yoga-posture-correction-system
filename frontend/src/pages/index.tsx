@@ -1808,7 +1808,7 @@ export default function Dashboard() {
             </div>
             <div className={`sidebar-group-body ${!openGroupTwin ? "collapsed" : ""}`}>
               {calibratedProfile ? (
-                <div className="scrollable-panel" style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "200px", overflowY: "auto", paddingRight: "4px" }}>
+                <div className="scrollable-panel" style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "220px", overflowY: "auto", padding: "4px 4px 4px 0", margin: "4px 0" }}>
                   <div style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500", marginBottom: "4px" }}>
                     {TRANSLATIONS[lang].activeProfile}
                   </div>
