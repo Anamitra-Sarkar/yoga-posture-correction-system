@@ -51,6 +51,17 @@ def _load_smpl_model():
     global _smpl_model
     if _smpl_model is not None:
         return _smpl_model
+
+    # Unpickling the official SMPL .pkl needs `chumpy` (it wraps some arrays
+    # as chumpy objects), but chumpy itself imports deprecated numpy aliases
+    # (np.bool, np.float, ...) removed in numpy>=1.24. Patch them in first
+    # rather than pinning an old numpy just for this one legacy dependency.
+    for name, alias in [("bool", bool), ("int", int), ("float", float),
+                         ("complex", complex), ("object", object),
+                         ("str", str), ("unicode", str)]:
+        if not hasattr(np, name):
+            setattr(np, name, alias)
+
     import smplx
     model_path = hf_hub_download(repo_id=SMPL_REPO, filename=SMPL_NEUTRAL_PATH_IN_REPO, token=settings.HF_TOKEN)
     _smpl_model = smplx.SMPL(model_path=model_path, gender="neutral", batch_size=1)
