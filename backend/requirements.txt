@@ -9,5 +9,4 @@ httpx
 mediapipe
 smplx
 scipy
-chumpy
 spaces
