@@ -776,8 +776,17 @@ button, [role="button"] { user-select: none; }
   backdrop-filter: blur(12px) saturate(1.3);
   -webkit-backdrop-filter: blur(12px) saturate(1.3);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
-  content-visibility: auto;
-  contain-intrinsic-size: 0 200px;
+  /* .app-sidebar is a flex column and every .sidebar-group is a flex
+     item; without flex-shrink:0, flexbox's default behavior compresses
+     each section to squeeze all of them into the drawer's height
+     BEFORE falling back to the drawer's own scroll -- and since this
+     element clips via overflow:hidden, that compression silently cut
+     sections down to ~2 visible pose cards instead of the 4 their own
+     inner max-height allowed, even though JS layout queries on the
+     inner element still reported its full, uncompressed size. The
+     drawer's overflow-y:auto already handles the resulting overflow
+     correctly, so nothing needs to shrink here. */
+  flex-shrink: 0;
   transition: var(--transition);
 }
 
