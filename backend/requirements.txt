@@ -8,4 +8,5 @@ requests
 httpx
 mediapipe
 smplx
+scipy
 spaces
