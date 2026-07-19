@@ -25,11 +25,14 @@ FEATURE_NAMES = [
 
 # Pulled from live detection after real-world testing: plank was consistently
 # misread as mountain_pose by the MLP (no rule engine coverage exists for it
-# either), and tree_pose scattered across child_pose/lunge-type predictions.
+# either), tree_pose scattered across child_pose/lunge-type predictions, and
+# chair_pose kept misfiring even after the warrior/chair rule-priority fix
+# (see classify_pose's chair_pose comment below -- reordering and the
+# leg-symmetry check helped but weren't sufficient in live real-world use).
 # Applied as a final safety net after classification, regardless of whether
 # the pose call came from the MLP or the rule engine, so neither can ever
 # surface as a detected pose until the underlying issue is fixed.
-DISABLED_POSES = {"plank", "tree_pose"}
+DISABLED_POSES = {"plank", "tree_pose", "chair_pose"}
 
 
 def sanitize_pose(pose_id: str) -> str:

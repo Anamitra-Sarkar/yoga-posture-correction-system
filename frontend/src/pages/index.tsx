@@ -27,7 +27,7 @@ import { CalibrationProfile } from "../types/yoga";
 import { extractAnglesFromLandmarks } from "../utils/geometry";
 
 /* eslint-disable */
-type PresetPoseId = "warrior_2" | "chair_pose" | "cobra_pose" | "mountain_pose";
+type PresetPoseId = "warrior_2" | "cobra_pose" | "mountain_pose";
 
 const POSE_TARGET_ANGLES: {
   [poseId: string]: {
@@ -42,11 +42,6 @@ const POSE_TARGET_ANGLES: {
     { joint: "shoulder_l", label: "Left Shoulder Angle", target: 90, tolerance: 15 },
     { joint: "knee_r", label: "Right Knee Angle", target: 180, tolerance: 15 },
     { joint: "shoulder_r", label: "Right Shoulder Angle", target: 90, tolerance: 15 }
-  ],
-  chair_pose: [
-    { joint: "knee_l", label: "Left Knee Bend", target: 100, tolerance: 15 },
-    { joint: "knee_r", label: "Right Knee Bend", target: 100, tolerance: 15 },
-    { joint: "hip_l", label: "Left Hip Bend", target: 100, tolerance: 15 }
   ],
   cobra_pose: [
     { joint: "neck", label: "Neck Extension", target: 140, tolerance: 20 },
@@ -67,12 +62,6 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
     { icon: "👁️", cue: "Gaze over front fingertips" },
     { icon: "🦴", cue: "Hips open to the long side" },
   ],
-  chair_pose: [
-    { icon: "🪑", cue: "Sit hips back like lowering into a chair" },
-    { icon: "🦵", cue: "Knees tracking over ankles, not past toes" },
-    { icon: "💪", cue: "Arms reach forward or overhead" },
-    { icon: "🦴", cue: "Weight rooted through the heels" },
-  ],
   cobra_pose: [
     { icon: "🐍", cue: "Hands under shoulders, elbows close to ribs" },
     { icon: "🦴", cue: "Lift chest with back muscles, not just arms" },
@@ -89,17 +78,17 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
 
 const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
   warrior_2:    { level: "Intermediate", color: "var(--color-warning)" },
-  chair_pose:   { level: "Beginner",     color: "var(--color-success)" },
   cobra_pose:   { level: "Beginner",     color: "var(--color-success)" },
   mountain_pose:{ level: "Beginner",     color: "var(--color-success)" },
 };
 
-// Poses selectable in the sidebar "Target Pose" grid. plank and tree_pose
-// were removed after live real-world testing showed the classifier
-// consistently misidentifying them (plank read as mountain_pose; tree_pose
-// scattered across child_pose/lunge-type poses) -- rather than ship a
-// selectable pose the detector can't reliably confirm, they're pulled from
-// the vocabulary entirely until the underlying classification is fixed.
+// Poses selectable in the sidebar "Target Pose" grid. plank, tree_pose, and
+// chair_pose were removed after live real-world testing showed the
+// classifier consistently misidentifying them (plank read as mountain_pose;
+// tree_pose scattered across child_pose/lunge-type poses; chair_pose kept
+// misfiring even after the warrior/chair rule-priority fix) -- rather than
+// ship a selectable pose the detector can't reliably confirm, they're pulled
+// from the vocabulary entirely until the underlying classification is fixed.
 // Icons are thematic only (never a human-figure emoji depicting a specific
 // body position) — a wrong body-position emoji invites users to physically
 // copy an incorrect pose. warrior_2 used to show 🧘 (a seated meditation
@@ -108,7 +97,6 @@ const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
 // source of truth.
 const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
   { id: "warrior_2", icon: "⚔️" },
-  { id: "chair_pose", icon: "🪑" },
   { id: "cobra_pose", icon: "🐍" },
   { id: "mountain_pose", icon: "⛰️" },
 ];
@@ -119,7 +107,6 @@ const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
 // inline per license terms.
 const POSE_REFERENCE_IMAGES: { [key: string]: { src: string; credit: string } } = {
   warrior_2: { src: "/pose-images/warrior_2.jpg", credit: "lululemon athletica, CC BY 2.0, via Wikimedia Commons" },
-  chair_pose: { src: "/pose-images/chair_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   cobra_pose: { src: "/pose-images/cobra_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   mountain_pose: { src: "/pose-images/mountain_pose.jpg", credit: "Witold Fitz-Simon, CC BY-SA 2.5, via Wikimedia Commons" },
 };
