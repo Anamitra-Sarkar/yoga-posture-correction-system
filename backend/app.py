@@ -118,7 +118,10 @@ def analyse_demo_image(image: np.ndarray):
     return summary, devs_dict
 
 
-with gr.Blocks(title=settings.TITLE) as demo:
+# Deliberately not named `demo`: HF's Gradio SDK runtime auto-launches any
+# top-level variable called `demo` on its own, which raced with our explicit
+# uvicorn.run() below and crashed the Space with "address already in use".
+with gr.Blocks(title=settings.TITLE) as blocks_ui:
     gr.HTML(
         """
         <div id="asana-header">
@@ -153,7 +156,7 @@ with gr.Blocks(title=settings.TITLE) as demo:
         """
     )
 
-app = gr.mount_gradio_app(api, demo, path="/", css=THEME_CSS)
+app = gr.mount_gradio_app(api, blocks_ui, path="/", css=THEME_CSS)
 
 if __name__ == "__main__":
     import uvicorn
