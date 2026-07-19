@@ -156,7 +156,11 @@ with gr.Blocks(title=settings.TITLE) as blocks_ui:
         """
     )
 
-app = gr.mount_gradio_app(api, blocks_ui, path="/", css=THEME_CSS)
+# ssr_mode explicitly off: HF Spaces sets GRADIO_SSR_MODE=True by default,
+# which spawns a Node SSR subprocess that raced our own uvicorn bind on the
+# same port and crashed the Space with "address already in use". Not needed
+# for this internal demo page anyway.
+app = gr.mount_gradio_app(api, blocks_ui, path="/", css=THEME_CSS, ssr_mode=False)
 
 if __name__ == "__main__":
     import uvicorn
