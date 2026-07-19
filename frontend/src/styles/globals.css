@@ -646,6 +646,52 @@ button, [role="button"] { user-select: none; }
   transform: translateX(0);
 }
 
+/* ── Shared smooth-scroll treatment ──────────────────────────
+   Applied to every internally-scrollable panel (sidebar drawer, sidebar
+   group bodies, the digital-twin joint list, main content) so touch
+   scrolling feels the same everywhere: momentum on iOS, no scroll
+   chaining into the page behind it, and a slim scrollbar instead of the
+   default chunky one. */
+.app-sidebar,
+.sidebar-group-body,
+.app-content,
+.scrollable-panel {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 103, 244, 0.35) transparent;
+}
+
+.app-sidebar::-webkit-scrollbar,
+.sidebar-group-body::-webkit-scrollbar,
+.app-content::-webkit-scrollbar,
+.scrollable-panel::-webkit-scrollbar {
+  width: 5px;
+}
+
+.app-sidebar::-webkit-scrollbar-track,
+.sidebar-group-body::-webkit-scrollbar-track,
+.app-content::-webkit-scrollbar-track,
+.scrollable-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-sidebar::-webkit-scrollbar-thumb,
+.sidebar-group-body::-webkit-scrollbar-thumb,
+.app-content::-webkit-scrollbar-thumb,
+.scrollable-panel::-webkit-scrollbar-thumb {
+  background: rgba(79, 103, 244, 0.35);
+  border-radius: 10px;
+}
+
+.app-sidebar::-webkit-scrollbar-thumb:hover,
+.sidebar-group-body::-webkit-scrollbar-thumb:hover,
+.app-content::-webkit-scrollbar-thumb:hover,
+.scrollable-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 103, 244, 0.55);
+}
+
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -749,7 +795,12 @@ button, [role="button"] { user-select: none; }
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  overflow: hidden;
+  /* auto (not hidden): a group's true content height can exceed the 600px
+     expand/collapse animation cap (long guide text, the reference photo,
+     more pose cards, larger fonts) -- it now scrolls internally instead of
+     silently clipping content with no way to reach it. */
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 600px;
   opacity: 1;
   transition:
@@ -1871,6 +1922,16 @@ button, [role="button"] { user-select: none; }
   .kpi-column .kpi-card {
     flex: 1 1 calc(33% - var(--space-2));
     min-width: 120px;
+  }
+
+  /* Camera stays pinned near the top of the scroll area on phones instead
+     of scrolling away with the KPI/guidance content below it -- it's the
+     thing you're actively performing a pose in front of, so it shouldn't
+     disappear just because you scrolled down to check your form guidance. */
+  .camera-panel {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-2));
+    z-index: 10;
   }
 }
 
