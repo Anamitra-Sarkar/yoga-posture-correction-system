@@ -26,6 +26,17 @@ class SequenceResponse(BaseModel):
     confidence: float
     requires_static_fallback: bool
 
+# Default fallback threshold is 0.70. child_pose gets a lower one: it has
+# only 33 static training frames (vs 15k+ for most poses), so the static
+# MLP classifier reliably misclassifies it -- but the sequence model
+# handles it fine (962 training sequences, ~0.62 confidence on real
+# held-out data). Trusting the sequence model down to 0.55 here avoids
+# routing to the known-weak static fallback for this one specific pose.
+SEQUENCE_FALLBACK_THRESHOLDS = {
+    "child_pose": 0.55,
+}
+DEFAULT_SEQUENCE_FALLBACK_THRESHOLD = 0.70
+
 @router.post("/analyse_frame", response_model=FrameResponse)
 def analyse_frame(data: FrameInput):
     if len(data.angles) != 15:
@@ -75,7 +86,8 @@ def analyse_sequence(data: SequenceInput):
             predicted_seq = classes[idx.item()]
             confidence = conf.item()
             
-        requires_fallback = (predicted_seq == "transition/unknown" or confidence < 0.70)
+        threshold = SEQUENCE_FALLBACK_THRESHOLDS.get(predicted_seq, DEFAULT_SEQUENCE_FALLBACK_THRESHOLD)
+        requires_fallback = (predicted_seq == "transition/unknown" or confidence < threshold)
         
         return SequenceResponse(
             sequence_pose=predicted_seq,
