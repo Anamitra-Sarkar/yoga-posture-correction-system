@@ -23,6 +23,18 @@ FEATURE_NAMES = [
     "neck", "hip_abduct_l", "hip_abduct_r"
 ]
 
+# Pulled from live detection after real-world testing: plank was consistently
+# misread as mountain_pose by the MLP (no rule engine coverage exists for it
+# either), and tree_pose scattered across child_pose/lunge-type predictions.
+# Applied as a final safety net after classification, regardless of whether
+# the pose call came from the MLP or the rule engine, so neither can ever
+# surface as a detected pose until the underlying issue is fixed.
+DISABLED_POSES = {"plank", "tree_pose"}
+
+
+def sanitize_pose(pose_id: str) -> str:
+    return "transition/unknown" if pose_id in DISABLED_POSES else pose_id
+
 
 def _between(v: float, lo: float, hi: float) -> bool:
     return lo <= v <= hi
@@ -50,10 +62,25 @@ def classify_pose(a: Dict[str, float]) -> str:
         return "seated_staff"
     if _between(hip_l, 50, 120) and _between(hip_r, 50, 120) and knee_l < 125 and knee_r < 125 and trunk_l >= 60 and trunk_r >= 60:
         return "seated_easy_pose"
-    tree_l = knee_l > 140 and hip_l > 140 and knee_r < 120 and _between(hip_r, 70, 135) and hip_abduct_r > 115
-    tree_r = knee_r > 140 and hip_r > 140 and knee_l < 120 and _between(hip_l, 70, 135) and hip_abduct_l > 115
-    if tree_l or tree_r:
-        return "tree_pose"
+    # tree_pose rule intentionally removed: live real-world testing showed it
+    # consistently scattering across child_pose/lunge-type predictions rather
+    # than reliably identifying tree_pose itself. Pulled from the vocabulary
+    # (see PRODUCTION_DISABLED_POSES below) until the underlying detection is
+    # fixed, rather than keep offering an unreliable rule.
+    # Chair pose (Utkatasana) is a SYMMETRIC bent-knee stance; warrior_1/2/lunge
+    # are all defined by an ASYMMETRIC one-bent-one-straight leg pair. Checking
+    # chair_pose first, with an explicit symmetry requirement, stops the (much
+    # wider) warrior/lunge leg conditions from preempting a genuinely symmetric
+    # chair stance just because one knee's 2D angle reads slightly differently
+    # than the other -- and conversely stops legitimate warrior_2 attempts that
+    # fall outside its arm-angle band from being coincidentally caught by
+    # chair_pose's own wide hip/knee band, since real warrior stances have a
+    # large (>30 deg) knee asymmetry that chair_pose now explicitly excludes.
+    if (_between(hip_l, 75, 140) and _between(hip_r, 75, 140)
+            and _between(knee_l, 75, 140) and _between(knee_r, 75, 140)
+            and abs(knee_l - knee_r) < 30
+            and shoulder_l > 95 and shoulder_r > 95):
+        return "chair_pose"
     w1_legs = (knee_l < 120 and knee_r > 130) or (knee_r < 120 and knee_l > 130)
     w1_arms = shoulder_l > 110 and shoulder_r > 110
     if w1_legs and w1_arms:
@@ -68,8 +95,6 @@ def classify_pose(a: Dict[str, float]) -> str:
         return "standing_forward_fold"
     if _between(hip_l, 70, 115) and _between(hip_r, 70, 115) and knee_l > 130 and knee_r > 130:
         return "halfway_lift"
-    if _between(hip_l, 75, 140) and _between(hip_r, 75, 140) and _between(knee_l, 75, 140) and _between(knee_r, 75, 140) and shoulder_l > 95 and shoulder_r > 95:
-        return "chair_pose"
     if _between(hip_l, 60, 125) and _between(hip_r, 60, 125) and _between(knee_l, 60, 125) and _between(knee_r, 60, 125) and _between(shoulder_l, 60, 125) and _between(shoulder_r, 60, 125):
         return "table_top"
     if hip_l > 140 and hip_r > 140 and knee_l > 140 and knee_r > 140:

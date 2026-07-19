@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from app.config import settings
 from app.services.hf_loader import get_mlp_model, get_stgcn_model
 from app.utils.geometry import FEATURE_NAMES, normalize_coordinate_sequence
-from app.utils.rules_classifier import classify_pose, score_pose
+from app.utils.rules_classifier import classify_pose, score_pose, sanitize_pose
 
 router = APIRouter()
 
@@ -72,6 +72,8 @@ def analyse_frame(data: FrameInput):
         else:
             predicted_pose = rule_pose
             correctness_prob, devs_dict = score_pose(rule_pose, angles_dict)
+
+        predicted_pose = sanitize_pose(predicted_pose)
 
         return FrameResponse(
             pose_id=predicted_pose,

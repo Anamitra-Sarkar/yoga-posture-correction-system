@@ -27,7 +27,7 @@ import { CalibrationProfile } from "../types/yoga";
 import { extractAnglesFromLandmarks } from "../utils/geometry";
 
 /* eslint-disable */
-type PresetPoseId = "warrior_2" | "plank" | "tree_pose" | "chair_pose" | "cobra_pose" | "mountain_pose";
+type PresetPoseId = "warrior_2" | "chair_pose" | "cobra_pose" | "mountain_pose";
 
 const POSE_TARGET_ANGLES: {
   [poseId: string]: {
@@ -52,16 +52,6 @@ const POSE_TARGET_ANGLES: {
     { joint: "neck", label: "Neck Extension", target: 140, tolerance: 20 },
     { joint: "trunk_l", label: "Left Trunk Extension", target: 140, tolerance: 20 }
   ],
-  plank: [
-    { joint: "elbow_l", label: "Left Elbow Extension", target: 180, tolerance: 10 },
-    { joint: "elbow_r", label: "Right Elbow Extension", target: 180, tolerance: 10 },
-    { joint: "trunk_l", label: "Left Spine Line", target: 180, tolerance: 15 }
-  ],
-  tree_pose: [
-    { joint: "knee_l", label: "Left Knee Angle (Bent)", target: 45, tolerance: 15 },
-    { joint: "hip_abduct_l", label: "Left Hip Abduction", target: 45, tolerance: 15 },
-    { joint: "knee_r", label: "Right Knee Angle (Standing)", target: 180, tolerance: 15 }
-  ],
   mountain_pose: [
     { joint: "knee_l", label: "Left Knee Extension", target: 180, tolerance: 10 },
     { joint: "knee_r", label: "Right Knee Extension", target: 180, tolerance: 10 },
@@ -76,18 +66,6 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
     { icon: "💪", cue: "Arms parallel, shoulder height" },
     { icon: "👁️", cue: "Gaze over front fingertips" },
     { icon: "🦴", cue: "Hips open to the long side" },
-  ],
-  plank: [
-    { icon: "💪", cue: "Wrists under shoulders, arms straight" },
-    { icon: "🦴", cue: "Body forms one straight line" },
-    { icon: "🧘", cue: "Core + glutes fully engaged" },
-    { icon: "👁️", cue: "Neck neutral, gaze at floor" },
-  ],
-  tree_pose: [
-    { icon: "🦶", cue: "Root foot flat, press into ground" },
-    { icon: "🦵", cue: "Bent knee open to the side" },
-    { icon: "👁️", cue: "Fix gaze on a still point (Drishti)" },
-    { icon: "💪", cue: "Hands in Anjali or raised overhead" },
   ],
   chair_pose: [
     { icon: "🪑", cue: "Sit hips back like lowering into a chair" },
@@ -111,15 +89,17 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
 
 const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
   warrior_2:    { level: "Intermediate", color: "var(--color-warning)" },
-  plank:        { level: "Beginner",     color: "var(--color-success)" },
-  tree_pose:    { level: "Intermediate", color: "var(--color-warning)" },
   chair_pose:   { level: "Beginner",     color: "var(--color-success)" },
   cobra_pose:   { level: "Beginner",     color: "var(--color-success)" },
   mountain_pose:{ level: "Beginner",     color: "var(--color-success)" },
 };
 
-// Poses selectable in the sidebar "Target Pose" grid — all 6 have backend
-// correction templates + target-angle rules, so every one is fully live.
+// Poses selectable in the sidebar "Target Pose" grid. plank and tree_pose
+// were removed after live real-world testing showed the classifier
+// consistently misidentifying them (plank read as mountain_pose; tree_pose
+// scattered across child_pose/lunge-type poses) -- rather than ship a
+// selectable pose the detector can't reliably confirm, they're pulled from
+// the vocabulary entirely until the underlying classification is fixed.
 // Icons are thematic only (never a human-figure emoji depicting a specific
 // body position) — a wrong body-position emoji invites users to physically
 // copy an incorrect pose. warrior_2 used to show 🧘 (a seated meditation
@@ -128,8 +108,6 @@ const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
 // source of truth.
 const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
   { id: "warrior_2", icon: "⚔️" },
-  { id: "plank", icon: "🏋️" },
-  { id: "tree_pose", icon: "🌲" },
   { id: "chair_pose", icon: "🪑" },
   { id: "cobra_pose", icon: "🐍" },
   { id: "mountain_pose", icon: "⛰️" },
@@ -141,8 +119,6 @@ const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
 // inline per license terms.
 const POSE_REFERENCE_IMAGES: { [key: string]: { src: string; credit: string } } = {
   warrior_2: { src: "/pose-images/warrior_2.jpg", credit: "lululemon athletica, CC BY 2.0, via Wikimedia Commons" },
-  plank: { src: "/pose-images/plank.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
-  tree_pose: { src: "/pose-images/tree_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   chair_pose: { src: "/pose-images/chair_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   cobra_pose: { src: "/pose-images/cobra_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   mountain_pose: { src: "/pose-images/mountain_pose.jpg", credit: "Witold Fitz-Simon, CC BY-SA 2.5, via Wikimedia Commons" },
@@ -1088,7 +1064,15 @@ export default function Dashboard() {
       modelComplexity: 1,
       smoothLandmarks: true,
       minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
+      minTrackingConfidence: 0.5,
+      // MediaPipe's own selfieMode default mirrors the image AND landmark
+      // x-coordinates internally, independent of and inconsistent with the
+      // CSS-level mirror this app already applies conditionally for the
+      // front camera only. Forcing this off makes the CSS mirror the single
+      // source of truth for display, and keeps landmark coordinates (and
+      // therefore angle-based pose classification) always true-to-camera
+      // regardless of which camera is active.
+      selfieMode: false
     });
 
     pose.onResults((results: any) => {
@@ -1170,7 +1154,8 @@ export default function Dashboard() {
                     modelComplexity: 0,
                     smoothLandmarks: true,
                     minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
+                    minTrackingConfidence: 0.5,
+                    selfieMode: false
                   });
                 }
                 // NOTE: an auto-upgrade to modelComplexity 2 ("Heavy") for fast

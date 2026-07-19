@@ -8,7 +8,7 @@ from app.main import app as api
 from app.config import settings
 from app.services.hf_loader import get_mlp_model
 from app.utils.geometry import FEATURE_NAMES, extract_angles_from_landmarks
-from app.utils.rules_classifier import classify_pose, score_pose
+from app.utils.rules_classifier import classify_pose, score_pose, sanitize_pose
 
 # ---------------------------------------------------------------------------
 # Companion Gradio UI. HF Spaces on the Docker SDK cannot use ZeroGPU (free
@@ -121,6 +121,7 @@ def analyse_demo_image(image: np.ndarray):
         predicted_pose = rule_pose
         correctness, devs = score_pose(rule_pose, angles_dict)
 
+    predicted_pose = sanitize_pose(predicted_pose)
     devs_dict = {name: round(min(180.0, max(0.0, float(val))), 1) for name, val in devs.items()}
     summary = (
         f"**Detected pose:** {predicted_pose.replace('_', ' ').title()}\n\n"
