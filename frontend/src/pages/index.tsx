@@ -1004,12 +1004,22 @@ export default function Dashboard() {
   // the raw correctness score (which only measures form quality for whatever
   // pose was detected) would be misleading to show — override both the
   // displayed guidance text and the effective score in that case.
-  const displayCorrectionText = poseMismatch
+  //
+  // `poseMismatch` is only recomputed once per ~10s prediction cycle inside
+  // the hook, but activePose/activePreset can change sooner (e.g. the user
+  // switches their target pose, or a fresher classification lands) -- if we
+  // trusted the stale flag alone, the message text (built from the CURRENT
+  // live values) could render as "This looks like X, not your selected X"
+  // once both sides catch up to being equal while the boolean hasn't yet.
+  // Requiring a live re-check here closes that window: the message can only
+  // ever show when the two pose ids genuinely differ right now.
+  const showMismatch = poseMismatch && activePose !== activePreset;
+  const displayCorrectionText = showMismatch
     ? TRANSLATIONS[lang].wrongPoseDetected
         .replace('{detected}', getSanskritName(activePose, lang))
         .replace(/{target}/g, getSanskritName(activePreset, lang))
     : correctionText;
-  const effectiveCorrectness = poseMismatch ? 0 : correctness;
+  const effectiveCorrectness = showMismatch ? 0 : correctness;
 
   // Audio speech synthesis loop — tied to the pipeline's own ~10s prediction
   // cadence (predictionTimestamp only changes once per real classification
@@ -2130,7 +2140,7 @@ export default function Dashboard() {
 
                     {/* Score badge */}
                     <div className={`fullscreen-score-badge ${effectiveCorrectness >= 0.75 ? 'good' : 'warn'}`}>
-                      {poseMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}
+                      {showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}
                     </div>
                   </>
                 )}
@@ -2161,7 +2171,7 @@ export default function Dashboard() {
                 <>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].postureScore}</span>
-                    <span className="kpi-value">{poseMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}</span>
+                    <span className="kpi-value">{showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}</span>
                     <span className="kpi-sub">{effectiveCorrectness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
                   </div>
                   <div className="kpi-card">
@@ -2233,7 +2243,7 @@ export default function Dashboard() {
                   <span className="guidance-text">{TRANSLATIONS[lang].detectingPose}</span>
                 </div>
               </div>
-            ) : poseMismatch ? (
+            ) : showMismatch ? (
               <div className="guidance-box" key="pose-mismatch">
                 <ShieldAlert size={24} />
                 <div className="guidance-content">
@@ -2278,7 +2288,7 @@ export default function Dashboard() {
               <div className="angle-placeholder-text">
                 <p>{TRANSLATIONS[lang].assumePosePrompt}</p>
               </div>
-            ) : poseMismatch ? (
+            ) : showMismatch ? (
               <div className="angle-placeholder-text">
                 <p>{displayCorrectionText}</p>
               </div>
