@@ -1,8 +1,49 @@
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
+import { useEffect } from 'react';
 import '../styles/globals.css';
 
+// Native-app-only polish (status bar theming, hardware back-button handling).
+// Dynamically imported and no-op outside the Capacitor Android WebView (the
+// PWA/browser build never touches these) -- Capacitor.isNativePlatform()
+// gates it so this has zero effect on the existing production PWA.
+function useNativeAppPolish() {
+  useEffect(() => {
+    let backListener: { remove: () => void } | undefined;
+
+    (async () => {
+      const { Capacitor } = await import('@capacitor/core');
+      if (!Capacitor.isNativePlatform()) return;
+
+      const { StatusBar, Style } = await import('@capacitor/status-bar');
+      try {
+        await StatusBar.setBackgroundColor({ color: '#0f0c29' });
+        await StatusBar.setStyle({ style: Style.Dark });
+      } catch {
+        // Non-fatal on devices/OEM skins that restrict status bar theming.
+      }
+
+      const { App } = await import('@capacitor/app');
+      const sub = await App.addListener('backButton', ({ canGoBack }) => {
+        // Default WebView behavior can otherwise instantly exit the app on
+        // the very first back press. Mirror normal Android app conventions:
+        // navigate web history if there is any, otherwise minimize (never
+        // hard-exit, since users expect the task-switcher/home-button model).
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          App.minimizeApp();
+        }
+      });
+      backListener = sub;
+    })();
+
+    return () => backListener?.remove();
+  }, []);
+}
+
 export default function App({ Component, pageProps }: AppProps) {
+  useNativeAppPolish();
   return (
     <>
       <Head>

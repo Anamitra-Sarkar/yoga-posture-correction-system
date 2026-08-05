@@ -39,3 +39,17 @@ temp/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Capacitor Android build artifacts (build.gradle, AndroidManifest.xml,
+# MainActivity.java etc. ARE committed for reproducibility -- only the
+# generated build output and local machine-specific SDK path are excluded)
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/.idea/
+frontend/android/captures/
+frontend/android/*.iml
+frontend/android/app/*.iml

@@ -10,18 +10,26 @@
     "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/camera": "^8.2.2",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
+    "lucide-react": "^0.331.0",
     "next": "^14.1.0",
+    "next-pwa": "^5.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.331.0",
-    "next-pwa": "^5.6.0",
     "workbox-window": "^7.0.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.0",
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
-    "typescript": "^5.3.3",
-    "sharp": "^0.33.0"
+    "sharp": "^0.33.0",
+    "typescript": "^5.3.3"
   }
 }
