@@ -39,9 +39,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Camera access for live pose analysis. @capacitor/camera is installed
-         even though the app uses raw getUserMedia/<video>/<canvas>, not
-         Capacitor's native Camera API -- its presence is what wires
+    <!-- Camera access for live pose analysis. Capacitor Camera plugin is
+         installed even though the app uses raw getUserMedia/video/canvas,
+         not Capacitor's native Camera API: its presence is what wires
          WebChromeClient.onPermissionRequest so in-page getUserMedia() calls
          actually trigger Android's runtime permission dialog (the standard
          "camera works in Chrome, black screen in the APK" gotcha). -->
