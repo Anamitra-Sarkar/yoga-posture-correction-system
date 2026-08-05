@@ -116,6 +116,29 @@ BIOMECHANICAL_TEMPLATES = {
                 "bn": "মেরুদণ্ড সোজা করে বুক টানটান করে দাঁড়ান এবং কাঁধ শিথিল রাখুন।"
             }
         }
+    },
+    "downward_dog": {
+        "hip_l": {
+            "issue_low": {
+                "en": "Lift your hips higher to form a taller inverted V shape.",
+                "hi": "अपने कूल्हों को ऊंचा उठाएं ताकि एक बड़ा उल्टा वी आकार बने।",
+                "bn": "একটি বড় উল্টানো ভি আকৃতি তৈরি করতে আপনার নিতম্ব আরও উঁচু করুন।"
+            }
+        },
+        "knee_l": {
+            "issue_low": {
+                "en": "Straighten your legs as much as comfortable, keeping heels reaching down.",
+                "hi": "जितना आरामदायक हो अपने पैरों को सीधा करें, एड़ियों को नीचे की ओर ले जाते हुए।",
+                "bn": "যতটা আরামদায়ক পা সোজা করুন, গোড়ালি নিচের দিকে রাখুন।"
+            }
+        },
+        "shoulder_l": {
+            "issue_low": {
+                "en": "Press firmly through your hands and extend your arms fully.",
+                "hi": "अपने हाथों से मजबूती से दबाएं और अपनी बाहों को पूरी तरह फैलाएं।",
+                "bn": "হাতের উপর দৃঢ়ভাবে চাপ দিন এবং বাহু সম্পূর্ণ প্রসারিত করুন।"
+            }
+        }
     }
 }
 

@@ -27,7 +27,7 @@ import { CalibrationProfile } from "../types/yoga";
 import { extractAnglesFromLandmarks } from "../utils/geometry";
 
 /* eslint-disable */
-type PresetPoseId = "warrior_2" | "cobra_pose" | "mountain_pose";
+type PresetPoseId = "warrior_2" | "cobra_pose" | "mountain_pose" | "tree_pose" | "plank" | "downward_dog";
 
 const POSE_TARGET_ANGLES: {
   [poseId: string]: {
@@ -51,6 +51,20 @@ const POSE_TARGET_ANGLES: {
     { joint: "knee_l", label: "Left Knee Extension", target: 180, tolerance: 10 },
     { joint: "knee_r", label: "Right Knee Extension", target: 180, tolerance: 10 },
     { joint: "trunk_l", label: "Left Spine Straightness", target: 180, tolerance: 10 }
+  ],
+  tree_pose: [
+    { joint: "knee_r", label: "Standing Leg Extension", target: 175, tolerance: 15 },
+    { joint: "hip_r", label: "Standing Hip Extension", target: 175, tolerance: 10 },
+  ],
+  plank: [
+    { joint: "hip_l", label: "Hip Line Straightness", target: 160, tolerance: 15 },
+    { joint: "knee_l", label: "Knee Line Straightness", target: 160, tolerance: 15 },
+    { joint: "shoulder_l", label: "Shoulder-Arm Angle", target: 85, tolerance: 20 },
+  ],
+  downward_dog: [
+    { joint: "hip_l", label: "Hip Fold Angle", target: 80, tolerance: 30 },
+    { joint: "knee_l", label: "Leg Extension", target: 145, tolerance: 25 },
+    { joint: "shoulder_l", label: "Arm-Shoulder Line", target: 137, tolerance: 25 },
   ]
 };
 
@@ -74,21 +88,46 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
     { icon: "💪", cue: "Arms relaxed at sides" },
     { icon: "👁️", cue: "Gaze steady, breathing calm" },
   ],
+  tree_pose: [
+    { icon: "🦶", cue: "Standing leg fully extended, foot rooted" },
+    { icon: "🦵", cue: "Lifted foot pressed into inner thigh or calf, never the knee" },
+    { icon: "🦴", cue: "Hips level, stacked over the standing foot" },
+    { icon: "👁️", cue: "Fix your gaze on one point for balance" },
+  ],
+  plank: [
+    { icon: "🦴", cue: "Straight line from shoulders to heels" },
+    { icon: "💪", cue: "Hands under shoulders, arms firm" },
+    { icon: "🦵", cue: "Legs active, core engaged" },
+    { icon: "👁️", cue: "Gaze slightly forward, neck neutral" },
+  ],
+  downward_dog: [
+    { icon: "🦶", cue: "Hands shoulder-width, feet hip-width" },
+    { icon: "🦴", cue: "Hips lifted high, forming an inverted V" },
+    { icon: "🦵", cue: "Heels reach toward the floor, knees soft if needed" },
+    { icon: "💪", cue: "Arms straight, weight shared between hands and feet" },
+  ],
 };
 
 const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
   warrior_2:    { level: "Intermediate", color: "var(--color-warning)" },
   cobra_pose:   { level: "Beginner",     color: "var(--color-success)" },
   mountain_pose:{ level: "Beginner",     color: "var(--color-success)" },
+  tree_pose:    { level: "Intermediate", color: "var(--color-warning)" },
+  plank:        { level: "Intermediate", color: "var(--color-warning)" },
+  downward_dog: { level: "Beginner",     color: "var(--color-success)" },
 };
 
-// Poses selectable in the sidebar "Target Pose" grid. plank, tree_pose, and
-// chair_pose were removed after live real-world testing showed the
-// classifier consistently misidentifying them (plank read as mountain_pose;
-// tree_pose scattered across child_pose/lunge-type poses; chair_pose kept
-// misfiring even after the warrior/chair rule-priority fix) -- rather than
-// ship a selectable pose the detector can't reliably confirm, they're pulled
-// from the vocabulary entirely until the underlying classification is fixed.
+// Poses selectable in the sidebar "Target Pose" grid. Phase B re-validated
+// plank, tree_pose, and downward_dog against a fresh 47-image real-world
+// test set with new/widened rules (see backend/app/utils/rules_classifier.py)
+// and they cleared a real accuracy bar (50%/76.4%/91.7% respectively) --
+// added here. chair_pose was re-tested and still measured ~0% (unchanged
+// finding, not a threshold miss -- 2D real-world chair_pose photos vary too
+// much by camera angle); warrior_1 was newly tested and topped out at 18.3%
+// (most sourced photos didn't actually show a clean Warrior I stance). Both
+// stay out of the vocabulary, matching backend/app/utils/rules_classifier.py's
+// DISABLED_POSES, rather than ship a selectable pose the detector can't
+// reliably confirm.
 // Icons are thematic only (never a human-figure emoji depicting a specific
 // body position) — a wrong body-position emoji invites users to physically
 // copy an incorrect pose. warrior_2 used to show 🧘 (a seated meditation
@@ -99,6 +138,9 @@ const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
   { id: "warrior_2", icon: "⚔️" },
   { id: "cobra_pose", icon: "🐍" },
   { id: "mountain_pose", icon: "⛰️" },
+  { id: "tree_pose", icon: "🌳" },
+  { id: "plank", icon: "📏" },
+  { id: "downward_dog", icon: "🐕" },
 ];
 
 // Real reference photographs for each practice-able pose, shown in the Pose
@@ -109,6 +151,13 @@ const POSE_REFERENCE_IMAGES: { [key: string]: { src: string; credit: string } } 
   warrior_2: { src: "/pose-images/warrior_2.jpg", credit: "lululemon athletica, CC BY 2.0, via Wikimedia Commons" },
   cobra_pose: { src: "/pose-images/cobra_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   mountain_pose: { src: "/pose-images/mountain_pose.jpg", credit: "Witold Fitz-Simon, CC BY-SA 2.5, via Wikimedia Commons" },
+  plank: { src: "/pose-images/plank.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
+  tree_pose: { src: "/pose-images/tree_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
+  // downward_dog has no local reference image yet -- POSE_REFERENCE_IMAGES
+  // lookups are guarded (`POSE_REFERENCE_IMAGES[activePreset] &&`), so this
+  // degrades gracefully (no image shown) rather than breaking. Sourcing one
+  // is a small, non-heavy download appropriate for a follow-up, not done
+  // here per this task's own no-local-download scope.
 };
 
 
