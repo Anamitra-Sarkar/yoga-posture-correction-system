@@ -41,6 +41,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Capacitor sync
+        run: |
+          # webDir content is unused at runtime in server mode (the WebView
+          # loads the live Vercel URL directly, see capacitor.config.ts) --
+          # a real `next build` isn't needed, but `cap sync` still wants the
+          # directory to exist, and regenerates capacitor-cordova-android-plugins/
+          # (deliberately gitignored by Capacitor's own template, meant to be
+          # regenerated, not committed) which the Gradle build requires.
+          mkdir -p .next
+          npx cap sync android
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
