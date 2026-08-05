@@ -1309,6 +1309,22 @@ export default function Dashboard() {
       }));
       const angles = extractAnglesFromLandmarks(points);
 
+      // 3b. Second independent signal: MediaPipe's poseWorldLandmarks
+      // (metric-scale, separately calibrated 3D coordinates, distinct from
+      // the image-normalized poseLandmarks above). Kept as genuine depth
+      // (zeroZ=false) and sent alongside the 2D angles so the backend's
+      // hybrid_classify can use it as a 3-way tiebreak vote. Always present
+      // whenever poseLandmarks is (same detection pass), but guarded anyway.
+      let worldAngles: number[] | undefined;
+      if (results.poseWorldLandmarks) {
+        const worldPoints = results.poseWorldLandmarks.map((pt: any) => ({
+          x: pt.x,
+          y: pt.y,
+          z: pt.z,
+        }));
+        worldAngles = extractAnglesFromLandmarks(worldPoints, false);
+      }
+
       // Update UI real-time angle display
       setAllCurrentAngles(angles);
       setCurrentKneeAngle(Math.round(angles[6])); // Left Knee
@@ -1346,7 +1362,7 @@ export default function Dashboard() {
         abortControllerRef.current = new AbortController();
       }
 
-      processFrame(rawLandmarks, angles).finally(() => {
+      processFrame(rawLandmarks, angles, worldAngles).finally(() => {
         isProcessingRef.current = false;
       });
     } else {

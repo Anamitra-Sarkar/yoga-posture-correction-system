@@ -6,13 +6,18 @@ from typing import List, Dict, Optional
 from app.config import settings
 from app.services.hf_loader import get_mlp_model, get_stgcn_model
 from app.utils.geometry import FEATURE_NAMES, normalize_coordinate_sequence
-from app.utils.rules_classifier import classify_pose, score_pose, sanitize_pose
+from app.utils.rules_classifier import hybrid_classify
 
 router = APIRouter()
 
 # Input & Output Schemas
 class FrameInput(BaseModel):
     angles: List[float]
+    # Optional second signal: angles derived from MediaPipe's pose_world_landmarks
+    # (metric-scale 3D, separately calibrated from the default normalized
+    # landmarks). Older clients that haven't been updated yet simply omit this,
+    # and hybrid_classify falls back to its original 2-way MLP-vs-2D-rules logic.
+    world_angles: Optional[List[float]] = None
 
 class FrameResponse(BaseModel):
     pose_id: str
@@ -59,21 +64,16 @@ def analyse_frame(data: FrameInput):
         # pose call (see Section "Real-World Generalization Gap" in the paper):
         # the MLP is trained on 3D angle features whose z-depth component is
         # only reliable at the camera framing of training video, not arbitrary
-        # webcam/photo distances. When the rule engine -- which never depended
-        # on that unreliable z signal -- disagrees with the MLP's pose call,
-        # its independently-derived answer is trusted instead. When they
-        # agree, the MLP's richer learned correctness/deviation output is kept.
-        rule_pose = classify_pose(angles_dict)
+        # webcam/photo distances. Combined with an optional independent
+        # world-landmarks rule vote (see hybrid_classify) when the client sends
+        # one, for a 3-way tiebreak instead of a straight 2-way override.
+        world_angles_dict = None
+        if data.world_angles is not None and len(data.world_angles) == 15:
+            world_angles_dict = {FEATURE_NAMES[idx]: data.world_angles[idx] for idx in range(15)}
 
-        if rule_pose == mlp_pose:
-            predicted_pose = mlp_pose
-            correctness_prob = mlp_correctness
-            devs_dict = mlp_devs
-        else:
-            predicted_pose = rule_pose
-            correctness_prob, devs_dict = score_pose(rule_pose, angles_dict)
-
-        predicted_pose = sanitize_pose(predicted_pose)
+        predicted_pose, correctness_prob, devs_dict = hybrid_classify(
+            mlp_pose, mlp_correctness, mlp_devs, angles_dict, world_angles_dict
+        )
 
         return FrameResponse(
             pose_id=predicted_pose,

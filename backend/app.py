@@ -8,7 +8,7 @@ from app.main import app as api
 from app.config import settings
 from app.services.hf_loader import get_mlp_model
 from app.utils.geometry import FEATURE_NAMES, extract_angles_from_landmarks
-from app.utils.rules_classifier import classify_pose, score_pose, sanitize_pose
+from app.utils.rules_classifier import hybrid_classify
 
 # ---------------------------------------------------------------------------
 # Companion Gradio UI. HF Spaces on the Docker SDK cannot use ZeroGPU (free
@@ -104,6 +104,16 @@ def analyse_demo_image(image: np.ndarray):
     angles = extract_angles_from_landmarks(points)
     angles_dict = {FEATURE_NAMES[i]: angles[i] for i in range(15)}
 
+    # This demo runs MediaPipe server-side, so pose_world_landmarks (metric-
+    # scale 3D, separately calibrated from the default normalized landmarks)
+    # is directly available here -- no client round-trip needed, unlike the
+    # production /api/analyse_frame path. zero_z=False keeps its genuine depth.
+    world_angles_dict = None
+    if results.pose_world_landmarks:
+        world_points = np.array([[lm.x, lm.y, lm.z] for lm in results.pose_world_landmarks.landmark])
+        world_angles = extract_angles_from_landmarks(world_points, zero_z=False)
+        world_angles_dict = {FEATURE_NAMES[i]: world_angles[i] for i in range(15)}
+
     model, classes = get_mlp_model()
     x_tensor = torch.tensor([angles], dtype=torch.float32).to(settings.DEVICE)
     with torch.no_grad():
@@ -113,15 +123,12 @@ def analyse_demo_image(image: np.ndarray):
         devs_deg = (deviations_pred[0].cpu().numpy() * 180.0)
         mlp_devs = {FEATURE_NAMES[i]: float(devs_deg[i]) for i in range(15)}
 
-    # Same MLP + rule-engine sanity-check pattern as /api/analyse_frame.
-    rule_pose = classify_pose(angles_dict)
-    if rule_pose == mlp_pose:
-        predicted_pose, correctness, devs = mlp_pose, mlp_correctness, mlp_devs
-    else:
-        predicted_pose = rule_pose
-        correctness, devs = score_pose(rule_pose, angles_dict)
+    # Same MLP + rule-engine (+ world-landmarks 3-way vote) pattern as
+    # /api/analyse_frame's hybrid_classify.
+    predicted_pose, correctness, devs = hybrid_classify(
+        mlp_pose, mlp_correctness, mlp_devs, angles_dict, world_angles_dict
+    )
 
-    predicted_pose = sanitize_pose(predicted_pose)
     devs_dict = {name: round(min(180.0, max(0.0, float(val))), 1) for name, val in devs.items()}
     summary = (
         f"**Detected pose:** {predicted_pose.replace('_', ' ').title()}\n\n"

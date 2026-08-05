@@ -35,7 +35,7 @@ export function useYogaPipeline({
   const lastPredictionTime = useRef<number>(0);
   const PREDICTION_INTERVAL_MS = 10000; // Real-time monitoring predicts/speaks at most once every 10s
 
-  const processFrame = async (rawLandmarks: number[][], currentAngles: number[]) => {
+  const processFrame = async (rawLandmarks: number[][], currentAngles: number[], worldAngles?: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
     if (rawLandmarks.length !== 33) return;
 
@@ -79,7 +79,7 @@ export function useYogaPipeline({
       let activeDeviations: { [jointName: string]: number } = {};
       
       if (fallbackRequired) {
-        const frameRes = await analyseFrame({ angles: currentAngles });
+        const frameRes = await analyseFrame({ angles: currentAngles, world_angles: worldAngles });
         currentPoseId = frameRes.pose_id;
         currentCorrectness = frameRes.correctness_score;
         activeDeviations = frameRes.deviations;
@@ -95,7 +95,7 @@ export function useYogaPipeline({
 
         // Fetch frame deviations for sequence flow to provide rich context to the correction generator
         try {
-          const frameRes = await analyseFrame({ angles: currentAngles });
+          const frameRes = await analyseFrame({ angles: currentAngles, world_angles: worldAngles });
           activeDeviations = frameRes.deviations;
         } catch (err) {
           console.error("Error fetching deviations for sequence:", err);

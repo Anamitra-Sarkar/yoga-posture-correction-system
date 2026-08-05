@@ -34,26 +34,31 @@ ANKLE_L, ANKLE_R = 27, 28
 HEEL_L, HEEL_R = 29, 30
 NOSE = 0
 
-def extract_angles_from_landmarks(points: np.ndarray) -> list:
+def extract_angles_from_landmarks(points: np.ndarray, zero_z: bool = True) -> list:
     """
     Mirrors frontend/src/utils/geometry.ts's extractAnglesFromLandmarks, so the
     Gradio demo (which runs MediaPipe server-side on an uploaded/webcam image)
     computes the exact same 15 biomechanical features, in the same order as
     FEATURE_NAMES, that the client-side pipeline sends to /api/analyse_frame.
     points shape: [33, 3] (x, y, z per MediaPipe landmark)
+
+    MediaPipe's default (image-normalized) z-depth estimate is only reliable
+    at the consistent camera distance/framing seen in demo videos; on
+    arbitrary real-world camera framing it degrades badly (measured 0-3%
+    real-world pose accuracy with z included, vs ~46% with it dropped,
+    confirmed across a 40-trial randomized threshold sweep). zero_z=True (the
+    default) reproduces that proven 2D-only path. zero_z=False is for the
+    separately-calibrated `pose_world_landmarks` (metric-scale 3D) signal,
+    which keeps genuine depth information and is used as an independent
+    second vote alongside the 2D path rather than as a replacement for it
+    (see rules_classifier.hybrid_classify).
     """
     if points.shape[0] < 31:
         return [0.0] * 15
 
-    # MediaPipe's monocular z-depth estimate is only reliable at the consistent
-    # camera distance/framing seen in demo videos; on arbitrary real-world
-    # camera framing it degrades badly (measured 0-3% real-world pose accuracy
-    # with z included, vs ~46% with it dropped, confirmed consistently across
-    # a 40-trial randomized threshold sweep). Using pure 2D (image-plane)
-    # angles is far more robust since that's what the camera actually captures
-    # reliably -- so z is zeroed here before any angle is computed.
     points = points.copy()
-    points[:, 2] = 0.0
+    if zero_z:
+        points[:, 2] = 0.0
 
     shoulder_mid = (points[SHOULDER_L] + points[SHOULDER_R]) / 2.0
     hip_mid = (points[HIP_L] + points[HIP_R]) / 2.0

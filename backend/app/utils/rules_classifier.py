@@ -137,6 +137,62 @@ _POSE_FEATURE_BANDS: Dict[str, List[Tuple[str, float, float]]] = {
 }
 
 
+def hybrid_classify(
+    mlp_pose: str,
+    mlp_correctness: float,
+    mlp_devs: Dict[str, float],
+    angles_2d: Dict[str, float],
+    world_angles: "Dict[str, float] | None" = None,
+) -> Tuple[str, float, Dict[str, float]]:
+    """
+    Combines the learned MLP's pose call with the deterministic 2D-rule engine
+    (see module docstring) and, when available, a second independent rule
+    call over MediaPipe's `pose_world_landmarks` (metric-scale 3D, distinct
+    from the default normalized landmarks' unreliable z). Three sources
+    voting beats two: world-landmarks genuinely carries depth information the
+    2D path deliberately discards, so when the 2D path and MLP disagree,
+    checking whether either one agrees with the independent 3D read gives a
+    real tiebreak instead of always defaulting to one side.
+
+    Without world_angles, falls back to the original 2-way MLP-vs-2D-rules
+    comparison (unchanged behavior for any caller that hasn't been updated to
+    send world landmarks yet).
+    """
+    rule_pose_2d = classify_pose(angles_2d)
+
+    if world_angles is None:
+        if rule_pose_2d == mlp_pose:
+            predicted_pose, correctness, devs = mlp_pose, mlp_correctness, mlp_devs
+        else:
+            predicted_pose = rule_pose_2d
+            correctness, devs = score_pose(rule_pose_2d, angles_2d)
+        return sanitize_pose(predicted_pose), correctness, devs
+
+    rule_pose_world = classify_pose(world_angles)
+
+    if mlp_pose == rule_pose_2d:
+        # MLP and the proven 2D-rule path already agree -- keep the MLP's
+        # richer learned correctness/deviation output, same as the 2-way case.
+        predicted_pose, correctness, devs = mlp_pose, mlp_correctness, mlp_devs
+    elif rule_pose_2d == rule_pose_world:
+        # Two independent geometric reads agree even though the MLP differs --
+        # trust them over the MLP.
+        predicted_pose = rule_pose_2d
+        correctness, devs = score_pose(rule_pose_2d, angles_2d)
+    elif mlp_pose == rule_pose_world:
+        # MLP's call is corroborated by real depth information the 2D path
+        # threw away -- worth trusting over the lone 2D-rules dissent.
+        predicted_pose = mlp_pose
+        correctness, devs = score_pose(mlp_pose, angles_2d)
+    else:
+        # All three disagree: fall back to the 2D-rules path, the one
+        # independently validated at ~45.7% real-world accuracy.
+        predicted_pose = rule_pose_2d
+        correctness, devs = score_pose(rule_pose_2d, angles_2d)
+
+    return sanitize_pose(predicted_pose), correctness, devs
+
+
 def score_pose(pose_id: str, a: Dict[str, float]) -> Tuple[float, Dict[str, float]]:
     """
     Returns (correctness_score in [0,1], per-feature deviation in degrees).

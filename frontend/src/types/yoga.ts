@@ -5,6 +5,7 @@
 
 export interface FrameInput {
   angles: number[]; // Array of 15 joint angles
+  world_angles?: number[]; // Optional: angles derived from MediaPipe's poseWorldLandmarks (metric-scale 3D)
 }
 
 export interface FrameResponse {

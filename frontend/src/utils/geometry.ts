@@ -37,17 +37,19 @@ export const HEEL_L = 29;
 export const HEEL_R = 30;
 export const NOSE = 0;
 
-export function extractAnglesFromLandmarks(rawPts: Point3D[]): number[] {
+export function extractAnglesFromLandmarks(rawPts: Point3D[], zeroZ: boolean = true): number[] {
   if (rawPts.length < 31) return Array(15).fill(0);
 
-  // MediaPipe's monocular z-depth estimate is only reliable at the consistent
-  // camera distance/framing seen in demo videos; on arbitrary real-world
-  // camera framing it degrades badly (measured 0-3% real-world pose accuracy
-  // with z included, vs ~46% with it dropped, confirmed consistently across
-  // a 40-trial randomized threshold sweep). Using pure 2D (image-plane)
-  // angles is far more robust since that's what the camera actually captures
-  // reliably -- so z is zeroed here before any angle is computed.
-  const pts = rawPts.map((p) => ({ x: p.x, y: p.y, z: 0 }));
+  // MediaPipe's monocular z-depth estimate (on the default poseLandmarks) is
+  // only reliable at the consistent camera distance/framing seen in demo
+  // videos; on arbitrary real-world camera framing it degrades badly
+  // (measured 0-3% real-world pose accuracy with z included, vs ~46% with it
+  // dropped, confirmed across a 40-trial randomized threshold sweep). zeroZ
+  // defaults to true to reproduce that proven 2D-only path. Pass zeroZ=false
+  // for poseWorldLandmarks (metric-scale, separately calibrated 3D) so its
+  // genuine depth is kept -- used as an independent second vote server-side,
+  // not a replacement for the 2D path.
+  const pts = rawPts.map((p) => ({ x: p.x, y: p.y, z: zeroZ ? 0 : p.z }));
 
   const shoulder_mid = {
     x: (pts[SHOULDER_L].x + pts[SHOULDER_R].x) / 2.0,
