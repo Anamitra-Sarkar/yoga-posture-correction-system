@@ -1,21 +1,23 @@
 # AsanaAI Mobile
 
-This directory contains the Expo-based Android companion for the existing AsanaAI web application. The original web client and FastAPI service remain unchanged in their existing locations.
+This directory contains the **native Expo/React Native Android companion** for the yoga posture correction system. It is a separate mobile product, not a WebView wrapper. The app uses the same hosted posture-analysis backend as the existing web product while preserving the original web application unchanged.
 
-## What it includes
+## Included experience
 
-The mobile app provides a calm, camera-first yoga practice experience with local pose selection, camera permissions, local language and voice preferences, practice-history storage, and a native shell for the existing live web coach. It does not fabricate posture scores when the live service is unavailable; the embedded coach provides the source of real-time analysis.
+The mobile app provides a camera-first yoga practice flow with native front/rear camera switching, optional immersive camera mode, MediaPipe landmark extraction, an SVG skeleton overlay, direct backend analysis, speech guidance, haptics, local session history, settings, and device-readiness checks.
 
-## Run locally
+Only these supported target poses are selectable: **Warrior II, Cobra, Mountain, Tree, Plank, and Downward Dog**. The app deliberately does not invent recognition success: mismatch, transition/unknown, incomplete framing, permission, and network states are shown explicitly.
 
-Install dependencies and start the Expo development server from this directory:
+## Local development
+
+Install dependencies and start the development server from this directory:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-To open the native project on an Android device or emulator, use:
+To open the project on a connected Android device or emulator, run:
 
 ```bash
 pnpm android
@@ -23,12 +25,17 @@ pnpm android
 
 ## Validation
 
-The mobile project provides the following checks:
+Run the following checks before a checkpoint or release candidate:
 
 ```bash
 pnpm test
 pnpm check
 pnpm lint
+CI=1 npx expo-doctor
 ```
 
-The app is configured as **AsanaAI** with Android package identifier `space.manus.asana.ai.mobile`. Publish/build it through the managed mobile project workflow to generate an APK rather than building an APK directly inside a constrained development environment.
+For documented landmark-to-backend fixture verification, see `image_pipeline_verification.md` and the files under `test-assets/pose-pipeline/`.
+
+## Continuation notes
+
+Read `AGENT_HANDOFF.md` and `todo.md` before changing the native coaching or classifier workflow. In particular, Cobra and Plank safety diagnostics reflect verified backend classifier coverage limits and must not be converted into fabricated success states.

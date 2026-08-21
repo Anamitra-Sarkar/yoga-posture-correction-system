@@ -88,8 +88,8 @@ export default function TodayScreen() {
 
         <View style={styles.statusRow}>
           <View style={styles.statusTextArea}>
-            <View style={styles.statusHeading}><StatusDot /><Text style={styles.statusTitle}>Live coach</Text></View>
-            <Text style={styles.statusDetail}>Online coaching opens inside the app after your camera is ready.</Text>
+            <View style={styles.statusHeading}><StatusDot /><Text style={styles.statusTitle}>Native camera coaching</Text></View>
+            <Text style={styles.statusDetail}>Landmark-based posture checks begin when you start a camera practice.</Text>
           </View>
           <MaterialIcons name="wifi" size={20} color={colors.moss} />
         </View>
@@ -101,8 +101,8 @@ export default function TodayScreen() {
         <View style={styles.emptyHistory}>
           <MaterialIcons name={lastPractice ? "self-improvement" : "history"} size={21} color={colors.mist} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.emptyTitle}>{lastPractice ? `${getPose(lastPractice.poseId).name} live practice` : "No practice summary yet"}</Text>
-            <Text style={styles.emptyDetail}>{lastPractice ? "Last opened in the live coach. Detailed posture results remain in the coach." : "Your first completed session will appear here on this device."}</Text>
+            <Text style={styles.emptyTitle}>{lastPractice?.score !== undefined ? `${Math.round(lastPractice.score * 100)}% · ${lastPractice.detectedPoseId ?? getPose(lastPractice.poseId).name}` : lastPractice ? `${getPose(lastPractice.poseId).name} camera practice` : "No practice summary yet"}</Text>
+            <Text style={styles.emptyDetail}>{lastPractice?.score !== undefined ? `${lastPractice.durationSeconds ? `${Math.max(1, Math.round(lastPractice.durationSeconds / 60))} min · ` : ""}${lastPractice.correction ?? "Latest real coaching result saved on this device."}` : lastPractice ? "Your last practice was recorded on this device. Start a new check for current landmarks and feedback." : "Your first completed session will appear here on this device."}</Text>
           </View>
         </View>
 

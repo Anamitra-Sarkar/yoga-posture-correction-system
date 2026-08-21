@@ -13,3 +13,35 @@
 - [x] Run static checks and test suite, inspect the build output, and resolve discovered issues.
 - [x] Verify the final experience visually with browser screenshots at Android portrait dimensions and test critical browser flows.
 - [x] Create the final checkpoint after confirming all completed TODO items are marked accurately.
+- [x] Integrate the completed Android companion into the selected yoga repository and push the commit to GitHub.
+- [x] Audit the live web app for its actual supported asanas, camera controls, skeleton overlay, and coaching states.
+- [x] Replace the embedded web coach with a native backend-driven camera coaching flow.
+- [x] Restrict native pose selection to the web app’s supported asanas only.
+- [x] Add front/rear camera switching and device-safe responsive camera layout.
+- [x] Render a native pose skeleton and real alignment feedback from backend results.
+- [x] Verify parity flows, responsive behavior, tests, and Android configuration before the upgrade checkpoint.
+- [x] Save a checkpoint for the native camera, skeleton, and responsive-layout upgrade.
+- [x] Add native pose reference guidance for the six supported asanas.
+- [x] Persist completed coaching summaries with real backend score and detected-pose data.
+- [x] Add a device-readiness diagnostic for camera, connectivity, landmark detector, and performance status.
+- [x] Validate the guidance, summary, and diagnostics upgrade and save its checkpoint.
+- [x] Fix the tall-phone Practice layout so camera mode uses the screen without a blank or clipped scroll state.
+- [x] Add an optional smooth full-screen camera action with essential live controls and an explicit exit action.
+- [x] Tune Practice-screen transitions and press feedback to avoid abrupt layout changes.
+- [x] Make the active Today, Practice, and Settings tab visually distinct in the bottom navigation.
+- [x] Verify the layout correction on compact and tall Android phone dimensions, then save its checkpoint.
+- [x] Gather representative images for supported asanas and document their provenance.
+- [x] Run the landmark-to-angle and shared backend analysis pipeline against the selected images.
+- [x] Compare image-based results against expected supported asanas and document any limitation or mismatch.
+- [x] Save the completed image-based verification record and checkpoint any required test-harness changes.
+- [x] Inspect the shared backend classifier’s supported pose coverage and map the Cobra/Plank fixture failures to concrete causes.
+- [x] Expand the Cobra and Plank image fixture set and rerun the landmark-to-backend verification pipeline.
+- [x] Improve native mismatch and no-person diagnostic copy without presenting unverified recognition as success.
+- [x] Run regression checks, document calibration findings, and save the resulting checkpoint.
+- [ ] Incoming agent: read `AGENT_HANDOFF.md`, retain checkpoint `97fb5cdb` as the known stable baseline, and do not remove the native camera or safety-diagnostic architecture.
+- [ ] Acquire the missing shared-backend classifier/router/model source and confirm the actual inference label map, especially whether `cobra_pose` and `plank` are trained labels.
+- [ ] Build or retrain the real classifier only after obtaining labeled full-body Cobra and Plank camera data; do not mask backend gaps by mapping selected targets to successful scores.
+- [ ] Re-run `test-assets/pose-pipeline/mediapipe-harness.html` and `scripts/run-fixture-backend-check.cjs` against each model revision, keeping Warrior II as the positive control and Cobra/Plank as regression-safety cases.
+- [ ] Perform physical Android testing for front/rear cameras, permission denial, full-screen exit, active-tab visibility, speech guidance, no-person/mismatch copy, and persisted practice summaries.
+- [ ] Before the next checkpoint, run `pnpm test`, `pnpm check`, `pnpm lint`, and `CI=1 npx expo-doctor`; keep the detailed outcomes in `image_pipeline_verification.md` or a new dated verification record.
+- [ ] Synchronize the latest native coaching diagnostics, image-verification fixtures, and agent handoff documents into the selected yoga repository and push the revision to GitHub.

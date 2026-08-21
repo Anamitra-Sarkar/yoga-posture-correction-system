@@ -13,7 +13,7 @@ describe("AsanaAI domain helpers", () => {
   });
 
   it("never reports unavailable service states as a fabricated success", () => {
-    expect(serviceCopy("offline").title).toBe("Live coach unavailable");
-    expect(serviceCopy("available").title).toBe("Camera ready");
+    expect(serviceCopy("offline").title).toBe("Coaching unavailable");
+    expect(serviceCopy("available").title).toBe("Coaching is live");
   });
 });

@@ -51,6 +51,7 @@ export function PosePicker({
                     <Text style={styles.poseName}>{item.name}</Text>
                     <Text style={styles.poseSanskrit}>{item.Sanskrit}</Text>
                     <Text style={styles.cue}>{item.cue}</Text>
+                    <Text style={styles.measurement}>{item.level} · {item.targets.map((target) => target.label).join(" · ")}</Text>
                   </View>
                   {active ? <MaterialIcons name="check-circle" size={22} color={colors.moss} /> : <MaterialIcons name="chevron-right" size={22} color={colors.mist} />}
                 </Pressable>
@@ -71,12 +72,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 27, lineHeight: 33, fontWeight: "700", color: colors.ink, letterSpacing: -0.65, marginTop: 4 },
   close: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line },
   list: { gap: 8, paddingBottom: 12 },
-  row: { minHeight: 92, borderRadius: 18, padding: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, flexDirection: "row", alignItems: "center", gap: 12 },
+  row: { minHeight: 108, borderRadius: 18, padding: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, flexDirection: "row", alignItems: "center", gap: 12 },
   activeRow: { borderColor: colors.moss, backgroundColor: "#F2F5EF" },
   poseMark: { width: 42, height: 42, borderRadius: 21, justifyContent: "center", alignItems: "center", alignSelf: "flex-start", marginTop: 1 },
   textArea: { flex: 1, gap: 1 },
   poseName: { fontSize: 16, fontWeight: "700", color: colors.ink, letterSpacing: -0.2 },
   poseSanskrit: { fontSize: 12, color: colors.mist, fontStyle: "italic" },
   cue: { fontSize: 12, lineHeight: 17, color: colors.ink, marginTop: 5 },
+  measurement: { fontSize: 10, lineHeight: 14, color: colors.moss, marginTop: 4, fontWeight: "700" },
   pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
 });
