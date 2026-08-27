@@ -123,14 +123,21 @@ def classify_pose(a: Dict[str, float]) -> str:
     # adding real margin against warrior_2/lunge collisions.
     if (knee_l > 150 and hip_l > 165 and knee_r < 140) or (knee_r > 150 and hip_r > 165 and knee_l < 140):
         return "tree_pose"
-    w1_legs = (knee_l < 120 and knee_r > 130) or (knee_r < 120 and knee_l > 130)
-    w1_arms = shoulder_l > 110 and shoulder_r > 110
-    if w1_legs and w1_arms:
-        return "warrior_1"
+    # warrior_2 (live) is checked before warrior_1 (disabled, DISABLED_POSES)
+    # even though warrior_1 appears first in the pose's natural teaching order.
+    # Their leg conditions are identical and their arm bands overlap at
+    # shoulder in (110, 125] -- checking the disabled pose first would catch
+    # genuine warrior_2 attempts in that overlap, classify them as warrior_1,
+    # and have sanitize_pose() throw them away as transition/unknown, silently
+    # losing valid detections of one of the three original live poses.
     w2_legs = (knee_l < 120 and knee_r > 130) or (knee_r < 120 and knee_l > 130)
     w2_arms = _between(shoulder_l, 65, 125) and _between(shoulder_r, 65, 125)
     if w2_legs and w2_arms:
         return "warrior_2"
+    w1_legs = (knee_l < 120 and knee_r > 130) or (knee_r < 120 and knee_l > 130)
+    w1_arms = shoulder_l > 110 and shoulder_r > 110
+    if w1_legs and w1_arms:
+        return "warrior_1"
     if (knee_l < 120 and knee_r > 130) or (knee_r < 120 and knee_l > 130):
         return "lunge_pose"
     if hip_l < 70 and hip_r < 70 and knee_l > 120 and knee_r > 120:
