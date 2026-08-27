@@ -16,12 +16,10 @@ deviation logic on top of whatever 15 angles it's given.
 """
 from typing import Dict, List, Tuple
 
-FEATURE_NAMES = [
-    "elbow_l", "elbow_r", "shoulder_l", "shoulder_r",
-    "hip_l", "hip_r", "knee_l", "knee_r",
-    "ankle_l", "ankle_r", "trunk_l", "trunk_r",
-    "neck", "hip_abduct_l", "hip_abduct_r"
-]
+# Single source of truth for the 15 feature names/order lives in geometry.py --
+# re-exported here (not redefined) so this module and geometry.py can never
+# silently drift out of sync and corrupt every angle-index mapping.
+from app.utils.geometry import FEATURE_NAMES
 
 # Phase B re-validation (47-image real-world Wikimedia Commons test set,
 # sourced independently of the original 35-image set, MediaPipe-processed via

@@ -8,8 +8,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.main import app as backend_app
 
 def load_groq_key():
-    key_path = "/home/anamitra/Downloads/API_Keys_and_Secrets/groq_api.txt"
-    if os.path.exists(key_path):
+    env_key = os.environ.get("GROQ_API_KEY")
+    if env_key:
+        return env_key
+    key_path = os.environ.get("GROQ_API_KEY_FILE", "")
+    if key_path and os.path.exists(key_path):
         with open(key_path, "r") as f:
             return f.read().strip()
     return None
@@ -17,7 +20,7 @@ def load_groq_key():
 def test_groq_backend():
     groq_key = load_groq_key()
     if not groq_key:
-        print("❌ Error: Groq API key not found in /home/anamitra/Downloads/API_Keys_and_Secrets/groq_api.txt")
+        print("❌ Error: Groq API key not found. Set GROQ_API_KEY or GROQ_API_KEY_FILE.")
         sys.exit(1)
         
     print("Groq API Key loaded successfully.")
