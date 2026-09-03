@@ -6,12 +6,25 @@
 export interface FrameInput {
   angles: number[]; // Array of 15 joint angles
   world_angles?: number[]; // Optional: angles derived from MediaPipe's poseWorldLandmarks (metric-scale 3D)
+  motion?: number; // Mean absolute angular velocity (deg/s) over the recent frame buffer
+  calibration?: CalibrationProfile; // Digital Twin profile, enables personalised scoring
 }
+
+/**
+ * "holding"       - body is still and the pose is recognised
+ * "transitioning" - actively moving between poses (don't nag mid-flow)
+ * "unrecognized"  - body is still, but the posture isn't one we can name
+ * "unknown"       - no motion signal was sent
+ */
+export type MotionState = "holding" | "transitioning" | "unrecognized" | "unknown";
 
 export interface FrameResponse {
   pose_id: string;
-  correctness_score: number; // 0.0 to 1.0
+  correctness_score: number; // 0.0 to 1.0, universal ideal form
   deviations: { [jointName: string]: number }; // Deviations in degrees
+  motion_state?: MotionState;
+  personal_correctness_score?: number | null; // present when calibration was sent
+  calibrated_deviations?: { [jointName: string]: number } | null;
 }
 
 export interface SequenceInput {

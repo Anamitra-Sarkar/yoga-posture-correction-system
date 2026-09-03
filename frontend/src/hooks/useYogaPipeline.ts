@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FrameResponse, SequenceResponse, CalibrationProfile } from "../types/yoga";
+import { FrameResponse, SequenceResponse, CalibrationProfile, MotionState } from "../types/yoga";
 import { analyseFrame, analyseSequence, recoverOcclusion, generateCorrection } from "../utils/api";
 
 interface UseYogaPipelineProps {
@@ -7,7 +7,6 @@ interface UseYogaPipelineProps {
   groqApiKey?: string;
   calibrationProfile?: CalibrationProfile;
   correctnessThreshold?: number; // e.g. 0.70
-  targetPose?: string; // user-selected practice pose id, e.g. "warrior_2"
 }
 
 export function useYogaPipeline({
@@ -15,15 +14,16 @@ export function useYogaPipeline({
   groqApiKey,
   calibrationProfile,
   correctnessThreshold = 0.70,
-  targetPose,
 }: UseYogaPipelineProps = {}) {
   const [activePose, setActivePose] = useState<string>("transition/unknown");
   const [correctness, setCorrectness] = useState<number>(1.0);
+  const [personalCorrectness, setPersonalCorrectness] = useState<number | null>(null);
+  const [motionState, setMotionState] = useState<MotionState>("unknown");
+  const [deviations, setDeviations] = useState<{ [joint: string]: number }>({});
   const [flowPose, setFlowPose] = useState<string>("transition/unknown");
   const [flowConfidence, setFlowConfidence] = useState<number>(0.0);
   const [correctionText, setCorrectionText] = useState<string>("");
   const [correctionIsSafe, setCorrectionIsSafe] = useState<boolean>(true);
-  const [poseMismatch, setPoseMismatch] = useState<boolean>(false);
   const [recoveredJoints, setRecoveredJoints] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [predictionTimestamp, setPredictionTimestamp] = useState<number>(0);
@@ -34,6 +34,25 @@ export function useYogaPipeline({
   const DEBOUNCE_MS = 30000; // 30 second throttle for LLM guidance API calls
   const lastPredictionTime = useRef<number>(0);
   const PREDICTION_INTERVAL_MS = 10000; // Real-time monitoring predicts/speaks at most once every 10s
+
+  // Rolling angle history, used purely to measure how fast the body is moving
+  // so a genuine pose HOLD can be told apart from a TRANSITION between poses.
+  // Kept short (~1.5s at 2fps) so it reacts quickly when the user settles.
+  const angleHistory = useRef<{ t: number; angles: number[] }[]>([]);
+  const MOTION_WINDOW_MS = 1500;
+
+  /** Mean absolute angular velocity (deg/s) across the recent window. */
+  const computeMotion = (angles: number[], now: number): number | undefined => {
+    angleHistory.current.push({ t: now, angles });
+    angleHistory.current = angleHistory.current.filter((s) => now - s.t <= MOTION_WINDOW_MS);
+    if (angleHistory.current.length < 2) return undefined;
+    const first = angleHistory.current[0];
+    const dtSec = (now - first.t) / 1000;
+    if (dtSec <= 0) return undefined;
+    let total = 0;
+    for (let i = 0; i < angles.length; i++) total += Math.abs(angles[i] - first.angles[i]);
+    return total / angles.length / dtSec;
+  };
 
   const processFrame = async (rawLandmarks: number[][], currentAngles: number[], worldAngles?: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
@@ -55,6 +74,11 @@ export function useYogaPipeline({
       if (coordBuffer.current.length > 60) {
         coordBuffer.current.shift();
       }
+
+      // Measure how fast the body is moving. Done on EVERY frame (not just on
+      // the throttled prediction tick) so the hold/transition read stays
+      // responsive, which is what makes the transition state feel immediate.
+      const motion = computeMotion(currentAngles, Date.now());
 
       // Gate the heavier classification/LLM/speech cycle to once per PREDICTION_INTERVAL_MS
       const nowTick = Date.now();
@@ -78,14 +102,29 @@ export function useYogaPipeline({
       let currentCorrectness = correctness;
       let activeDeviations: { [jointName: string]: number } = {};
       
+      // The calibration profile now goes to the backend, which returns BOTH a
+      // universal correctness score and a personalised one, so "wrong" and
+      // "just a different body" stay distinguishable.
+      const frameReq = {
+        angles: currentAngles,
+        world_angles: worldAngles,
+        motion,
+        calibration: calibrationProfile,
+      };
+      let currentMotionState: MotionState = "unknown";
+
       if (fallbackRequired) {
-        const frameRes = await analyseFrame({ angles: currentAngles, world_angles: worldAngles });
+        const frameRes = await analyseFrame(frameReq);
         currentPoseId = frameRes.pose_id;
         currentCorrectness = frameRes.correctness_score;
-        activeDeviations = frameRes.deviations;
-        
+        activeDeviations = frameRes.calibrated_deviations ?? frameRes.deviations;
+        currentMotionState = frameRes.motion_state ?? "unknown";
+
         setActivePose(currentPoseId);
         setCorrectness(currentCorrectness);
+        setPersonalCorrectness(frameRes.personal_correctness_score ?? null);
+        setMotionState(currentMotionState);
+        setDeviations(frameRes.calibrated_deviations ?? frameRes.deviations);
       } else {
         // If sequence model is confident, sync Pose ID with the sequence target
         currentPoseId = flowPose;
@@ -95,26 +134,23 @@ export function useYogaPipeline({
 
         // Fetch frame deviations for sequence flow to provide rich context to the correction generator
         try {
-          const frameRes = await analyseFrame({ angles: currentAngles, world_angles: worldAngles });
-          activeDeviations = frameRes.deviations;
+          const frameRes = await analyseFrame(frameReq);
+          activeDeviations = frameRes.calibrated_deviations ?? frameRes.deviations;
+          currentMotionState = frameRes.motion_state ?? "unknown";
+          setPersonalCorrectness(frameRes.personal_correctness_score ?? null);
+          setMotionState(currentMotionState);
+          setDeviations(frameRes.calibrated_deviations ?? frameRes.deviations);
         } catch (err) {
           console.error("Error fetching deviations for sequence:", err);
         }
       }
       
-      // 4. Stage 8: User Digital Twin Range Filter
-      if (calibrationProfile && activeDeviations) {
-        Object.keys(activeDeviations).forEach((joint) => {
-          if (calibrationProfile[joint]) {
-            const { min, max } = calibrationProfile[joint];
-            const angleVal = currentAngles[FEATURE_NAMES_ORDER.indexOf(joint)];
-            // If user stays within calibrated safe limits, dismiss warning deviations
-            if (angleVal >= min && angleVal <= max) {
-              activeDeviations[joint] = 0.0;
-            }
-          }
-        });
-      }
+      // Stage 8 (User Digital Twin range filter) now runs server-side: the
+      // backend receives the calibration profile and returns
+      // calibrated_deviations plus a personal_correctness_score, already
+      // picked up above. Doing it there means the native mobile client gets
+      // the same personalisation for free instead of each client
+      // reimplementing it.
       
       // 5. Target-pose reconciliation: the pose_head classifies whatever pose is
       // actually being performed, independent of what the user selected to
@@ -122,14 +158,22 @@ export function useYogaPipeline({
       // completely different one would still show a high correctness score,
       // since that score only ever describes form quality for the DETECTED
       // pose, never whether it matches the user's chosen target.
-      const isMismatch = !!targetPose && currentPoseId !== "transition/unknown" && currentPoseId !== targetPose;
-      setPoseMismatch(isMismatch);
+      // (No target pose any more: the app detects whatever the user is doing.)
 
       // 6. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
       const now = Date.now();
-      if (isMismatch) {
-        // Wrong pose entirely — form-correction guidance would be meaningless here.
-        // The UI layer overrides the displayed/spoken text with a mismatch message.
+      if (currentMotionState === "transitioning") {
+        // Don't correct alignment while the body is still moving -- it's
+        // useless mid-flow and a real instructor waits for the hold. This is
+        // only possible now that motion is measured separately from
+        // recognition failure.
+        const movingMsg = language === "hi"
+          ? "प्रवाह जारी रखें… अगली मुद्रा में स्थिर होने पर मार्गदर्शन मिलेगा।"
+          : language === "bn"
+          ? "প্রবাহ চালিয়ে যান… পরের আসনে স্থির হলে নির্দেশনা পাবেন।"
+          : "Flowing… hold your next posture and I'll guide you.";
+        setCorrectionText(movingMsg);
+        setCorrectionIsSafe(true);
       } else if (currentPoseId !== "transition/unknown") {
         if (currentCorrectness < correctnessThreshold) {
           if (now - lastCorrectionTime.current > DEBOUNCE_MS) {
@@ -154,13 +198,16 @@ export function useYogaPipeline({
           setCorrectionIsSafe(true);
         }
       } else {
-        // Transition/Unknown - prompt user to align body visually in real-time
-        const alignMsg = language === "hi"
-          ? "कैमरे के साथ अपने शरीर को संरेखित करें..."
+        // Held still, but the posture isn't one we can name. Say precisely
+        // that, instead of the old ambiguous "align your body" -- the user IS
+        // holding something; it just isn't recognised, which is a different
+        // situation from being mid-flow or out of frame.
+        const unknownMsg = language === "hi"
+          ? "यह मुद्रा पहचानी नहीं गई। पूरा शरीर फ्रेम में रखें और स्थिर रहें।"
           : language === "bn"
-          ? "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন..."
-          : "Align your body with the camera...";
-        setCorrectionText(alignMsg);
+          ? "এই ভঙ্গি চেনা যায়নি। পুরো শরীর ফ্রেমে রেখে স্থির থাকুন।"
+          : "I can't identify this posture yet — keep your full body in frame and hold steady.";
+        setCorrectionText(unknownMsg);
         setCorrectionIsSafe(true);
       }
 
@@ -180,9 +227,9 @@ export function useYogaPipeline({
   };
 
   useEffect(() => {
-    // Mismatch messaging is owned by the UI layer (it has the pose display-name
-    // lookup); don't let this reactive re-translation effect stomp on it.
-    if (poseMismatch) return;
+    // Re-translate the standing message when the language changes. Skipped
+    // while moving, so the pipeline's "flowing" message is not overwritten.
+    if (motionState === "transitioning") return;
     if (activePose !== "transition/unknown") {
       if (correctness >= correctnessThreshold) {
         const successMsg = language === "hi"
@@ -202,7 +249,7 @@ export function useYogaPipeline({
       setCorrectionText(alignMsg);
       setCorrectionIsSafe(true);
     }
-  }, [language, activePose, correctness, correctnessThreshold, poseMismatch]);
+  }, [language, activePose, correctness, correctnessThreshold, motionState]);
 
   const resetPipeline = () => {
     coordBuffer.current = [];
@@ -213,7 +260,10 @@ export function useYogaPipeline({
     setFlowConfidence(0.0);
     setCorrectionText("");
     setCorrectionIsSafe(true);
-    setPoseMismatch(false);
+    setPersonalCorrectness(null);
+    setMotionState("unknown");
+    setDeviations({});
+    angleHistory.current = [];
     setRecoveredJoints([]);
   };
 
@@ -224,7 +274,9 @@ export function useYogaPipeline({
     flowConfidence,
     correctionText,
     correctionIsSafe,
-    poseMismatch,
+    motionState,
+    personalCorrectness,
+    deviations,
     predictionTimestamp,
     recoveredJoints,
     isLoading,
@@ -232,10 +284,3 @@ export function useYogaPipeline({
     resetPipeline
   };
 }
-
-const FEATURE_NAMES_ORDER = [
-  "elbow_l", "elbow_r", "shoulder_l", "shoulder_r",
-  "hip_l", "hip_r", "knee_l", "knee_r",
-  "ankle_l", "ankle_r", "trunk_l", "trunk_r",
-  "neck", "hip_abduct_l", "hip_abduct_r"
-];

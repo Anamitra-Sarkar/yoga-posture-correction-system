@@ -134,7 +134,7 @@ const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
 // figure), which is a completely different pose from the standing Warrior II
 // lunge; the reference photo below is now the actual "how do I do this"
 // source of truth.
-const POSE_SELECTOR_OPTIONS: { id: PresetPoseId; icon: string }[] = [
+const POSE_LIBRARY: { id: PresetPoseId; icon: string }[] = [
   { id: "warrior_2", icon: "⚔️" },
   { id: "cobra_pose", icon: "🐍" },
   { id: "mountain_pose", icon: "⛰️" },
@@ -154,7 +154,7 @@ const POSE_REFERENCE_IMAGES: { [key: string]: { src: string; credit: string } } 
   plank: { src: "/pose-images/plank.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   tree_pose: { src: "/pose-images/tree_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
   // downward_dog has no local reference image yet -- POSE_REFERENCE_IMAGES
-  // lookups are guarded (`POSE_REFERENCE_IMAGES[activePreset] &&`), so this
+  // lookups are guarded (`POSE_REFERENCE_IMAGES[guidePose] &&`), so this
   // degrades gracefully (no image shown) rather than breaking. Sourcing one
   // is a small, non-heavy download appropriate for a follow-up, not done
   // here per this task's own no-local-download scope.
@@ -291,6 +291,13 @@ const TRANSLATIONS: {
     appTitle: "AsanaAI — Smart Yoga Coach",
     newSession: "New Session",
     targetPose: "Target Pose",
+    recognisedAsanas: "Recognised Asanas",
+    detectedPose: "Detected Pose",
+    stateHolding: "Holding",
+    stateTransitioning: "In Transition",
+    stateUnrecognized: "Unrecognised Posture",
+    universalScore: "Universal Form",
+    personalScore: "Your Calibrated Form",
     digitalTwinProfile: "Digital Twin Profile",
     activeProfile: "✓ Active Calibration Profile",
     uncalibratedTwin: "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges.",
@@ -311,7 +318,6 @@ const TRANSLATIONS: {
     postureScore: "Posture Score",
     onTarget: "✓ On target",
     needsAdjustment: "Needs adjustment",
-    detectedPose: "Detected Pose",
     fusing: "Fusing",
     occlusionActive: "Occlusion active",
     allVisible: "All visible",
@@ -341,6 +347,13 @@ const TRANSLATIONS: {
     appTitle: "असनएआई — स्मार्ट योग कोच",
     newSession: "नया सत्र",
     targetPose: "लक्ष्य मुद्रा",
+    recognisedAsanas: "पहचानी जाने वाली मुद्राएँ",
+    detectedPose: "पहचानी गई मुद्रा",
+    stateHolding: "स्थिर",
+    stateTransitioning: "संक्रमण में",
+    stateUnrecognized: "अपरिचित मुद्रा",
+    universalScore: "सार्वभौमिक रूप",
+    personalScore: "आपका अंशांकित रूप",
     digitalTwinProfile: "डिजिटल ट्विन प्रोफ़ाइल",
     activeProfile: "✓ सक्रिय अंशांकन प्रोफ़ाइल",
     uncalibratedTwin: "डिजिटल ट्विन अंशांकित नहीं है। एक मुद्रा चुनें और अपनी संयुक्त सीमाओं को अंशांकित करने के लिए कैमरा स्ट्रीम शुरू करें।",
@@ -361,7 +374,6 @@ const TRANSLATIONS: {
     postureScore: "मुद्रा स्कोर",
     onTarget: "✓ सही संरेखण",
     needsAdjustment: "समायोजन की आवश्यकता है",
-    detectedPose: "पहचानी गई मुद्रा",
     fusing: "फ्यूज़िंग",
     occlusionActive: "अस्पष्टता सक्रिय",
     allVisible: "सभी दृश्यमान",
@@ -391,6 +403,13 @@ const TRANSLATIONS: {
     appTitle: "আসনএআই — স্মার্ট যোগ কোচ",
     newSession: "নতুন সেশন",
     targetPose: "লক্ষ্য আসন",
+    recognisedAsanas: "চেনা আসনসমূহ",
+    detectedPose: "শনাক্ত আসন",
+    stateHolding: "স্থির",
+    stateTransitioning: "পরিবর্তনে",
+    stateUnrecognized: "অচেনা ভঙ্গি",
+    universalScore: "সর্বজনীন ভঙ্গি",
+    personalScore: "আপনার ক্যালিব্রেটেড ভঙ্গি",
     digitalTwinProfile: "ডিজিটাল টুইন প্রোফাইল",
     activeProfile: "✓ সক্রিয় ক্যালিব্রেশন প্রোফাইল",
     uncalibratedTwin: "ডিজিটাল টুইন ক্যালিব্রেট করা নেই। একটি আসন নির্বাচন করুন এবং আপনার জয়েন্ট সীমা ক্যালিব্রেট করতে ক্যামেরা স্ট্রীম শুরু করুন।",
@@ -411,7 +430,6 @@ const TRANSLATIONS: {
     postureScore: "আসন স্কোর",
     onTarget: "✓ সঠিক সারিবদ্ধকরণ",
     needsAdjustment: "সংশোধন প্রয়োজন",
-    detectedPose: "শনাক্ত আসন",
     fusing: "ফিউজিং",
     occlusionActive: "অস্পষ্টতা সক্রিয়",
     allVisible: "সব দৃশ্যমান",
@@ -590,7 +608,6 @@ export default function Dashboard() {
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
   const [langDropOpen, setLangDropOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activePreset, setActivePreset] = useState<PresetPoseId>("warrior_2");
   const [speechEnabled, setSpeechEnabled] = useState(true);
   // Digital Twin Calibration States
   const [calibrationState, setCalibrationState] = useState<"idle" | "calibrating" | "complete">("idle");
@@ -1022,7 +1039,9 @@ export default function Dashboard() {
     flowConfidence,
     correctionText,
     correctionIsSafe,
-    poseMismatch,
+    motionState,
+    personalCorrectness,
+    deviations,
     predictionTimestamp,
     recoveredJoints,
     isLoading,
@@ -1032,30 +1051,33 @@ export default function Dashboard() {
     language: lang,
     groqApiKey: undefined,
     calibrationProfile: calibratedProfile || undefined,
-    correctnessThreshold: 0.75,
-    targetPose: activePreset
+    correctnessThreshold: 0.75
   });
 
-  // When the detected pose doesn't match what the user selected to practice,
-  // the raw correctness score (which only measures form quality for whatever
-  // pose was detected) would be misleading to show — override both the
-  // displayed guidance text and the effective score in that case.
+  // Free-form practice: there is no selected target pose any more. The app
+  // detects whatever the user is actually doing and analyses THAT, so the
+  // old target-vs-detected mismatch guard is gone entirely.
   //
-  // `poseMismatch` is only recomputed once per ~10s prediction cycle inside
-  // the hook, but activePose/activePreset can change sooner (e.g. the user
-  // switches their target pose, or a fresher classification lands) -- if we
-  // trusted the stale flag alone, the message text (built from the CURRENT
-  // live values) could render as "This looks like X, not your selected X"
-  // once both sides catch up to being equal while the boolean hasn't yet.
-  // Requiring a live re-check here closes that window: the message can only
-  // ever show when the two pose ids genuinely differ right now.
-  const showMismatch = poseMismatch && activePose !== activePreset;
-  const displayCorrectionText = showMismatch
-    ? TRANSLATIONS[lang].wrongPoseDetected
-        .replace('{detected}', getSanskritName(activePose, lang))
-        .replace(/{target}/g, getSanskritName(activePreset, lang))
-    : correctionText;
-  const effectiveCorrectness = showMismatch ? 0 : correctness;
+  // `guidePose` drives the reference panel (photo, cues, target angles). It
+  // follows the DETECTED pose, and deliberately latches onto the last
+  // recognised pose while the user is mid-transition or briefly
+  // unrecognised -- otherwise the whole panel would blank out every time
+  // they moved between postures, which is visually jarring.
+  const [guidePose, setGuidePose] = useState<string>("mountain_pose");
+  useEffect(() => {
+    if (activePose && activePose !== "transition/unknown" && POSE_GUIDE[activePose]) {
+      setGuidePose(activePose);
+    }
+  }, [activePose]);
+
+  const isTransitioning = motionState === "transitioning";
+  const isUnrecognized = motionState === "unrecognized" || activePose === "transition/unknown";
+  const displayCorrectionText = correctionText;
+  // While moving, a form score is meaningless (it describes a held shape), so
+  // don't show a number that will swing wildly mid-flow.
+  const effectiveCorrectness = isTransitioning ? 0 : correctness;
+  // Personalised score, when the user has calibrated their Digital Twin.
+  const effectivePersonalCorrectness = isTransitioning ? null : personalCorrectness;
 
   // Audio speech synthesis loop — tied to the pipeline's own ~10s prediction
   // cadence (predictionTimestamp only changes once per real classification
@@ -1446,17 +1468,35 @@ export default function Dashboard() {
     ];
 
     const getJointStatus = (joint: string) => {
+      // Nothing meaningful to show mid-transition: the body is moving, so
+      // every joint would flicker red/green frame to frame.
+      if (motionState === "transitioning") return "neutral";
       if (activePose === "transition/unknown") return "neutral";
+
+      // Prefer the model's own per-joint deviation (degrees off the pose's
+      // expected band, already adjusted for the user's calibrated range when
+      // a Digital Twin profile exists). This covers all 15 joints, whereas
+      // POSE_TARGET_ANGLES only defines a handful per pose -- so the skeleton
+      // now shows the user exactly which joints are off, not just the 3 we
+      // happened to hand-author cues for.
+      const dev = deviations[joint];
+      if (dev !== undefined) {
+        if (dev > 15) return "deviating";
+        if (dev > 7) return "warning";
+        return "correct";
+      }
+
+      // Fallback: the hand-authored target-angle heuristic.
       const targets = POSE_TARGET_ANGLES[activePose] || [];
       const targetObj = targets.find(t => t.joint === joint);
       if (!targetObj) return "neutral";
-      
+
       const idx = FEATURE_NAMES_ORDER.indexOf(joint);
       if (idx === -1) return "neutral";
-      
+
       const current = allCurrentAngles[idx];
       const diff = Math.abs(current - targetObj.target);
-      
+
       if (diff > targetObj.tolerance) {
         return "deviating";
       } else if (diff > targetObj.tolerance - 7) {
@@ -1819,22 +1859,24 @@ export default function Dashboard() {
           
 
 
-          {/* Group 2: Target Pose Cards Selector */}
+          {/* Group 2: Recognisable Asana Library.
+              This used to be a TARGET selector -- you picked a pose and the app
+              checked whether you matched it. That put the classification work
+              on the user. Now the app detects whatever you're doing, so this is
+              a passive reference of what it can recognise, with the currently
+              detected pose highlighted live. */}
           <div className="sidebar-group">
             <div className="sidebar-group-header" onClick={() => setOpenGroupPose(!openGroupPose)}>
-              <span>{TRANSLATIONS[lang].targetPose}</span>
+              <span>{TRANSLATIONS[lang].recognisedAsanas}</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupPose ? "collapsed" : ""}`} />
             </div>
             <div className={`sidebar-group-body ${!openGroupPose ? "collapsed" : ""}`}>
               <div className="pose-card-grid">
-                {POSE_SELECTOR_OPTIONS.map(({ id, icon }) => (
+                {POSE_LIBRARY.map(({ id, icon }) => (
                   <div
                     key={id}
-                    className={`pose-card ${activePreset === id ? "active" : ""}`}
-                    onClick={() => {
-                      setActivePreset(id);
-                      setSidebarOpen(false);
-                    }}
+                    className={`pose-card ${activePose === id ? "active" : ""}`}
+                    title={getSanskritName(id, lang)}
                   >
                     <span className="pose-card-icon">{icon}</span>
                     <span className="pose-card-label">{getSanskritName(id, lang)}</span>
@@ -1880,9 +1922,9 @@ export default function Dashboard() {
 
           {/* Group 5: Pose Guide — alignment cues for the selected pose */}
           {(() => {
-            const cues = POSE_GUIDE[activePreset];
-            const diff = POSE_DIFFICULTY[activePreset];
-            const joints = (POSE_TARGET_ANGLES[activePreset] || []).slice(0, 3);
+            const cues = POSE_GUIDE[guidePose];
+            const diff = POSE_DIFFICULTY[guidePose];
+            const joints = (POSE_TARGET_ANGLES[guidePose] || []).slice(0, 3);
             return cues ? (
               <div className="sidebar-group">
                 <div className="sidebar-group-header" onClick={() => setOpenGroupPoseGuide(!openGroupPoseGuide)}>
@@ -1894,15 +1936,15 @@ export default function Dashboard() {
                       pose should look like, since a single emoji can't show
                       correct body position and (as warrior_2's old 🧘 icon
                       proved) a wrong one can teach the wrong form entirely. */}
-                  {POSE_REFERENCE_IMAGES[activePreset] && (
+                  {POSE_REFERENCE_IMAGES[guidePose] && (
                     <div className="pose-guide-reference">
                       <img
-                        src={POSE_REFERENCE_IMAGES[activePreset].src}
-                        alt={`Correct form for ${getSanskritName(activePreset, "en")}`}
+                        src={POSE_REFERENCE_IMAGES[guidePose].src}
+                        alt={`Correct form for ${getSanskritName(guidePose, "en")}`}
                         className="pose-guide-reference-img"
                       />
                       <span className="pose-guide-reference-credit">
-                        {POSE_REFERENCE_IMAGES[activePreset].credit}
+                        {POSE_REFERENCE_IMAGES[guidePose].credit}
                       </span>
                     </div>
                   )}
@@ -1912,7 +1954,7 @@ export default function Dashboard() {
                     <div className="pose-guide-diff">
                       <span className="pose-guide-diff-dot" style={{ background: diff.color }} />
                       <span className="pose-guide-diff-label" style={{ color: diff.color }}>{diff.level}</span>
-                      <span className="pose-guide-diff-name">{getSanskritName(activePreset, lang)}</span>
+                      <span className="pose-guide-diff-name">{getSanskritName(guidePose, lang)}</span>
                     </div>
                   )}
 
@@ -1981,7 +2023,7 @@ export default function Dashboard() {
                   <div className="session-stat-dot active" />
                   <span className="session-stat-label">Target Pose</span>
                   <span className="session-stat-val on" style={{ fontFamily: "var(--font-mono)", fontSize: "0.68rem" }}>
-                    {getSanskritName(activePreset, "en").split(" ")[0]}
+                    {getSanskritName(guidePose, "en").split(" ")[0]}
                   </span>
                 </div>
               </div>
@@ -2192,7 +2234,7 @@ export default function Dashboard() {
 
                     {/* Score badge */}
                     <div className={`fullscreen-score-badge ${effectiveCorrectness >= 0.75 ? 'good' : 'warn'}`}>
-                      {showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}
+                      {isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}
                     </div>
                   </>
                 )}
@@ -2223,13 +2265,32 @@ export default function Dashboard() {
                 <>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].postureScore}</span>
-                    <span className="kpi-value">{showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : `${Math.round(effectiveCorrectness * 100)}%`}</span>
+                    <span className="kpi-value">{isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}</span>
                     <span className="kpi-sub">{effectiveCorrectness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
                   </div>
+                  {/* Personalised score, shown only once the user has
+                      calibrated their Digital Twin. Kept as a SEPARATE card
+                      from the universal score rather than replacing it: the
+                      gap between the two is the interesting part -- it's the
+                      difference between "your form is off" and "your body
+                      just doesn't move that way". */}
+                  {effectivePersonalCorrectness !== null && effectivePersonalCorrectness !== undefined && (
+                    <div className="kpi-card">
+                      <span className="kpi-label">{TRANSLATIONS[lang].personalScore}</span>
+                      <span className="kpi-value">{isUnrecognized ? "—" : `${Math.round(effectivePersonalCorrectness * 100)}%`}</span>
+                      <span className="kpi-sub">{TRANSLATIONS[lang].universalScore}: {isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}</span>
+                    </div>
+                  )}
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].detectedPose}</span>
                     <span className="kpi-value">{activePose === "transition/unknown" ? "—" : getSanskritName(activePose, lang)}</span>
-                    <span className="kpi-sub">{flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : TRANSLATIONS[lang].flowMode}</span>
+                    <span className="kpi-sub">
+                      {isTransitioning
+                        ? TRANSLATIONS[lang].stateTransitioning
+                        : isUnrecognized
+                        ? TRANSLATIONS[lang].stateUnrecognized
+                        : TRANSLATIONS[lang].stateHolding}
+                    </span>
                   </div>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].fusing}</span>
@@ -2295,11 +2356,11 @@ export default function Dashboard() {
                   <span className="guidance-text">{TRANSLATIONS[lang].detectingPose}</span>
                 </div>
               </div>
-            ) : showMismatch ? (
-              <div className="guidance-box" key="pose-mismatch">
-                <ShieldAlert size={24} />
+            ) : isTransitioning ? (
+              <div className="guidance-box" key="pose-transitioning">
+                <Activity size={24} />
                 <div className="guidance-content">
-                  <span className="guidance-label-text">{TRANSLATIONS[lang].wrongPoseBadge}</span>
+                  <span className="guidance-label-text">{TRANSLATIONS[lang].stateTransitioning}</span>
                   <span className="guidance-text">{displayCorrectionText}</span>
                 </div>
               </div>
@@ -2340,7 +2401,7 @@ export default function Dashboard() {
               <div className="angle-placeholder-text">
                 <p>{TRANSLATIONS[lang].assumePosePrompt}</p>
               </div>
-            ) : showMismatch ? (
+            ) : isTransitioning ? (
               <div className="angle-placeholder-text">
                 <p>{displayCorrectionText}</p>
               </div>
