@@ -290,7 +290,6 @@ const TRANSLATIONS: {
   en: {
     appTitle: "AsanaAI — Smart Yoga Coach",
     newSession: "New Session",
-    targetPose: "Target Pose",
     recognisedAsanas: "Recognised Asanas",
     detectedPose: "Detected Pose",
     stateHolding: "Holding",
@@ -340,13 +339,10 @@ const TRANSLATIONS: {
     assumePosePrompt: "Assume a target yoga pose to view real-time joint angle alignments and corrections.",
     targetFor: "Target: {target}° for {pose}",
     diff: "Diff:",
-    wrongPoseDetected: "This looks like {detected}, not your selected {target}. Adjust into {target} to get scored.",
-    wrongPoseBadge: "Wrong Pose"
   },
   hi: {
     appTitle: "असनएआई — स्मार्ट योग कोच",
     newSession: "नया सत्र",
-    targetPose: "लक्ष्य मुद्रा",
     recognisedAsanas: "पहचानी जाने वाली मुद्राएँ",
     detectedPose: "पहचानी गई मुद्रा",
     stateHolding: "स्थिर",
@@ -396,13 +392,10 @@ const TRANSLATIONS: {
     assumePosePrompt: "वास्तविक समय में जोड़ों के संरेखण और सुधार देखने के लिए एक लक्ष्य योग मुद्रा धारण करें।",
     targetFor: "लक्ष्य: {pose} के लिए {target}°",
     diff: "अंतर:",
-    wrongPoseDetected: "यह {detected} जैसा लग रहा है, आपकी चुनी हुई {target} नहीं। स्कोर पाने के लिए {target} में आएं।",
-    wrongPoseBadge: "गलत मुद्रा"
   },
   bn: {
     appTitle: "আসনএআই — স্মার্ট যোগ কোচ",
     newSession: "নতুন সেশন",
-    targetPose: "লক্ষ্য আসন",
     recognisedAsanas: "চেনা আসনসমূহ",
     detectedPose: "শনাক্ত আসন",
     stateHolding: "স্থির",
@@ -452,8 +445,6 @@ const TRANSLATIONS: {
     assumePosePrompt: "রিয়েল-টাইম জয়েন্ট অ্যালাইনমেন্ট এবং সংশোধন দেখতে একটি লক্ষ্য যোগাসন অনুশীলন করুন।",
     targetFor: "{pose} এর জন্য লক্ষ্য কোণ {target}°",
     diff: "পার্থক্য:",
-    wrongPoseDetected: "এটি {detected} বলে মনে হচ্ছে, আপনার নির্বাচিত {target} নয়। স্কোর পেতে {target} ভঙ্গিতে আসুন।",
-    wrongPoseBadge: "ভুল আসন"
   }
 };
 
