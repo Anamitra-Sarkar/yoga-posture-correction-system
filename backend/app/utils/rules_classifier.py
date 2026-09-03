@@ -237,8 +237,18 @@ def hybrid_classify(
         predicted_pose = mlp_pose
         correctness, devs = score_pose(mlp_pose, angles_2d)
     else:
-        # All three disagree: fall back to the 2D-rules path, the one
-        # independently validated at ~45.7% real-world accuracy.
+        # All three disagree: fall back to the 2D-rules path.
+        #
+        # NOTE (kept deliberately as-is): the MLP was retrained after the
+        # train/inference z-zeroing mismatch was fixed, taking its isolated
+        # real-world accuracy from ~0-6% to 52.6% (n=19) -- which now exceeds
+        # the 2D-rules path's ~45.7% (n=35-47). Flipping this tiebreaker to
+        # prefer the MLP is therefore worth EVALUATING, but the two numbers
+        # come from different, small test sets, so there isn't yet enough
+        # evidence to justify changing live behavior on. Left on 2D-rules
+        # (the long-standing, more heavily validated default) until a single
+        # head-to-head test on one shared, larger real-world set says
+        # otherwise.
         predicted_pose = rule_pose_2d
         correctness, devs = score_pose(rule_pose_2d, angles_2d)
 
