@@ -32,9 +32,17 @@ export interface SequenceInput {
 }
 
 export interface SequenceResponse {
+  // Always a plain pose name or "transition/unknown" -- never a prefixed
+  // label -- so this field means the same thing under either checkpoint.
   sequence_pose: string;
   confidence: number;
   requires_static_fallback: boolean;
+  // Present once the transition-aware sequence checkpoint is loaded. Lets the
+  // UI say WHICH transition is under way instead of only that the pose is
+  // unrecognised.
+  sequence_kind?: "hold" | "transition" | "unrecognized";
+  transition_from?: string | null;
+  transition_to?: string | null;
 }
 
 export interface CorrectionInput {

@@ -47,9 +47,18 @@ class SequenceInput(BaseModel):
     coordinates: List[List[float]] # Shape [60, 99]
 
 class SequenceResponse(BaseModel):
+    # Always a plain pose name or "transition/unknown", never a prefixed label,
+    # so clients written against the original 15-class vocabulary keep working
+    # unchanged when the transition-aware checkpoint is loaded.
     sequence_pose: str
     confidence: float
     requires_static_fallback: bool
+    # "hold" | "transition" | "unrecognized". New clients use this (and the two
+    # fields below) to show WHICH transition is happening -- the thing the old
+    # single "transition/unknown" bucket could never express.
+    sequence_kind: str = "hold"
+    transition_from: Optional[str] = None
+    transition_to: Optional[str] = None
 
 # Default fallback threshold is 0.70. child_pose gets a lower one: the
 # sequence model handles it well (962 training sequences, ~0.62 confidence
@@ -68,6 +77,33 @@ DEFAULT_SEQUENCE_FALLBACK_THRESHOLD = 0.70
 # 15 deg/s sits comfortably in the empty gap between those two regimes, so it
 # does not need to be precise to be reliable.
 MOTION_HOLD_MAX_DEG_PER_SEC = 15.0
+
+
+def parse_sequence_label(label: str) -> tuple:
+    """Normalise a sequence-model label into (display, kind, from, to).
+
+    The original 15-class checkpoint emits plain pose names plus a single
+    catch-all "transition/unknown". The transition-aware checkpoint emits
+    "hold:<pose>", "transition:<A>-><B>" and "unrecognized" instead. Both are
+    handled here so the endpoint behaves identically whichever checkpoint is
+    loaded, and so swapping them is genuinely a one-line loader change.
+
+    `display` deliberately collapses a named transition back to
+    "transition/unknown": a client written against the old vocabulary would
+    otherwise render the raw label as if it were a pose name. New clients read
+    sequence_kind / transition_from / transition_to instead.
+    """
+    label = str(label)
+    if label.startswith("hold:"):
+        return label[len("hold:"):], "hold", None, None
+    if label.startswith("transition:"):
+        body = label[len("transition:"):]
+        a, _, b = body.partition("->")
+        return "transition/unknown", "transition", (a or None), (b or None)
+    if label in ("unrecognized", "transition/unknown"):
+        return "transition/unknown", "unrecognized", None, None
+    # plain pose name from the original 15-class vocabulary
+    return label, "hold", None, None
 
 
 def classify_motion_state(motion: Optional[float], predicted_pose: str) -> str:
@@ -208,16 +244,32 @@ def analyse_sequence(data: SequenceInput):
             probs = torch.softmax(logits, dim=1)
             conf, idx = probs.max(1)
             
-            predicted_seq = classes[idx.item()]
+            raw_label = classes[idx.item()]
             confidence = conf.item()
-            
-        threshold = SEQUENCE_FALLBACK_THRESHOLDS.get(predicted_seq, DEFAULT_SEQUENCE_FALLBACK_THRESHOLD)
-        requires_fallback = (predicted_seq == "transition/unknown" or confidence < threshold)
-        
+
+        display, kind, t_from, t_to = parse_sequence_label(raw_label)
+
+        # Look the threshold up by the DISPLAY name: the per-pose entries were
+        # tuned against the original vocabulary, and keying them off the raw
+        # label would silently drop them the moment a "hold:"-prefixed
+        # checkpoint is loaded.
+        threshold = SEQUENCE_FALLBACK_THRESHOLDS.get(display, DEFAULT_SEQUENCE_FALLBACK_THRESHOLD)
+        if kind == "transition":
+            # A NAMED transition is a successful detection, not a failure to
+            # recognise one, so it must not be routed to the single-frame
+            # fallback -- that fallback exists to name a held pose, and there
+            # is no held pose to name mid-movement.
+            requires_fallback = confidence < threshold
+        else:
+            requires_fallback = (display == "transition/unknown" or confidence < threshold)
+
         return SequenceResponse(
-            sequence_pose=predicted_seq,
+            sequence_pose=display,
             confidence=confidence,
-            requires_static_fallback=requires_fallback
+            requires_static_fallback=requires_fallback,
+            sequence_kind=kind,
+            transition_from=t_from,
+            transition_to=t_to,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sequence analysis failed: {str(e)}")
