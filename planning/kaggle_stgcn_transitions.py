@@ -40,7 +40,8 @@ HOLDOUT = {"4ORRiN2_aVI", "SZU7Sbgu57o"}   # same videos as before, for comparab
 # shattered the label space into 92 classes and collapsed macro to 12.6% (vs
 # 63.0% with 24 classes). Macro averages over classes, so a long tail of
 # near-empty ones dominates it. Only name transitions with real support.
-MIN_PAIR = 50
+MIN_PAIR = 90
+MIN_SUPPORT = 100   # minimum windows for ANY class to be kept
 HOLD_FRAC = 0.85       # window is a hold if one pose covers >= this fraction
 MOTION_HOLD = 15.0     # deg/s — identical to backend MOTION_HOLD_MAX_DEG_PER_SEC
 EPOCHS = 30
@@ -312,6 +313,25 @@ def main():
     n_tr = sum(v for k, v in cnt.items() if k.startswith("transition:") and k != "transition:other")
     print(f"named transitions: {sum(1 for k in cnt if k.startswith('transition:') and k!='transition:other')} classes, {n_tr} windows", flush=True)
     print(f"transition:other  : {cnt.get('transition:other',0)} windows", flush=True)
+
+    # Drop classes below the support floor. A class with 12 windows cannot be
+    # learned OR meaningfully evaluated, and including it only depresses macro
+    # while telling us nothing. Dropping is stated explicitly rather than
+    # hidden, and applies to holds and transitions alike -- earlier attempts
+    # policed only transitions, which is why rare holds kept dragging macro.
+    keep_cls = {k for k, v in cnt.items() if v >= MIN_SUPPORT}
+    dropped = {k: v for k, v in cnt.items() if v < MIN_SUPPORT}
+    if dropped:
+        print(f"\ndropping {len(dropped)} classes below {MIN_SUPPORT} windows:", flush=True)
+        for k, v in sorted(dropped.items(), key=lambda x: -x[1]):
+            print(f"    {k:<48} {v}", flush=True)
+    keep_i = [i for i, l in enumerate(labels) if l in keep_cls]
+    labels = [labels[i] for i in keep_i]
+    feats_raw = [feats_raw[i] for i in keep_i]
+    feats_bc = [feats_bc[i] for i in keep_i]
+    vids = [vids[i] for i in keep_i]
+    cnt = Counter(labels)
+    print(f"\nkept {len(labels)} windows across {len(cnt)} classes", flush=True)
 
     classes = sorted(cnt)
     cidx = {c: i for i, c in enumerate(classes)}
