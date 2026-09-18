@@ -1,3 +1,21 @@
+# NOT the deployment path for the Hugging Face Space.
+#
+# The Space runs sdk: gradio with app_file: app.py, declared in README.md's
+# frontmatter -- confirmed against the HF API, which reports sdk "gradio" and
+# does not even have this Dockerfile in the Space repo. That app.py serves the
+# Gradio demo page AND mounts the same FastAPI routes, which is why /health and
+# /api/* work there.
+#
+# This file therefore builds something different from what is deployed: it
+# copies only backend/app and runs uvicorn directly, with no Gradio UI. Kept
+# because it is still a valid way to run the API by itself locally or on any
+# container host:
+#
+#     docker build -t asanaai-api . && docker run -p 7860:7860 asanaai-api
+#
+# If you change backend behaviour, the Space picks it up from app.py and
+# backend/app via the GitHub Actions sync -- not from here.
+
 FROM python:3.10-slim
 
 # Install system dependencies needed for OpenCV and MediaPipe
