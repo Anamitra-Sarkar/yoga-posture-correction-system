@@ -1,0 +1,302 @@
+{
+ "rawz": {
+  "per_class": {
+   "child_pose": {
+    "n": 15,
+    "acc": 0.0
+   },
+   "cobra_pose": {
+    "n": 96,
+    "acc": 0.6458
+   },
+   "downward_dog": {
+    "n": 25,
+    "acc": 0.96
+   },
+   "lunge_pose": {
+    "n": 501,
+    "acc": 0.3034
+   },
+   "mountain_pose": {
+    "n": 468,
+    "acc": 0.8376
+   },
+   "seated_easy_pose": {
+    "n": 95,
+    "acc": 0.6842
+   },
+   "standing_forward_fold": {
+    "n": 520,
+    "acc": 0.6481
+   },
+   "standing_pose": {
+    "n": 144,
+    "acc": 0.9028
+   },
+   "table_top": {
+    "n": 6,
+    "acc": 0.0
+   },
+   "transition/unknown": {
+    "n": 4404,
+    "acc": 0.7654
+   },
+   "tree_pose": {
+    "n": 57,
+    "acc": 0.2632
+   },
+   "upward_dog": {
+    "n": 25,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 27,
+    "acc": 1.0
+   },
+   "warrior_1": {
+    "n": 72,
+    "acc": 0.6111
+   },
+   "warrior_2": {
+    "n": 75,
+    "acc": 0.5733
+   }
+  },
+  "macro": 0.5463,
+  "overall": 0.7139
+ },
+ "zeroz": {
+  "per_class": {
+   "child_pose": {
+    "n": 15,
+    "acc": 0.0
+   },
+   "cobra_pose": {
+    "n": 96,
+    "acc": 0.6458
+   },
+   "downward_dog": {
+    "n": 25,
+    "acc": 0.88
+   },
+   "lunge_pose": {
+    "n": 501,
+    "acc": 0.1617
+   },
+   "mountain_pose": {
+    "n": 468,
+    "acc": 0.9444
+   },
+   "seated_easy_pose": {
+    "n": 95,
+    "acc": 0.6
+   },
+   "standing_forward_fold": {
+    "n": 520,
+    "acc": 0.8019
+   },
+   "standing_pose": {
+    "n": 144,
+    "acc": 0.5278
+   },
+   "table_top": {
+    "n": 6,
+    "acc": 0.0
+   },
+   "transition/unknown": {
+    "n": 4404,
+    "acc": 0.5479
+   },
+   "tree_pose": {
+    "n": 57,
+    "acc": 0.0
+   },
+   "upward_dog": {
+    "n": 25,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 27,
+    "acc": 1.0
+   },
+   "warrior_1": {
+    "n": 72,
+    "acc": 0.1528
+   },
+   "warrior_2": {
+    "n": 75,
+    "acc": 0.4533
+   }
+  },
+  "macro": 0.4477,
+  "overall": 0.5577
+ },
+ "bonecorr": {
+  "per_class": {
+   "child_pose": {
+    "n": 15,
+    "acc": 0.0
+   },
+   "cobra_pose": {
+    "n": 96,
+    "acc": 0.4271
+   },
+   "downward_dog": {
+    "n": 25,
+    "acc": 0.96
+   },
+   "lunge_pose": {
+    "n": 501,
+    "acc": 0.3234
+   },
+   "mountain_pose": {
+    "n": 468,
+    "acc": 0.8397
+   },
+   "seated_easy_pose": {
+    "n": 95,
+    "acc": 0.4211
+   },
+   "standing_forward_fold": {
+    "n": 520,
+    "acc": 0.6808
+   },
+   "standing_pose": {
+    "n": 144,
+    "acc": 0.8889
+   },
+   "table_top": {
+    "n": 6,
+    "acc": 0.0
+   },
+   "transition/unknown": {
+    "n": 4404,
+    "acc": 0.765
+   },
+   "tree_pose": {
+    "n": 57,
+    "acc": 0.1053
+   },
+   "upward_dog": {
+    "n": 25,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 27,
+    "acc": 1.0
+   },
+   "warrior_1": {
+    "n": 72,
+    "acc": 0.5139
+   },
+   "warrior_2": {
+    "n": 75,
+    "acc": 0.5333
+   }
+  },
+  "macro": 0.4972,
+  "overall": 0.7077
+ },
+ "relab_bonecorr": {
+  "per_class": {
+   "hold:child_pose": {
+    "n": 15,
+    "acc": 0.0
+   },
+   "hold:cobra_pose": {
+    "n": 101,
+    "acc": 0.5842
+   },
+   "hold:downward_dog": {
+    "n": 39,
+    "acc": 0.9487
+   },
+   "hold:halfway_lift": {
+    "n": 1,
+    "acc": 1.0
+   },
+   "hold:lunge_pose": {
+    "n": 522,
+    "acc": 0.295
+   },
+   "hold:mountain_pose": {
+    "n": 485,
+    "acc": 0.9897
+   },
+   "hold:seated_easy_pose": {
+    "n": 100,
+    "acc": 0.39
+   },
+   "hold:standing_forward_fold": {
+    "n": 537,
+    "acc": 0.6723
+   },
+   "hold:standing_pose": {
+    "n": 168,
+    "acc": 0.744
+   },
+   "hold:table_top": {
+    "n": 6,
+    "acc": 0.0
+   },
+   "hold:tree_pose": {
+    "n": 60,
+    "acc": 0.9667
+   },
+   "hold:upward_dog": {
+    "n": 26,
+    "acc": 0.0
+   },
+   "hold:upward_salute": {
+    "n": 42,
+    "acc": 1.0
+   },
+   "hold:warrior_1": {
+    "n": 91,
+    "acc": 0.7253
+   },
+   "hold:warrior_2": {
+    "n": 83,
+    "acc": 0.4819
+   },
+   "transition:cobra_pose->standing_pose": {
+    "n": 21,
+    "acc": 0.8571
+   },
+   "transition:downward_dog->standing_forward_fold": {
+    "n": 50,
+    "acc": 0.98
+   },
+   "transition:lunge_pose->tree_pose": {
+    "n": 22,
+    "acc": 0.7273
+   },
+   "transition:lunge_pose->warrior_2": {
+    "n": 24,
+    "acc": 0.75
+   },
+   "transition:other": {
+    "n": 2464,
+    "acc": 0.3259
+   },
+   "transition:standing_forward_fold->downward_dog": {
+    "n": 22,
+    "acc": 1.0
+   },
+   "transition:tree_pose->lunge_pose": {
+    "n": 40,
+    "acc": 0.825
+   },
+   "transition:warrior_2->lunge_pose": {
+    "n": 20,
+    "acc": 0.75
+   },
+   "unrecognized": {
+    "n": 1591,
+    "acc": 0.1037
+   }
+  },
+  "macro": 0.6299,
+  "overall": 0.3983
+ }
+}

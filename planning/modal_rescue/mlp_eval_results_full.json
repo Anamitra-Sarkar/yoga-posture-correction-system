@@ -1,0 +1,161 @@
+{
+ "real_world_photos": {},
+ "video_holdout": {
+  "v2_live": {
+   "per_class": {
+    "chair_pose": {
+     "n": 2,
+     "acc": 1.0
+    },
+    "child_pose": {
+     "n": 318,
+     "acc": 0.934
+    },
+    "cobra_pose": {
+     "n": 2958,
+     "acc": 0.9645
+    },
+    "downward_dog": {
+     "n": 2427,
+     "acc": 0.9378
+    },
+    "halfway_lift": {
+     "n": 281,
+     "acc": 0.9466
+    },
+    "lunge_pose": {
+     "n": 10983,
+     "acc": 0.9533
+    },
+    "mountain_pose": {
+     "n": 6625,
+     "acc": 0.9974
+    },
+    "seated_easy_pose": {
+     "n": 2414,
+     "acc": 0.9793
+    },
+    "seated_staff": {
+     "n": 48,
+     "acc": 0.7708
+    },
+    "standing_forward_fold": {
+     "n": 9526,
+     "acc": 0.9659
+    },
+    "standing_pose": {
+     "n": 3297,
+     "acc": 0.9469
+    },
+    "table_top": {
+     "n": 315,
+     "acc": 0.9873
+    },
+    "transition/unknown": {
+     "n": 29163,
+     "acc": 0.917
+    },
+    "tree_pose": {
+     "n": 1959,
+     "acc": 0.9801
+    },
+    "upward_dog": {
+     "n": 687,
+     "acc": 0.9782
+    },
+    "upward_salute": {
+     "n": 1465,
+     "acc": 0.9973
+    },
+    "warrior_1": {
+     "n": 3310,
+     "acc": 0.9819
+    },
+    "warrior_2": {
+     "n": 2683,
+     "acc": 0.9359
+    }
+   },
+   "macro": 0.9541,
+   "overall": 0.9478
+  },
+  "v3_aug": {
+   "per_class": {
+    "chair_pose": {
+     "n": 2,
+     "acc": 1.0
+    },
+    "child_pose": {
+     "n": 318,
+     "acc": 0.0252
+    },
+    "cobra_pose": {
+     "n": 2958,
+     "acc": 0.9047
+    },
+    "downward_dog": {
+     "n": 2427,
+     "acc": 0.9246
+    },
+    "halfway_lift": {
+     "n": 281,
+     "acc": 0.7224
+    },
+    "lunge_pose": {
+     "n": 10983,
+     "acc": 0.646
+    },
+    "mountain_pose": {
+     "n": 6625,
+     "acc": 0.8195
+    },
+    "seated_easy_pose": {
+     "n": 2414,
+     "acc": 0.8397
+    },
+    "seated_staff": {
+     "n": 48,
+     "acc": 0.3333
+    },
+    "standing_forward_fold": {
+     "n": 9526,
+     "acc": 0.7029
+    },
+    "standing_pose": {
+     "n": 3297,
+     "acc": 0.4328
+    },
+    "table_top": {
+     "n": 315,
+     "acc": 0.9111
+    },
+    "transition/unknown": {
+     "n": 29163,
+     "acc": 0.5241
+    },
+    "tree_pose": {
+     "n": 1959,
+     "acc": 0.5794
+    },
+    "upward_dog": {
+     "n": 687,
+     "acc": 0.9869
+    },
+    "upward_salute": {
+     "n": 1465,
+     "acc": 0.9495
+    },
+    "warrior_1": {
+     "n": 3310,
+     "acc": 0.6761
+    },
+    "warrior_2": {
+     "n": 2683,
+     "acc": 0.7603
+    }
+   },
+   "macro": 0.7077,
+   "overall": 0.6484
+  }
+ }
+}
