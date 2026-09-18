@@ -1,0 +1,19 @@
+{
+  "id": "arkosarkarhehe/asanaai-stgcn-transitions",
+  "id_no": 134880101,
+  "title": "AsanaAI STGCN Transitions",
+  "code_file": "asanaai-stgcn-transitions.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "dataset_sources": [
+    "arkosarkarhehe/asanaai-stgcn-source"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}

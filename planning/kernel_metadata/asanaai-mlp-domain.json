@@ -1,0 +1,22 @@
+{
+  "id": "arkosarkarhehe/asanaai-mlp-domain",
+  "id_no": 134895299,
+  "title": "AsanaAI MLP Domain",
+  "code_file": "asanaai-mlp-domain.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [
+    "gpu"
+  ],
+  "dataset_sources": [
+    "arkosarkarhehe/asanaai-photo-testset",
+    "arkosarkarhehe/asanaai-stgcn-source"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}
