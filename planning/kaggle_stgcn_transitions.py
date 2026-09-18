@@ -36,10 +36,14 @@ IN = "/kaggle/input/asanaai-stgcn-source"
 OUT = "/kaggle/working"
 WIN, STRIDE = 60, 12
 HOLDOUT = {"4ORRiN2_aVI", "SZU7Sbgu57o"}   # same videos as before, for comparability
-MIN_PAIR = 12          # name a directional transition with >= this many windows
+# 12 was far too low: it named 69 transition classes, many with n=12-20, which
+# shattered the label space into 92 classes and collapsed macro to 12.6% (vs
+# 63.0% with 24 classes). Macro averages over classes, so a long tail of
+# near-empty ones dominates it. Only name transitions with real support.
+MIN_PAIR = 50
 HOLD_FRAC = 0.85       # window is a hold if one pose covers >= this fraction
 MOTION_HOLD = 15.0     # deg/s — identical to backend MOTION_HOLD_MAX_DEG_PER_SEC
-EPOCHS = 45
+EPOCHS = 30
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ---------------- production architecture, verbatim ----------------
@@ -229,13 +233,19 @@ def main():
 
     # ---------------- relabelling ----------------
     def named(seg, mot):
+        """hold / transition / unrecognized.
+
+        `unrecognized` must mean "we genuinely cannot name this posture", NOT
+        "left over". A previous attempt made hold: require >=85% homogeneity
+        AND low motion, which dumped every low-motion-but-mixed window into
+        unrecognized -- it ballooned to 22,579 windows (41% of the dataset),
+        recreating the exact residual-bin problem this relabelling exists to
+        remove. So a still window with a clear dominant pose is a hold even if
+        it is not perfectly homogeneous.
+        """
         from collections import Counter
         real = [p for p in seg if p != "transition/unknown"]
-        if real:
-            top, cnt = Counter(real).most_common(1)[0]
-            if cnt / len(seg) >= HOLD_FRAC and mot <= MOTION_HOLD:
-                return f"hold:{top}"
-        # moving: try to name a direction using the window's endpoints
+
         if mot > MOTION_HOLD:
             head = [p for p in seg[:WIN//3] if p != "transition/unknown"]
             tail = [p for p in seg[-WIN//3:] if p != "transition/unknown"]
@@ -245,6 +255,14 @@ def main():
                 if a != b:
                     return f"transition:{a}->{b}"
             return "transition:other"
+
+        # still. Prefer a hold whenever one pose clearly dominates.
+        if real:
+            top, c = Counter(real).most_common(1)[0]
+            if c / len(seg) >= HOLD_FRAC:
+                return f"hold:{top}"
+            if c / len(real) >= 0.60 and len(real) >= len(seg) * 0.4:
+                return f"hold:{top}"
         return "unrecognized"
 
     labels = [named(s, m) for s, m in zip(raw_labels, motions)]
