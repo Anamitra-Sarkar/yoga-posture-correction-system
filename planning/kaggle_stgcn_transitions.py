@@ -163,6 +163,31 @@ def base_pose(l):
     return "child_pose" if l == "child" else l
 
 def main():
+    # Diagnostic: if the dataset mount is missing/partial the failure should be
+    # obvious rather than a bare FileNotFoundError 170 lines in.
+    import glob as _g
+    print("=== /kaggle/input tree ===", flush=True)
+    for d in sorted(_g.glob("/kaggle/input/*")):
+        fs = sorted(_g.glob(d + "/*"))
+        print(f"  {d}  ({len(fs)} files)", flush=True)
+        for f in fs[:4]:
+            print(f"     {os.path.basename(f)}", flush=True)
+    # Kaggle nests dataset mounts (/kaggle/input/datasets/<owner>/<slug>/...),
+    # and the exact layout has changed between CLI versions -- so discover the
+    # data rather than hardcoding a path that silently breaks.
+    global IN
+    if not os.path.exists(f"{IN}/master_mlp_dataset_fully_classified.csv"):
+        hits = _g.glob("/kaggle/input/**/master_mlp_dataset_fully_classified.csv",
+                       recursive=True)
+        if not hits:
+            raise SystemExit("FATAL: labels CSV not found anywhere under /kaggle/input")
+        IN = os.path.dirname(hits[0])
+        print(f"resolved data dir -> {IN}", flush=True)
+    n_lm = len(_g.glob(f"{IN}/landmarks_*.npy"))
+    print(f"landmark files visible: {n_lm}", flush=True)
+    if n_lm == 0:
+        raise SystemExit("FATAL: no landmark .npy files alongside the CSV")
+
     # map landmark filename -> youtube id
     vid_of = {}
     for j in glob.glob(f"{IN}/*.info.json"):
