@@ -191,18 +191,37 @@ def generate_safe_correction(
             lang_names = {"en": "English", "hi": "Hindi", "bn": "Bengali"}
             target_lang_name = lang_names.get(language, "English")
             
+            # qwen/qwen3.6-27b was correct when this was written but has since
+            # been decommissioned: Groq now answers it with 404 model_not_found.
+            # Because the non-200 branch below used to be silent, the service
+            # had been quietly returning the Stage-1 template for every request
+            # instead of the paraphrase -- verified by the live response being
+            # byte-identical to the template string.
             payload = {
-                "model": "qwen/qwen3.6-27b",
+                "model": "qwen/qwen3.8-27b",
+                # A system-only message list is rejected by this model with
+                # 400 "No user query found in messages", so the instruction to
+                # rewrite goes in the system role and the text to be rewritten
+                # goes in the user role -- which is also the correct shape.
                 "messages": [
                     {
                         "role": "system",
-                        "content": f"You are a professional yoga instructor. Translate or paraphrase the following instruction: '{correction_text}' into {target_lang_name}. Do NOT suggest stretching further or pushing deeper. Keep it safe, concise (under 15 words), and respond ONLY in the {target_lang_name} language."
-                    }
+                        "content": f"You are a professional yoga instructor. Translate or paraphrase the user's instruction into {target_lang_name}. Do NOT suggest stretching further or pushing deeper. Keep it safe, concise (under 15 words), and respond ONLY in the {target_lang_name} language, with no preamble."
+                    },
+                    {"role": "user", "content": correction_text},
                 ],
                 "temperature": 0.2,
+                "max_tokens": 120,
                 "reasoning_format": "hidden"
             }
-            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=5)
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=8)
+            if response.status_code != 200:
+                # Log it. The template fallback is a correct and safe outcome,
+                # which is exactly why a silent one is dangerous: it looks
+                # identical to success from the outside.
+                logger.warning(
+                    "Groq correction call returned %s, falling back to template: %s",
+                    response.status_code, response.text[:200])
             if response.status_code == 200:
                 candidate_text = response.json()["choices"][0]["message"]["content"].strip()
                 
