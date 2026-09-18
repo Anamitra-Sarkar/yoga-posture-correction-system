@@ -109,6 +109,40 @@ silent (no else, no log) and falling back to the reviewed template is a
 correct, safe outcome — so a total outage looked exactly like success. Non-200s
 are now logged. Timeout 5s -> 8s.
 
+**THIRD cause, found after deploying, needs YOUR action:** with the logging in
+place the Space immediately reported the real remaining failure on every call:
+
+```
+Groq correction call returned 401, falling back to template:
+{"error":{"message":"Invalid API Key","code":"invalid_api_key"}}
+```
+
+So the code fix is deployed and correct, but the `GROQ_API_KEY` **secret stored
+on the Space is stale**. The key in
+`~/Downloads/API_Keys_and_Secrets/groq_api.txt` is valid — it was used to
+confirm both the model id and the corrected payload shape, returning HTTP 200
+with a proper Hindi paraphrase.
+
+Updating it is a change to account settings involving a credential, so it was
+deliberately NOT done automatically. Do it either way:
+
+* **Web UI:** huggingface.co/spaces/Arko007/yoga_pose/settings -> Variables and
+  secrets -> edit `GROQ_API_KEY` -> paste the key from `groq_api.txt`.
+* **Terminal:** prefix with `!` in Claude Code so the output lands in the
+  session:
+
+```bash
+python3 -c "
+from huggingface_hub import HfApi
+k=open('/home/anamitra/Downloads/API_Keys_and_Secrets/groq_api.txt').read().strip()
+t=open('/home/anamitra/Downloads/API_Keys_and_Secrets/hf_token').read().strip()
+HfApi(token=t).add_space_secret('Arko007/yoga_pose','GROQ_API_KEY',k)
+print('updated; the Space will restart')"
+```
+
+Then confirm with `bash backup/verify_live.sh` — once the English correction
+is no longer the exact template string, the LLM path is genuinely live.
+
 **`backend/app.py` could 500 on a mediapipe bump.** The try/except guarded only
 `import mediapipe`, then called `mp.solutions.pose` on the next line — and
 0.10.35 removed it. Now degrades with a message naming the installed version.
