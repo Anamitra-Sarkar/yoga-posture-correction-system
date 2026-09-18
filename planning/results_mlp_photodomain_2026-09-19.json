@@ -1,0 +1,334 @@
+{
+ "video_only": {
+  "per_class": {
+   "chair_pose": {
+    "n": 4,
+    "acc": 0.0
+   },
+   "child_pose": {
+    "n": 3,
+    "acc": 0.3333
+   },
+   "cobra_pose": {
+    "n": 2,
+    "acc": 0.0
+   },
+   "corpse": {
+    "n": 2,
+    "acc": 0.0
+   },
+   "downward_dog": {
+    "n": 6,
+    "acc": 0.3333
+   },
+   "lunge_pose": {
+    "n": 8,
+    "acc": 0.0
+   },
+   "mountain_pose": {
+    "n": 10,
+    "acc": 0.3
+   },
+   "plank": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_easy_pose": {
+    "n": 16,
+    "acc": 0.375
+   },
+   "seated_forward": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_staff": {
+    "n": 10,
+    "acc": 0.0
+   },
+   "standing_forward_fold": {
+    "n": 3,
+    "acc": 0.0
+   },
+   "standing_pose": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "tree_pose": {
+    "n": 13,
+    "acc": 0.3077
+   },
+   "triangle": {
+    "n": 8,
+    "acc": 0.0
+   },
+   "upward_dog": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 3,
+    "acc": 0.6667
+   },
+   "warrior_1": {
+    "n": 6,
+    "acc": 0.1667
+   },
+   "warrior_2": {
+    "n": 5,
+    "acc": 0.2
+   }
+  },
+  "macro": 0.1412,
+  "overall": 0.1942,
+  "n_train": 654488
+ },
+ "video+photos": {
+  "per_class": {
+   "chair_pose": {
+    "n": 4,
+    "acc": 0.0
+   },
+   "child_pose": {
+    "n": 3,
+    "acc": 0.3333
+   },
+   "cobra_pose": {
+    "n": 2,
+    "acc": 0.0
+   },
+   "corpse": {
+    "n": 2,
+    "acc": 0.5
+   },
+   "downward_dog": {
+    "n": 6,
+    "acc": 0.3333
+   },
+   "lunge_pose": {
+    "n": 8,
+    "acc": 0.0
+   },
+   "mountain_pose": {
+    "n": 10,
+    "acc": 0.3
+   },
+   "plank": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_easy_pose": {
+    "n": 16,
+    "acc": 0.5625
+   },
+   "seated_forward": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_staff": {
+    "n": 10,
+    "acc": 0.0
+   },
+   "standing_forward_fold": {
+    "n": 3,
+    "acc": 0.0
+   },
+   "standing_pose": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "tree_pose": {
+    "n": 13,
+    "acc": 0.3077
+   },
+   "triangle": {
+    "n": 8,
+    "acc": 0.125
+   },
+   "upward_dog": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 3,
+    "acc": 0.6667
+   },
+   "warrior_1": {
+    "n": 6,
+    "acc": 0.1667
+   },
+   "warrior_2": {
+    "n": 5,
+    "acc": 0.2
+   }
+  },
+  "macro": 0.184,
+  "overall": 0.2427,
+  "n_train": 654807
+ },
+ "video+photos_oversampled": {
+  "per_class": {
+   "chair_pose": {
+    "n": 4,
+    "acc": 0.0
+   },
+   "child_pose": {
+    "n": 3,
+    "acc": 0.6667
+   },
+   "cobra_pose": {
+    "n": 2,
+    "acc": 0.0
+   },
+   "corpse": {
+    "n": 2,
+    "acc": 1.0
+   },
+   "downward_dog": {
+    "n": 6,
+    "acc": 0.5
+   },
+   "lunge_pose": {
+    "n": 8,
+    "acc": 0.625
+   },
+   "mountain_pose": {
+    "n": 10,
+    "acc": 0.1
+   },
+   "plank": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_easy_pose": {
+    "n": 16,
+    "acc": 0.8125
+   },
+   "seated_forward": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_staff": {
+    "n": 10,
+    "acc": 0.3
+   },
+   "standing_forward_fold": {
+    "n": 3,
+    "acc": 0.0
+   },
+   "standing_pose": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "tree_pose": {
+    "n": 13,
+    "acc": 0.3846
+   },
+   "triangle": {
+    "n": 8,
+    "acc": 0.75
+   },
+   "upward_dog": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 3,
+    "acc": 0.6667
+   },
+   "warrior_1": {
+    "n": 6,
+    "acc": 0.3333
+   },
+   "warrior_2": {
+    "n": 5,
+    "acc": 0.6
+   }
+  },
+  "macro": 0.3547,
+  "overall": 0.4563,
+  "n_train": 817816
+ },
+ "photos_only": {
+  "per_class": {
+   "chair_pose": {
+    "n": 4,
+    "acc": 0.0
+   },
+   "child_pose": {
+    "n": 3,
+    "acc": 0.0
+   },
+   "cobra_pose": {
+    "n": 2,
+    "acc": 0.0
+   },
+   "corpse": {
+    "n": 2,
+    "acc": 0.5
+   },
+   "downward_dog": {
+    "n": 6,
+    "acc": 0.5
+   },
+   "lunge_pose": {
+    "n": 8,
+    "acc": 0.25
+   },
+   "mountain_pose": {
+    "n": 10,
+    "acc": 0.1
+   },
+   "plank": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_easy_pose": {
+    "n": 16,
+    "acc": 0.9375
+   },
+   "seated_forward": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "seated_staff": {
+    "n": 10,
+    "acc": 0.4
+   },
+   "standing_forward_fold": {
+    "n": 3,
+    "acc": 0.0
+   },
+   "standing_pose": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "tree_pose": {
+    "n": 13,
+    "acc": 0.4615
+   },
+   "triangle": {
+    "n": 8,
+    "acc": 0.875
+   },
+   "upward_dog": {
+    "n": 1,
+    "acc": 0.0
+   },
+   "upward_salute": {
+    "n": 3,
+    "acc": 0.0
+   },
+   "warrior_1": {
+    "n": 6,
+    "acc": 0.5
+   },
+   "warrior_2": {
+    "n": 5,
+    "acc": 0.0
+   }
+  },
+  "macro": 0.2381,
+  "overall": 0.4078,
+  "n_train": 319
+ }
+}
