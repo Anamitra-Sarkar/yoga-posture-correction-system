@@ -161,6 +161,38 @@ def angles_zero_z(p):
         ang(KN_L,AN_L,HE_L), ang(KN_R,AN_R,HE_R), ang(SH_L,HP_L,HP_R), ang(SH_R,HP_R,HP_L),
         ang3(q[NOSE], sm, hm), ang(HP_R,HP_L,KN_L), ang(HP_L,HP_R,KN_R)], dtype=np.float32)
 
+def rule_pose(a):
+    """Minimal re-implementation of backend classify_pose ordering.
+
+    THE ACTUAL ROOT CAUSE of the two failed relabelling attempts: 35.6% of
+    stored per-frame labels are 'transition/unknown', so windows collapse into
+    a residual bin no matter what thresholds are chosen. Re-deriving the pose
+    from the frame's own angles recovers a real name for many of those frames,
+    which is what the run that scored 63.0% must effectively have had.
+    warrior_2 is checked before warrior_1 to match the production fix.
+    """
+    hl,hr,kl,kr,sl,sr,tl,tr,nk = (a[4],a[5],a[6],a[7],a[2],a[3],a[10],a[11],a[12])
+    B = lambda v,lo,hi: lo <= v <= hi
+    if hl>140 and hr>140 and kl>140 and kr>140 and sl<55 and sr<55 and tl>65 and tr>65: return "mountain_pose"
+    if hl>140 and hr>140 and kl>140 and kr>140 and sl>115 and sr>115 and tl>65 and tr>65: return "upward_salute"
+    if B(hl,20,140) and B(hr,20,140) and kl>110 and kr>110 and sl>95 and sr>95: return "downward_dog"
+    if hl>140 and hr>140 and kl>140 and kr>140 and B(sl,60,110) and B(sr,60,110): return "plank"
+    if hl>120 and hr>120 and kl>120 and kr>120 and B(sl,5,50) and B(sr,5,50) and nk>=80: return "cobra_pose"
+    if hl<90 and hr<90 and kl<90 and kr<90 and sl>85 and sr>85: return "child_pose"
+    if B(hl,60,120) and B(hr,60,120) and kl>135 and kr>135 and tl>=60 and tr>=60: return "seated_staff"
+    if B(hl,50,120) and B(hr,50,120) and kl<125 and kr<125 and tl>=60 and tr>=60: return "seated_easy_pose"
+    if B(hl,75,140) and B(hr,75,140) and B(kl,75,140) and B(kr,75,140) and abs(kl-kr)<30 and sl>95 and sr>95: return "chair_pose"
+    if (kl>150 and hl>165 and kr<140) or (kr>150 and hr>165 and kl<140): return "tree_pose"
+    legs = (kl<120 and kr>130) or (kr<120 and kl>130)
+    if legs and B(sl,65,125) and B(sr,65,125): return "warrior_2"
+    if legs and sl>110 and sr>110: return "warrior_1"
+    if legs: return "lunge_pose"
+    if hl<70 and hr<70 and kl>120 and kr>120: return "standing_forward_fold"
+    if B(hl,70,115) and B(hr,70,115) and kl>130 and kr>130: return "halfway_lift"
+    if B(hl,60,125) and B(hr,60,125) and B(kl,60,125) and B(kr,60,125) and B(sl,60,125) and B(sr,60,125): return "table_top"
+    if hl>140 and hr>140 and kl>140 and kr>140: return "standing_pose"
+    return "transition/unknown"
+
 def base_pose(l):
     l = str(l)
     if l.startswith("imperfect_"): l = l[len("imperfect_"):]
@@ -227,7 +259,9 @@ def main():
             mot = float(np.abs(ang[s+WIN-1] - ang[s]).mean() / dt)
             feats_raw.append(lm[w, :, :3].reshape(WIN, -1))
             feats_bc.append(lm_bc[w, :, :3].reshape(WIN, -1))
-            raw_labels.append(seg); vids.append(vid); motions.append(mot)
+            seg2 = [(p if p != "transition/unknown" else rule_pose(ang[s+i]))
+                    for i, p in enumerate(seg)]
+            raw_labels.append(seg2); vids.append(vid); motions.append(mot)
 
     print("windows:", len(feats_raw), flush=True)
 
