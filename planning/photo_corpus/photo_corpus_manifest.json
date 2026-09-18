@@ -1,0 +1,1719 @@
+{
+ "per_class": {
+  "warrior_2": 18,
+  "warrior_1": 27,
+  "mountain_pose": 37,
+  "cobra_pose": 16,
+  "tree_pose": 56,
+  "plank": 14,
+  "downward_dog": 20,
+  "chair_pose": 21,
+  "child_pose": 13,
+  "table_top": 5,
+  "seated_staff": 30,
+  "seated_easy_pose": 77,
+  "standing_forward_fold": 11,
+  "halfway_lift": 0,
+  "upward_salute": 6,
+  "upward_dog": 1,
+  "lunge_pose": 17,
+  "triangle": 24,
+  "chaturanga": 0,
+  "corpse": 18,
+  "seated_forward": 5,
+  "standing_pose": 6
+ },
+ "total": 422,
+ "train": 319,
+ "test": 103,
+ "meta": [
+  {
+   "title": "File:Ashish veerbhadrasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Desert Warrior II DVIDS47521.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Furuno Electric GPS Navigator GP-80 at Greenpeace's Rainbow Warrior II 20110108.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:G-BSJX - Piper Cherokee Warrior II Abberton 170525.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:G-IKBP - Piper Cherokee Warrior II Chester 050925.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Kavya - Shulinasana.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Photography by Mina Alizadeh.png",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:1980 Piper PA-28-161 Warrior II G-BPCK Abbas Air (8623952155).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:A posture in ashtanga yoga (28).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Air Force JROTC cadet Madelyn Spitzer, observes the right aileron on a Piper Warrior II.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:G-BRDF Piper PA-28-161 Warrior II Duxford 141021 (51618511338).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:G-BRDM Piper PA-28-161 Duxford 28-6-2025.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:G-BSJX Piper PA-28-161 Warrior II @ Earls Colne 16022017.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:G-CDMY Piper Pa28-161 Cherokee Warrior II Redhill Air services CVT 03-07-19 (48235672306).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Rocket-yoga-06-1200px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-06-4000px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Virabhadrasana II - Warrior II Pose.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga Warrior I.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2012.07 eurotrip Innsbruck mountains 06.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Chakra Balancing.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Flickr - The U.S. Army - Security agreement provides hope.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Gold Star Memorial Groundbreaking 01.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Gold Star Memorial Groundbreaking 02.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Kavya - Tuladharasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Lauren Nilson 6563 - Flickr - familymwr.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:More than 600 motorcycles ride from Orange County to the Wounded Warrior Battalion aboard Camp Pendleton, Calif., Nov. 1, 2013; The ride raised over 28,000 dollars to donate to the Wounded Warrior 131101-M-LS369-002.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:More than 600 motorcycles ride from Orange County to the Wounded Warrior Battalion aboard Camp Pendleton, Calif., Nov. 1, 2013; The ride raised over 28,000 dollars to donate to the Wounded Warrior 131101-M-LS369-011.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Nama Baddha Hasta Virabhadrasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Nilsen vs. China - Flickr - familymwr.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:On 16 May 2024 In Kharkiv, Volodymyr Zelenskyy Presented State Awards to Warriors of the 92nd Separate Assault Brigade Named after Kish Ataman Ivan Sirko. (53724466167).jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:On 16 May 2024 In Kharkiv, Volodymyr Zelenskyy Presented State Awards to Warriors of the 92nd Separate Assault Brigade Named after Kish Ataman Ivan Sirko. (53724466282).jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:On 16 May 2024 In Kharkiv, Volodymyr Zelenskyy Presented State Awards to Warriors of the 92nd Separate Assault Brigade Named after Kish Ataman Ivan Sirko. (53725366766).jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:On 16 May 2024 In Kharkiv, Volodymyr Zelenskyy Presented State Awards to Warriors of the 92nd Separate Assault Brigade Named after Kish Ataman Ivan Sirko. (53725583218).jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:On 16 May 2024 In Kharkiv, Volodymyr Zelenskyy Presented State Awards to Warriors of the 92nd Separate Assault Brigade Named after Kish Ataman Ivan Sirko. (53725583273).jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:On 16 May 2024 In Kharkiv, Volodymyr Zelenskyy Presented State Awards to Warriors of the 92nd Separate Assault Brigade Named after Kish Ataman Ivan Sirko. (53725583458).jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Kalari Pattu.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Open Heart Chakra Warrior.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-01-1200px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-01-4000px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-04-1200px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-04-4000px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-18.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-18 (cropped).jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Warrier Pose.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Yagnesh Vikrantasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:86th IBCT (MTN) conducts Immediate Response 25 in Greece (9069493).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:86th IBCT (MTN) conducts Immediate Response 25 in Greece 250528-Z-YO854-1007.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Aula Yoga - introdu\u00e7\u00e3o.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Group Yogasana at Begnas Yoga & Retreat.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Just focus.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Kavya - Uttanasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Re-publica 23 - Tag 3 (52957588485).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Re-publica 23 - Tag 3 (52967312948).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Sitrah, 1935 03.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Tadasana, Heinz Grill 1992.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Tadasana - Yoga Art and Science.jpg",
+   "license": "CC BY-SA 2.5"
+  },
+  {
+   "title": "File:Vermont Teacher, Humanitarian Visits TF Wolverine DVIDS298803.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Yoga am See.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:170209-N-PL946-047 (32496032650).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:170209-N-PL946-049 (32836320056).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Park Ranger in Ryan Mountain Yoga Pose (50696211892).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Flexible Goddess yoga series by Dr Igor Popov.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Indian-dancer-nataraja.png",
+   "license": "CC BY 2.5 in"
+  },
+  {
+   "title": "File:Kashapadaasna.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Kavya - Prushrutasana.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Kavya - Uttulasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:La posture d'\u00e9l\u00e9vation du ciel.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Mr-yoga- tandava dance.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-bound one legged unsupported forward bend.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-half bound one legged forward bend.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-mermaid arms - lord of dance 2.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-one legged crescent.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-one legged standing bound.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-reverse facing stretch 5.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-sun salutation 1.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-sun salutation 2.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-tandava 2.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-tandava backbend.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-toppling tree.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-toppling tree 1.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-toppling tree 1 (cropped).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-toppling tree 2.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:AC Cobra - 50th Annyversary Cobra Limited Edition CSX8000 (01).jpg",
+   "license": "GFDL 1.2"
+  },
+  {
+   "title": "File:AC Cobra - 50th Annyversary Cobra Limited Edition CSX8000 (03).jpg",
+   "license": "GFDL 1.2"
+  },
+  {
+   "title": "File:AC Cobra 427 Replica Magnum, li. Seite (2015-09-12 3676 b).jpg",
+   "license": "CC BY-SA 2.0 de"
+  },
+  {
+   "title": "File:AC Cobra 427 Superperformance (27979075872).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Advanced version of bhujangasana cobra pose.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Anil Shrikrishna Manekar - Bhujangasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7392.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Bhujangasana1.JPG",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Bhujangasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7379.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Bhujangasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7384.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Bhujangasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7390.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Bhujangasana - International Day of Yoga Celebration - NCSM - Kolkata 2016-06-21 4944.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Bhujangasana Yoga-Asana Nina-Mel.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:AC COBRA 03.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:AC Cobra replica.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Alex Suarez- Cobra Starship.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Cobra Commander and Snake Eyes Become Friends at NYCC 2017.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2016 \ubbf8\uc2a4\uc139\uc2dc\ubc31(MISS SEXY BACK) \ucd5c\uc885\uc608\uc120\uc804 1\ubd80 \uc7a5\uae30\uc790\ub791 97.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:2017 \ubbf8\uc2a4\uc139\uc2dc\ubc31 \ubc00\ub9ac\uc624\ub808 \uc1fc\ucf00\uc774\uc2a4 (4).jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:2023-10-28 MAG warm-up 2 Parallel bars (Martin Rulsch) 69.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:AcroDanceHandstand.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Asanas Composite.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Boy sitting on a tree stump, NINO F Scholten Tel Aviv 201-250 52.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Boy sitting on a tree stump, NINO F Scholten photographic print 12 140.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:BrightonYoga couver outdooryoga hove lawns.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Cardiac Yoga Exercise .jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Donald Rumsfeld Does a Handstand on a Chair - NARA - 27575786.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Eka Hasta Adho Mukha Vrksasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Eka Hasta Adho Mukha Vrksasana (cropped).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Free souls.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Guy doing handstand.jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Handstand-yoga.png",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Handstand at Boti Falls.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Handstand by a young woman.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Handstand on the city.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Kopfstand-im-seil-iyengar-yoga-2020.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Man in Uzzi swim briefs.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Man standing on a path between trees, NINO F Scholten Varia 08 24.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:A Koch woman.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:A style of vrikshasana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A style of vrikshasana 1.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A style of vrikshasana 2.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A style of vrikshasana 3.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A style of vrikshasana 4.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Anatomical Man.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:AvMalecon-LaHabanaCuba-04735.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Don Quijote de la Mancha en el Teatro Teresa Carre\u00f1o, Caracas, Venezuela 3.jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:ESTADOS UNIDOS LEVAM OURO NA GIN\u00c1STICA FEMININA POR EQUIPES DOS JOGOS OL\u00cdMPICOS RIO 2016 (28849586476).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:008 Milky way aligned with the Matterhorn reflecting in Stellisee Photo by Giles Laurent.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:03 Delicate balance 2250.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:03 Delicate balance 2252.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Balance Beam Ginna Escobar, 2015 Pan Am Games.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Balance Roberval.tif",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Balance bike adjusted by adult.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Balance breach kuopiorock.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Park Ranger in Desert Tortoise Pose (50696199372).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Park Ranger in Downward Coyote Yoga Pose (50696210552).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Park Ranger in Joshua Tree Yoga Pose (50695377468).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Park Ranger in Joshua Tree Yoga Pose (50695393088).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Park Ranger in Joshua Tree Yoga Pose (50696134541).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Postura da \u00c1rvore Yoga.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-13.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Scenic beauty ; trees... dog... handstand .. totally perfect.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:The Minister of State for Home Affairs, Shri Kiren Rijiju performing Yoga, on the occasion of the 3rd International Day of Yoga \u2013 2017, in Gangtok, Sikkim on June 21, 2017 (2).jpg",
+   "license": "GODL-India"
+  },
+  {
+   "title": "File:The Tree Posture.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Vijay Goel performing Yoga, on the occasion of the 4th International Day of Yoga 2018, organised by the Kampur district administration Government of Assam, in Guwahati (2).JPG",
+   "license": "GODL-India"
+  },
+  {
+   "title": "File:Vriksasana Yoga-Asana Nina-Mel.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Vrksasana.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga under the banyan tree, GTMO residents realize the benefits of an age-old practice in beautiful Cuba 140326-A-ZI015-084.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:An Eka Pada Koundinyasana yoga posture asana.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Man Doing Yoga GIF Animation Loop.gif",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Raju Yoga 1.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:\u0421\u0442\u043e\u0438 \u043d\u0430 \u0433\u043b\u0430\u0432\u0430 \u0438 \u0440\u0430\u0446\u0435 \u0458\u043e\u0433\u0430 \u043f\u0435\u0440\u0444\u043e\u0440\u043c\u0430\u043d\u0441.jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Catura\u1e45ga Da\u1e47\u1e0d\u0101sana-Four-Limbed Staff.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:DSC 4050m.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Forearm Plank Phalakasana variant (outdoor class).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-03-1200px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-03-4000px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:STAGE RUNNING4YOU.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:USS George H.W. Bush (CVN 77) 140720-N-CS564-179 (14691638316).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Waterfall yoga (8680893144).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Waterfall yoga (8680901296).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Woman-in-black-tank-top-and-black-leggings-doing-yoga-3823063.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:YogaZipolite.JPG",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Yoga (9704368001).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Putvottanasana - Upward Plank Pose 1 - Diagonal View.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga PLank.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Beach Yoga (2).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Dickinson Law Yoga Offering.jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Downward-Facing-Dog.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Flickr - Nicholas T - Up and Down.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Gajasana in Sritattvanidhi (cropped).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Hatha yoga in Japanese @ Semperviva (4440275958).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Rocket-yoga-02-1200px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-02-4000px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Stickney Brook Yoga 57.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Three Person Foot to Foot Downward Dog with Foot Hang Flyer - Acroyoga Pose.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:USS George H.W. Bush (CVN 77) 140720-N-CS564-158 (14527961010).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Urdhva Prasarita Ekapadasana.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga (9704310027).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga (9704378437).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga (9707545272).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga (9707616220).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga (9707619732).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga (9707623866).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga asana Jean Paul Finne Svanasana.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga in Seoul - 2021 (P1085171).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:A style of Utkatasana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Hari Seldon and The Foundation by Vishchun.png",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:John Bullard, Kristina Egan, Paul Chasse, and Susan Teal at South Coast Rail planning celebration on May 7, 2015 (17801680936).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Man sitting in a chair, posing for the camera in a garden. Dog is lying next to him, NINO F Scholten Jaffa 18 34.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Man sitting in a chair, posing for the camera in a garden. Dog is lying next to him, NINO F Scholten photographic print 11 070.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Man sitting on a chair, NINO F Scholten Jaffa Tel Aviv Sarona 08 005.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Revolved Yogi.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Soldier sitting on a chair, posing for the camera, NINO F Scholten Tel Aviv 001-050 05.tiff",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:The Minister of State for Home Affairs, Shri Kiren Rijiju performing Yoga, on the occasion of the 3rd International Day of Yoga \u2013 2017, in Gangtok, Sikkim on June 21, 2017 (1).jpg",
+   "license": "GODL-India"
+  },
+  {
+   "title": "File:The dull husband (BM 1938,0613.19).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Thigh chair pose 1 (49583211366).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Thigh chair pose 2 (49583446712).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Twisted chair.png",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Unidentified man, facing front, standing next to chair, posing for full-length studio portrait LCCN2015649998.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Unidentified man, facing front, standing next to chair, posing for full-length studio portrait LCCN2015649998.tif",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Unknown asana 5.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Utkatasana.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Utkatasana - power pose hands bound.png",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Utkatasana Side View.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Utkatasana is back.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yudh Abhyas 2014 140920-a-sf654-002 (15336834641).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Balasana.JPG",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Garbhasana.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Hare-pose.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Yagnesh Vandanasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Beggars, Beihai Park (c1917-1919) Sydney D. Gamble (RESTORED) (4072932711).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Greek - Herakles as a Child - Walters 541002.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Greek - Herakles as a Child - Walters 541002 - Back.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Greek - Herakles as a Child - Walters 541002 - Three Quarter.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:HumanNewborn.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Month of the Military Child- big thumbs up from Papi (3306798).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Nutrition and growth in children (1922) (14597637650).jpg",
+   "license": "No restrictions"
+  },
+  {
+   "title": "File:Portrait of Dorothea, Lady Eden, n\u00e9e Johnson (1742-1792) (by Thomas Gainsborough).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Portrait of Master Smith (by Francis Cotes).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Bird dog exercise.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga at Your Park (1fe0c5d7-4c1d-48c5-a121-fddc1b3961de).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Yoga at Your Park (769083a3-0735-4ad9-8248-b6aaf9b95670).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Yoga at Your Park - Bidalasana.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Yoga at Your Park - Bitilasana.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:2022 - Staff EN1 5761 (52477534893).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2022 - Staff EN1 5786 (52476990071).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2022 - Staff EN1 5810 (52477454830).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2022 - Staff EN1 5847 (52476990406).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2022 - Staff EN1 5871 (52477535783).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:2025 Fee Staff (54631039158).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:2025 Fee Staff (54631039303).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:38th Air Defense Artillery Brigade Staff Conducts Staff Ride at Meiji Shrine (9031662).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:A stretching posture, paschimottan asana.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:A style of Dandasana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Afghan National Air Corps Staff and U.S. staff pose for a picture at a Kabul air base. (4492614517).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Bus staff posing for a photo in their downtime in New York City - Oct 2024.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:180420-D-SW162-1215 (41550958562).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:181105-D-PB383-028.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:181208-D-SW162-0311 (32375134498).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:190330-D-SW162-1812 (40536965273).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:190401-D-SW162-1699 (32568487757).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:190401-D-SW162-1711 (33634000708).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:190401-D-SW162-1716 (46595260175).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:190401-D-SW162-1719 (47510662481).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:190401-D-SW162-1725 (46786824874).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:191203-D-SW162-1168 (49169587042).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:191203-D-SW162-1431 (49169606287).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Bikram Yoga - with Bikram Choudhury - Flickr - tiarescott.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Chairman of the Joint Chiefs of Staff Attends AFRICOM CHOD Conference 2024 (8499490).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Chairman of the Joint Chiefs of Staff Attends AFRICOM CHOD Conference 2024 (8499492).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Defense.gov photo essay 081101-N-0696M-413.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:GEN Colin Powell, chairman, Joint Chiefs of STAFF, poses for a photograph with soldiers from Joint Task Force B. Powell is visiting Honduras as part of exercise Fuertes Caminos '91 - DPLA - bb9cd7e9df0ed4beaf919bcdf609f7ea.jpeg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Gabon National Navy chief of staff visits Obangame Express (8403349).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:General CQ Brown, Jr. met with Lieutenant General Karel \u0158ehka, Chief of the General Staff of the Czech Armed Forces, at the Pentagon, February 27, 2024 - 240227-A-UH083-1044 (53556406990).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:10 beeldverhaal DVP.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Abhishek shivanna meditating (cropped).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Berlin, Germany (8000975026).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Boys in the river of Venezuela.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Buddha in Lotus Position, University of York 01.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Buddha in Lotus Position, University of York 02.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Buddhist child.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Cross-legged sitting, female.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Cross-legged sitting.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Cross-legged sitting - woman.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Gampopa.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Guerra e Paz (40984618910).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Hostel Albufeira Portugal.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Josef Danilowatz Der Besuch.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:L2045152 retouch flattened2 preview.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Lord Ajitnath.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Lululemon Yoga Lotus.png",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:1 Sannyasi in yoga meditation on the Ganges, Rishikesh.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Afghan lady in Kabul.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Babaji.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Ceramic craftsman in Fez, Morocco.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Falun Dafa the fifth exercise, meditation2.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:GD-EG-Caire-Mus\u00e9e037.JPG",
+   "license": "CC BY-SA 2.5"
+  },
+  {
+   "title": "File:Hanuman HYC 20181014.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Just Breath.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Krishna with sakhis by manaku from Bhagavata purana series.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Lahiri Mahasaya.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Le D\u00e9jeuner du Matin by William-Adolphe Bouguereau.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Meditaci\u00f3n Evolutiva.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Jean Maurice Carenant - Param singh bien \u00eatre-professeur de yoga et praticien reiki.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Meditation on the hill.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:A YOUNG MAN FINDS A QUIET SPOT ON THE STONEWORK OF THE H.C (BUD) RICHARDSON FOUNTAIN IN FRONT OF POWER'S DRY GOODS STORE - NARA - 551486.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:A collected Bhairava sculpture at Bapu Museum.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Abhishek shivanna meditating.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Artifacts in the Art Gallery at Thanjavur Maratha palace ttkcvrvb122k23iph (192).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Artifacts in the Art Gallery at Thanjavur Maratha palace ttkcvrvb122k23iph (193).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Artifacts in the Art Gallery at Thanjavur Maratha palace ttkcvrvb122k23iph (194).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Artifacts in the Art Gallery at Thanjavur Maratha palace ttkcvrvb122k23iph (196).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Dancesport at the 2018 Summer Youth Olympics \u2013 Mixed Team \u2013 Quarterfinal 3 (49).jpeg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Murlidhar Narayan Temple Padel Ward No. 2 Pokharithok Gorkha Nepal Rajesh Dhungana (9).jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Picnicking at the Peak 01.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Sandra 374-089 (46264054735).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Senior woman practicing yoga indoors while tracking time on her watch in a cozy and well-lit living room setting.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Study at a Reading Desk - Frederic Leighton (1877).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:The Lei Maker, oil on canvas painting by Theodore Wores, 1901nf.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Tourists relaxing (9516939189).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:000549 Falun Dafa in Szczecin, Poland - August 2007.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:1 Sannyasi in yoga meditation on the Ganges, Rishikesh cropped.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:A style of Padmasana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:An art of of Padmasana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:An art of of Padmasana 1.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Ardha Padmasana, Heinz Grill 1992.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Baddha padmasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Balancing two Emmy's.jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Buddhist monk meditation.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Debabrata Ghosh and Tania Nag in Padmasana - International Day of Yoga Celebration - NCSM - Kolkata 2016-06-21 4929.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Dr Padmasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Falun Dafa, the fifth exercise3.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Falun Dafa the fifth exercise, meditation7.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Feliks Pak Beluha.png",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Full lotus.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Goa Gong3.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:I AM BREATHING.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Jes\u00fas Bonilla Tanumanasi practicando meditaci\u00f3n.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Kashir Dadu.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Lotus Pose .jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Lotus pose.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Michel Laurent Dioptaz cr\u00e9ateur SARBACANA.jpg",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Buddha in Zazen.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Calmresilience Viktor Karpenko Meditation Tortorella 26 May 2024.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Falun Dafa, the fifth exercise.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Falun Dafa the fifth exercise, meditation.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Flickr - Nicholas T - Taut.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Girnaar junagadh gujarat motoG5 3.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Girnaar junagadh gujarat motoG5 5.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Jeenal Deepakasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Jeenal Pushkarchudasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Advanced version of uttanasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Forwardbend1.jpg",
+   "license": "GPL"
+  },
+  {
+   "title": "File:Limb Stretch (4) (14842611283).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Mr-yoga-hands bound-sun salute.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Raised Hands Pose.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Session (1) (8208826489).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Uttanasana...jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Vivek Hasta Uttanasana.jpg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Yagnesh Shahmrigasan 1.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Mr-yoga-twisting one legged forward bend.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Yoga wheel use.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:A view of Surya namaskar position 1.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A view of Surya namaskar position 12.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A view of Surya namaskar position 1 side view.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Re-publica 23 - Tag 3 (52957204601).jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:U S and Indian Armies focus on combatives and mindfulness during Tiger Triumph (8955984).jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Rocket-yoga-12.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:083012 HuffPostOasis 007 (7895502530).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Advanced version of anjaneyasana Half Moon.png",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Advanced version of anjaneyasana Half Moon with line.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Halve maanhouding, anjaneyasana, Heinz Grill 2026.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:J\u00f3ga.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:J\u00f3ga Anjaneyasana.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Low Lunge.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Orangepfl\u00fcckender Reiter und nackte Frau (1869-70).jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Raja \u0100\u00f1janey\u0101sana, Julija Zora Mazover, 2023.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Yoga in Seoul - 2021 (P1085148).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:\u0100\u00f1janey\u0101sana, Armvariation, Julija Zora Mazover, 2022.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:\u0100\u00f1janey\u0101sana, Julija Zora Mazover, 2022.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:\u0100\u00f1janey\u0101sana, Julija Zora Mazover, 2023.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:\u0100\u00f1janey\u0101sana Vorbereitung Beindynamik, Julija Zora Mazover, 2022.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:\u0100\u00f1janey\u0101sana fortgeschritten, Julija Zora Mazover, 2023.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:\u0100\u00f1janey\u0101sana leichtere Form, Julija Zora Mazover, 2022.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-08-1200px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-08-4000px.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:A style of Trikonasana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A style of Trikonasana 1.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Anil Shrikrishna Manekar - Trikonasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7326.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Flickr - Nicholas T - Bent.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Flickr - Nicholas T - Side Stretch (1).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Flickr - Nicholas T - Side Twist.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Medha Ganguly - Trikonasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7327.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Mrs Manekar - Trikonasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7325.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Parivritt trikonasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Parivrtta Trikonasana, Heinz Grill 1992.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Parswa trikonasana1.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Revolved triange pose.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Rocket-yoga-07-1200.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Rocket-yoga-07-4000.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Surf and Yoga .jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Trikonasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7328.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Trikonasana - International Day of Yoga Celebration - NCSM - Kolkata 2015-06-21 7331.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:US Army 53584 BAGHDAD - Capt. Robert Magill, the provost marshal office's long-range planner, from Killeen, Texas, does yoga exercises here, Oct. 17, as part of additional physical training through a structured vid.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Vishal trikonasana.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Yoga, A quiet escape for healthcare professionals 140624-F-LX971-020.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:YogaInRishikesh.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Yoga Time!.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga at Sunset.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Yoga in Seoul - 2021 (P1085165).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:A style of shanthi asana.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Abdome inferior.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Abdome superior.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Corpse posture.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Debabrata Ghosh and Tania Nag in Savasana with Sanjay Manna - International Day of Yoga Celebration - NCSM - Kolkata 2016-06-21 4930.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Helen yoga2.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:I am enjoing the journey.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Nisith Ranjan Chowdhury Explains Savasana Benefits - Football Workshop - Nisana Foundation - Sagar Sangha Stadium - Baruipur - South 24 Parganas 2016-02-14 1398.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Savasana - International Day of Yoga Celebration - NCSM - Kolkata 2017-06-21 2395.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Savasana - International Day of Yoga Celebration - NCSM - Kolkata 2017-06-21 2473.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Savasana - International Day of Yoga Celebration - NCSM - Kolkata 2017-06-21 2477.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Savasana - International Day of Yoga Celebration - NCSM - Kolkata 2017-06-21 2478.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Savasana - International Day of Yoga Celebration - NCSM - Kolkata 2017-06-21 2479.JPG",
+   "license": "CC BY 3.0"
+  },
+  {
+   "title": "File:Shavasana.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Shavasana gx pli\u00e9s.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:USS Theodore Roosevelt operations 150920-N-CH038-050.jpg",
+   "license": "Public domain"
+  },
+  {
+   "title": "File:Umbigo do tao yin.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:Vishal savasana.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Jeenal Paschimottanasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:Leon (199558235).jpeg",
+   "license": "CC0"
+  },
+  {
+   "title": "File:Limb Stretch (2) (14333491216).jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "title": "File:Udi Bilu with students practicing Paschimottanasana (seated forward bend) in a workshop - 2018.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:Vrukshotaanaasan.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "title": "File:2007-08-24 Hawaii Shiva Rea.jpg",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A yoga asana Caty Mae.jpg",
+   "license": "CC BY-SA 2.0"
+  },
+  {
+   "title": "File:Dipika Yoga Cards Romi Rolbin.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:200-hour-ashtanga-yoga-teacher-training-in-rishikesh.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "title": "File:A style of Pirai asanam 1.JPG",
+   "license": "CC BY-SA 3.0"
+  },
+  {
+   "title": "File:A view of Surya namaskar position.JPG",
+   "license": "CC BY-SA 3.0"
+  }
+ ]
+}
