@@ -101,8 +101,24 @@ def main():
 
     import cv2
     import mediapipe as mp
+    from mediapipe.tasks import python as mp_python
+    from mediapipe.tasks.python import vision as mp_vision
     os.makedirs(OUT, exist_ok=True)
-    pose = mp.solutions.pose.Pose(static_image_mode=True, model_complexity=2)
+
+    # mediapipe >=0.10.30 removed the legacy mp.solutions.pose API, so use the
+    # Tasks API. This is also what kaggle_process.py used to build the TRAINING
+    # corpus, so the test set is extracted the same way the training data was.
+    task_path = os.path.join(OUT, "pose_landmarker_heavy.task")
+    if not os.path.exists(task_path):
+        url = ("https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+               "pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task")
+        with open(task_path, "wb") as fh:
+            fh.write(requests.get(url, timeout=180).content)
+    landmarker = mp_vision.PoseLandmarker.create_from_options(
+        mp_vision.PoseLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=task_path),
+            running_mode=mp_vision.RunningMode.IMAGE,
+            num_poses=1, output_segmentation_masks=False))
 
     all_lm, all_lab, all_meta = [], [], []
     seen = set()
@@ -129,11 +145,13 @@ def main():
                 img = cv2.imdecode(np.frombuffer(r.content, np.uint8), cv2.IMREAD_COLOR)
                 if img is None:
                     continue
-                res = pose.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                mp_img = mp.Image(image_format=mp.ImageFormat.SRGB,
+                                  data=cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                res = landmarker.detect(mp_img)
                 if not res.pose_landmarks:
                     continue
                 lm = np.array([[p.x, p.y, p.z, p.visibility]
-                               for p in res.pose_landmarks.landmark], dtype=np.float32)
+                               for p in res.pose_landmarks[0]], dtype=np.float32)
                 # require a genuinely full-body detection, else the sample says
                 # more about framing than about the pose
                 key = [11, 12, 23, 24, 25, 26, 27, 28]
@@ -141,7 +159,7 @@ def main():
                     continue
                 wl = None
                 if res.pose_world_landmarks:
-                    wl = np.array([[p.x, p.y, p.z] for p in res.pose_world_landmarks.landmark],
+                    wl = np.array([[p.x, p.y, p.z] for p in res.pose_world_landmarks[0]],
                                   dtype=np.float32)
                 all_lm.append(lm)
                 all_lab.append(label)
