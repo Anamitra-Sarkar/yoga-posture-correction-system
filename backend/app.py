@@ -93,7 +93,20 @@ def analyse_demo_image(image: np.ndarray):
     except Exception as e:
         return f"MediaPipe unavailable in this environment ({e}).", {}
 
-    mp_pose = mp.solutions.pose
+    # mediapipe is unpinned in requirements.txt, so a rebuild can silently pull
+    # a newer release -- and 0.10.35 REMOVED mp.solutions.pose in favour of the
+    # Tasks API. Guarding only the import would leave that as an uncaught
+    # AttributeError here, turning a dependency bump into a 500 on the demo
+    # page. Degrade with an explanation instead; /api/analyse_frame is
+    # unaffected either way, since the production client runs MediaPipe in the
+    # browser and only ever posts the 15 angles.
+    mp_pose = getattr(getattr(mp, "solutions", None), "pose", None)
+    if mp_pose is None:
+        return (f"This demo needs the legacy mediapipe solutions API, which "
+                f"was removed in mediapipe 0.10.35 (installed: "
+                f"{getattr(mp, '__version__', 'unknown')}). The live app is "
+                f"unaffected -- it runs MediaPipe in the browser.", {})
+
     with mp_pose.Pose(static_image_mode=True, model_complexity=1) as pose:
         results = pose.process(image)
 
