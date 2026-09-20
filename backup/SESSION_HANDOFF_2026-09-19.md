@@ -268,3 +268,46 @@ working in `verify_live.sh`'s occlusion_recovery check. Not part of "model is
 too bad" (that was about pose/correctness quality), so left alone rather than
 chased under time pressure -- flagging for whenever the Groq secret gets
 rotated, since it may be the same root cause.
+
+
+---
+
+## 9. UPDATE: terminal closed while the data-improvement harvest was mid-run
+
+The core fix (section 8) is done, live, and does not depend on anything below.
+
+`anamitrasarkar007/asanaai-photo-corpus-v2` (Commons + Openverse harvest) was
+still `RUNNING` on Kaggle's servers when the terminal closed -- it keeps
+running regardless, same as any Kaggle kernel. What does NOT survive is the
+local watch loop that was going to auto-push the retrain kernel the moment the
+harvest finished; that loop lived in the closed terminal, not on Kaggle.
+
+**To resume:**
+
+```bash
+kaggle kernels status anamitrasarkar007/asanaai-photo-corpus-v2
+```
+
+If `COMPLETE`, push the retrain kernel manually:
+
+```bash
+cd /tmp/claude-1000/-home-anamitra/d0057ab9-c807-4879-8f1e-a3647448be7a/scratchpad/mlp_v2_a007
+kaggle kernels push -p .
+kaggle kernels status anamitrasarkar007/asanaai-mlp-photo-v2
+```
+
+(if that scratchpad directory is gone -- it can get wiped between sessions --
+regenerate it: copy `planning/kaggle_mlp_photo_v2.py` to
+`asanaai-mlp-photo-v2.py` alongside a `kernel-metadata.json` with `id:
+anamitrasarkar007/asanaai-mlp-photo-v2`, `enable_gpu: true`,
+`dataset_sources: ["anamitrasarkar007/asanaai-photo-corpus-v1",
+"anamitrasarkar007/asanaai-mlp-dataset-zeroz-fullyclassified"]`,
+`kernel_sources: ["anamitrasarkar007/asanaai-photo-corpus-v2"]`).
+
+If `ERROR`, read the failure via the API `log` field (not `kaggle kernels
+output`) before deciding whether to retry.
+
+Once the retrain finishes, it self-reports a verdict against **35.5%** (the
+checkpoint already live) on the frozen 103-photo test set, and says "do NOT
+promote" if it does not clear that bar. Only wire it into `hf_loader.py` if it
+does.
