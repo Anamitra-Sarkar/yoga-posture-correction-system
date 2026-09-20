@@ -24,20 +24,40 @@ def initialize_models():
     
     try:
         # Download files from Hugging Face Hub
-        # mlp_3head_model_v2.pth is the zero_z-retrained checkpoint. The original
-        # training pipeline computed its 15 angle features from MediaPipe's raw,
-        # un-zeroed z, while this backend's inference path always zeroes z first
-        # (see geometry.extract_angles_from_landmarks) -- so the model was trained
-        # on a feature distribution it never saw at inference. Retraining with that
-        # mismatch fixed took isolated real-world MLP accuracy from ~0-6% to 52.6%
-        # (n=19 real photos), which also beats the 2D rule engine's 45.7%.
-        # The previous weights remain at mlp_3head_model.pth for instant rollback
-        # (revert this line); both share the identical 23-class encoder below.
-        mlp_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_model_v2.pth", token=settings.HF_TOKEN)
-        mlp_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_pose_encoder.npy", token=settings.HF_TOKEN)
-        
-        stgcn_path = hf_hub_download(repo_id=settings.HF_REPO, filename="stgcn_sequence_model.pth", token=settings.HF_TOKEN)
-        stgcn_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="stgcn_label_encoder.npy", token=settings.HF_TOKEN)
+        # mlp_3head_photodomain_v1.pth (2026-09-20). mlp_3head_model_v2.pth (the
+        # zero_z-retrained checkpoint, live until today) was re-measured against
+        # the app's real judging condition -- a single held-out 103-photo set
+        # spanning the full 23-class vocabulary, identical for both models -- and
+        # scored only 10.5% macro / 13.6% overall. That is the "model is too bad"
+        # the live app was actually shipping; the previously-quoted 52.6% covered
+        # only 6 well-supported poses on a 19-photo set, not this benchmark.
+        # photodomain_v1 was trained on the SAME video corpus plus real photographs
+        # (oversampled so ~319 photos aren't drowned by ~650k video frames), and
+        # scores 35.5% macro / 45.6% overall on the identical 103-photo set -- a
+        # >3x macro gain, verified before this swap, not assumed from its own
+        # training run. Same 23-class vocabulary, same order, as confirmed by
+        # diffing the two encoder files -- so this is a pure checkpoint swap, no
+        # downstream remapping. Previous weights remain at mlp_3head_model_v2.pth
+        # (and the original mlp_3head_model.pth before it) for instant rollback.
+        mlp_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_photodomain_v1.pth", token=settings.HF_TOKEN)
+        mlp_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_photodomain_v1_encoder.npy", token=settings.HF_TOKEN)
+
+        # stgcn_transitions_v1.pth (2026-09-20). The previous stgcn_sequence_model.pth
+        # was the original 15-class checkpoint that had NEVER been shown a
+        # transition -- confirmed live, /api/analyse_sequence always answered
+        # "transition/unknown". This one is trained on relabelled hold/transition
+        # windows (24 classes: "hold:<pose>" / "transition:<A>-><B>" / "unrecognized"),
+        # measured 63.0% macro with all 8 transition classes learned (72.7-100%
+        # accuracy on the named ones), vs 54.6% for the old 15-class scheme with
+        # zero transition coverage. Its residual-block keys were originally named
+        # "block1.res.*"; this file has them remapped to "block1.residual.*" and was
+        # strict-load-verified against the production YogaSequenceLSTM class with a
+        # real forward pass before upload. The routing layer that makes
+        # /api/analyse_sequence behave identically under either label vocabulary
+        # (parse_sequence_label in routers/pose.py) shipped and was tested BEFORE
+        # this swap, so this line is the only behavioural change.
+        stgcn_path = hf_hub_download(repo_id=settings.HF_REPO, filename="stgcn_transitions_v1.pth", token=settings.HF_TOKEN)
+        stgcn_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="stgcn_transitions_v1_encoder.npy", token=settings.HF_TOKEN)
         
         # Load encoders
         mlp_classes = list(np.load(mlp_enc_path, allow_pickle=True))
