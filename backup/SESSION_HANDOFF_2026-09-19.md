@@ -191,3 +191,80 @@ Five classes at 0%: `chair_pose`, `cobra_pose`, `plank`, `upward_dog`,
 `standing_forward_fold` — all had ~10-21 training photos, `upward_dog` had 1.
 `halfway_lift` and `chaturanga` had zero usable Commons photos; Openverse is
 the only reason to expect different. `mountain_pose` regressed 30% -> 10%.
+
+
+---
+
+## 8. UPDATE 2026-09-20: the real bug, found and fixed
+
+User reported the live model was "too bad" and asked to diagnose, get more
+data if needed, or ship the best already-available checkpoints. Diagnosis
+first: re-measured the then-live `mlp_3head_model_v2.pth` against the app's
+actual judging condition (the full 23-class vocabulary on the frozen 103-photo
+test set, not the 6-pose/19-photo set the 52.6% headline came from). Real
+score: **10.5% macro / 13.6% overall.** That was the actual bug -- a stale
+benchmark had been masking how bad the live checkpoint really was.
+
+**Fixed by promoting two already-built, already-verified checkpoints that were
+sitting unused on HF** (no new training needed for this part):
+
+* `mlp_3head_photodomain_v1.pth` -- measured on the identical frozen set:
+  **35.5% macro / 45.6% overall**, a >3x gain. Same 23-class vocabulary and
+  order as the old checkpoint (diffed both encoder files), so it was a pure
+  swap, no remapping.
+* `stgcn_transitions_v1.pth` -- the old `stgcn_sequence_model.pth` had never
+  been shown a transition (confirmed live: always answered
+  `"transition/unknown"`). This one: 63.0% macro, all 8 transition classes
+  learned. Re-verified with a strict `state_dict` load into a standalone
+  reimplementation of the real production class plus a forward pass
+  (30 classes, finite output) before trusting last session's claim.
+
+**Both confirmed live** via behavioural change on identical requests (the
+calibration smoke test now scores 0.726 instead of 0.866; `analyse_sequence`
+on the same synthetic input now returns `"chair_pose"` instead of always
+`"transition/unknown"`), and via the Space's own log: "All models successfully
+fetched and loaded into memory."
+
+`backend/tests/test_mlp_checkpoint_choice.py` re-measures both MLP checkpoints
+against a live HF pull on every test run, so this justification stays checkable
+from the repo, not just this session. Network-marked, skips (never fails)
+offline.
+
+### Kaggle account blocker, worked around
+
+The local CLI was authenticated as `anamitrasarkar007`, not `arkosarkarhehe`
+(the account the two kernels from the previous session were running under) --
+`403 Forbidden` on both. Modal, the documented route to that account, was over
+its spend limit. Did not attempt to route around either restriction by
+extracting or trying stored credentials for the other account.
+
+Instead, pursued "get more data yourself" under the account that WAS
+accessible, using files that already existed locally (no new downloads):
+
+* `anamitrasarkar007/asanaai-photo-corpus-v1` -- new dataset, the existing
+  422-photo v1 corpus.
+* `anamitrasarkar007/asanaai-mlp-dataset-zeroz-fullyclassified` -- already
+  existed from an earlier session (the same 650k-frame video CSV), reused
+  rather than re-uploaded.
+* `anamitrasarkar007/asanaai-photo-corpus-v2` -- the Commons+Openverse harvest
+  kernel, pushed and running.
+* `anamitrasarkar007/asanaai-mlp-photo-v2` -- queued to auto-push and run the
+  moment the harvest kernel completes (a monitor is watching for this; if it
+  is not still running when you read this, check its outcome directly).
+
+**This is a bonus improvement attempt layered on an already-shipped, already-
+verified fix** -- nothing above depended on it, and the app was already fixed
+before this was kicked off. If it lands a further win, it's a strict
+improvement to swap in next; if not, the two checkpoints already live are the
+ones to ship.
+
+### One pre-existing, unrelated issue noticed (not fixed, out of scope)
+
+The Space log also shows the SMPL occlusion-recovery model failing to load
+(`401 Repository Not Found` for `Arko007/smpl-models`) -- likely the same
+class of stale-Space-secret issue as the Groq key. It degrades gracefully to
+"Symmetric Kinematic solver (4GB RAM Optimization Fallback)", confirmed
+working in `verify_live.sh`'s occlusion_recovery check. Not part of "model is
+too bad" (that was about pose/correctness quality), so left alone rather than
+chased under time pressure -- flagging for whenever the Groq secret gets
+rotated, since it may be the same root cause.
