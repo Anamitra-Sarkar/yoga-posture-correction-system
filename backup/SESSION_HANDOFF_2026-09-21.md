@@ -1,5 +1,32 @@
 # AsanaAI handoff — 2026-09-21
 
+## THE GOAL (do not drift from this)
+
+**Same two models, better real-world metrics.** The architecture is fixed by
+the final-year proposal (P05, RCC Institute of Information Technology,
+supervisor Mr. Sujit Chakraborty) and must not be swapped out:
+
+* **3-head MLP** — pose identity, binary correctness, 15-joint deviation
+  vector, from a single 15-D biomechanical frame.
+* **ST-GCN** — 60-frame skeletal sequences for transition / flow analysis.
+
+Plus, in the user's own words:
+
+1. **More pose compatibility and correctness.** The original complaint was
+   that only ~3 poses classified correctly in the real world and the rest were
+   excluded. Every pose should be recognised AND get a real correctness score.
+2. **Genuine metrics, never faked.** "Do not fake .. make it better." If a
+   number does not clear its bar, say so and do not promote.
+3. **Do not delete or overwrite existing model artifacts** — only add new
+   names. (All 14+ files on HF are intact; nothing has ever been overwritten.)
+4. **Arko007 HF account only.** Never the bhumika account.
+5. Aim higher than a typical final-year project — the closed-loop
+   correction-efficacy work is the genuinely novel contribution (see §5).
+
+**Never**: download datasets to the local PC (3.7GB RAM), run npm installs or
+builds locally, or use `kaggle kernels output` on large kernels.
+
+
 Supersedes the 2026-09-19 handoff. Read `docs/TRAINING_LESSONS.md` first (13
 lessons, all measured on this project).
 
@@ -203,3 +230,54 @@ print("\n".join(x.get("data","") for x in e if isinstance(x, dict))[-4000:])
 `asanaai-stgcn-source-v2`, `asanaai-mlp-dataset-zeroz-fullyclassified`.
 
 Kernel metadata for re-pushing any run: `planning/kernel_metadata/`.
+
+
+---
+
+## 8. Terminal was closed while jobs were running
+
+The Kaggle kernels keep running server-side — closing the terminal does not
+touch them. What does NOT survive is the local watcher loop, so nothing is
+auto-chained any more; the next session must check and act manually.
+
+```bash
+kaggle kernels status anamitrasarkar007/asanaai-mlp-v4      # bar 47.8%
+kaggle kernels status anamitrasarkar007/asanaai-stgcn-v6    # bar 63.0%
+```
+
+**If a run COMPLETEd, read its log (§7 snippet) and compare against the bar
+before doing anything else.** Promote only on a clear win.
+
+### To promote an MLP checkpoint
+
+1. Download the `.pth` + encoder from the kernel output (small files, fine).
+2. **Re-measure it yourself** on the frozen 103 rather than trusting the
+   kernel's printout — `scratchpad/verify_v4.py` does this; regenerate it from
+   the pattern in `backend/tests/test_mlp_checkpoint_choice.py` if the
+   scratchpad was wiped.
+3. Check the encoder matches the live one in content AND order.
+4. Check the correctness/deviation heads are not at random init (std > 0.15,
+   range > 0.5, deviations reaching tens of degrees).
+5. Upload under a NEW filename; never overwrite.
+6. Point `hf_loader.py` at it, run `pytest tests/ -q`, push.
+7. After deploy, verify a BEHAVIOUR CHANGE on a fixed input — not a green
+   deploy (lesson 11).
+
+### To promote the ST-GCN
+
+Same, plus a strict `load_state_dict` into the real production
+`YogaSequenceLSTM` with a forward pass, and confirm `block1.residual.*` key
+naming (lesson 12).
+
+---
+
+## 9. Still open (unchanged by the terminal closing)
+
+1. **Rotate the Space's `GROQ_API_KEY`** — §6. One command, needs the user.
+2. **Expel weak poses** — judged end-to-end after the v4 re-run, not on
+   rule-engine recall alone.
+3. **Fit bands for `chaturanga`, `seated_forward`, `upward_dog`** — they now
+   have 271 / 268 / 51 photos, so honest bands are finally possible.
+4. **ST-GCN beyond v6** — its real ceiling is source diversity. The 17-person
+   corpus covers only 6 poses and no transitions, so the 9 named transition
+   classes still rest entirely on the original 12 videos.
