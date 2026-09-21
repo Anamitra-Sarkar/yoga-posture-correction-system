@@ -24,23 +24,41 @@ def initialize_models():
     
     try:
         # Download files from Hugging Face Hub
-        # mlp_3head_photodomain_v1.pth (2026-09-20). mlp_3head_model_v2.pth (the
-        # zero_z-retrained checkpoint, live until today) was re-measured against
-        # the app's real judging condition -- a single held-out 103-photo set
-        # spanning the full 23-class vocabulary, identical for both models -- and
-        # scored only 10.5% macro / 13.6% overall. That is the "model is too bad"
-        # the live app was actually shipping; the previously-quoted 52.6% covered
-        # only 6 well-supported poses on a 19-photo set, not this benchmark.
-        # photodomain_v1 was trained on the SAME video corpus plus real photographs
-        # (oversampled so ~319 photos aren't drowned by ~650k video frames), and
-        # scores 35.5% macro / 45.6% overall on the identical 103-photo set -- a
-        # >3x macro gain, verified before this swap, not assumed from its own
-        # training run. Same 23-class vocabulary, same order, as confirmed by
-        # diffing the two encoder files -- so this is a pure checkpoint swap, no
-        # downstream remapping. Previous weights remain at mlp_3head_model_v2.pth
-        # (and the original mlp_3head_model.pth before it) for instant rollback.
-        mlp_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_photodomain_v1.pth", token=settings.HF_TOKEN)
-        mlp_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_photodomain_v1_encoder.npy", token=settings.HF_TOKEN)
+        # mlp_3head_v4_photos_x2000.pth (2026-09-21). Two improvements over
+        # mlp_3head_photodomain_v1, measured on the identical frozen 103-photo
+        # set and re-verified here from the saved weights rather than trusting
+        # the training run's own report:
+        #
+        #   pose macro   35.5% -> 47.8%
+        #
+        # and, more importantly, ALL THREE HEADS ARE TRAINED. The photo-domain
+        # scripts optimised only the pose head, so correctness_head and
+        # deviation_head shipped at random initialisation -- and hybrid_classify
+        # serves both directly whenever the MLP and the 2D rules agree, which is
+        # the confident, common case. The per-joint coaching numbers the app has
+        # been showing were therefore noise. Verified non-random here:
+        # correctness spans [0.000, 1.000] with std 0.420, deviations reach
+        # 131 degrees, neither of which a freshly-initialised head produces.
+        #
+        # The gain comes from data, not architecture: a 10x photo corpus (587 ->
+        # 6,242) extracted from four public datasets, which finally gave the
+        # starved classes real support. cobra_pose 0% -> 100%, seated_staff
+        # 0% -> 80%, triangle -> 100%, corpse -> 100%.
+        #
+        # Trade-off worth knowing: heavier photo oversampling helps diverse
+        # real-world imagery and costs same-shoot video accuracy (photos_x2000
+        # scores 47.8% photo / 65.9% held-out video; photos_x1 is 30.8% /
+        # 84.3%). x2000 is chosen because the app is judged on arbitrary users
+        # in arbitrary rooms, which is the diverse-imagery condition -- the
+        # held-out videos are 3 clips from the same 12-video shoot and flatter
+        # a model that has memorised that production style.
+        # mlp_3head_v4_photos_x365.pth is the balanced alternative.
+        #
+        # Encoder verified identical in content AND order to the previous
+        # checkpoint's, so this is a pure swap with no relabelling. Every
+        # earlier checkpoint remains on HF untouched for rollback.
+        mlp_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_v4_photos_x2000.pth", token=settings.HF_TOKEN)
+        mlp_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_v4_encoder.npy", token=settings.HF_TOKEN)
 
         # stgcn_transitions_v1.pth (2026-09-20). The previous stgcn_sequence_model.pth
         # was the original 15-class checkpoint that had NEVER been shown a

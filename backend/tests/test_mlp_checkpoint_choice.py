@@ -1,6 +1,9 @@
-"""Locks in WHY mlp_3head_photodomain_v1 replaced mlp_3head_model_v2 as the
-live checkpoint on 2026-09-20, and re-verifies it against a live HF pull
-rather than trusting a cached number.
+"""Locks in WHY the live MLP checkpoint is what it is, re-verified against a
+live HF pull rather than a cached number.
+
+CURRENT (2026-09-21): mlp_3head_v4_photos_x2000 -- 47.8% macro, and the first
+promoted checkpoint whose correctness and deviation heads are actually
+trained. Earlier history below.
 
 The switch was triggered by re-measuring mlp_3head_model_v2 -- the checkpoint
 that had been live since 2026-09-03 -- against the app's actual judging
@@ -151,8 +154,8 @@ def test_photodomain_beats_v2_on_the_frozen_photo_set():
     try:
         v2_path = _download("mlp_3head_model_v2.pth")
         v2_enc_path = _download("mlp_3head_pose_encoder.npy")
-        pd_path = _download("mlp_3head_photodomain_v1.pth")
-        pd_enc_path = _download("mlp_3head_photodomain_v1_encoder.npy")
+        pd_path = _download("mlp_3head_v4_photos_x2000.pth")
+        pd_enc_path = _download("mlp_3head_v4_encoder.npy")
     except Exception as e:
         pytest.skip(f"could not reach Hugging Face Hub: {e}")
 
@@ -179,10 +182,47 @@ def test_photodomain_beats_v2_on_the_frozen_photo_set():
     # without changing the conclusion. What this test guards is the ORDERING
     # and the MAGNITUDE of the gap, which is what justified the swap.
     assert pd_macro > v2_macro, (
-        f"photodomain_v1 macro {pd_macro:.3f} no longer beats model_v2 "
+        f"the live checkpoint's macro {pd_macro:.3f} no longer beats model_v2 "
         f"{v2_macro:.3f} on the frozen set -- the checkpoint choice in "
         f"hf_loader.py needs re-justifying, not just this test updating")
-    assert pd_macro > 0.30, f"photodomain_v1 macro dropped to {pd_macro:.3f} (was 0.355)"
+    assert pd_macro > 0.42, (
+        f"the live checkpoint's macro dropped to {pd_macro:.3f}; it measured "
+        f"0.478 when promoted")
     assert v2_macro < 0.20, (
         f"model_v2 macro is now {v2_macro:.3f}, well above the measured 0.105 -- "
         f"if this moved, the whole comparison should be re-run before trusting it")
+
+
+@pytest.mark.network
+def test_live_checkpoint_has_trained_correctness_and_deviation_heads():
+    """The regression that shipped on 2026-09-20: a checkpoint from a script
+    that optimised ONLY the pose head, so these two shipped at random
+    initialisation while hybrid_classify served them straight to users.
+
+    A freshly-initialised sigmoid head sits in a narrow band near 0.5 and the
+    deviation head outputs near zero. A trained one spans the range.
+    """
+    try:
+        path = _download("mlp_3head_v4_photos_x2000.pth")
+        enc = _download("mlp_3head_v4_encoder.npy")
+    except Exception as e:
+        pytest.skip(f"could not reach Hugging Face Hub: {e}")
+
+    classes = list(np.load(enc, allow_pickle=True))
+    m = Yoga3HeadMLP(15, len(classes))
+    m.load_state_dict(torch.load(path, map_location="cpu"))
+    m.eval()
+
+    X, _y = _load_frozen_test_set()
+    with torch.no_grad():
+        _pose, corr, dev = m(torch.tensor(X))
+    c = torch.sigmoid(corr).numpy()
+    d = (dev.numpy() * 180.0)
+
+    assert c.std() > 0.15, (
+        f"correctness head looks untrained (std {c.std():.3f}); a random head "
+        f"barely moves off 0.5")
+    assert (c.max() - c.min()) > 0.5, f"correctness range only {c.max()-c.min():.3f}"
+    assert d.max() > 20.0, (
+        f"deviation head maxes at {d.max():.2f} degrees, which is what an "
+        f"untrained head produces")
