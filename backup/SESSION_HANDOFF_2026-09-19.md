@@ -413,3 +413,83 @@ WHOLE VIDEOS and says in its output that the number is not comparable to
 `arkosarkarhehe/asanaai-stgcn-transitions` (attempt 4) remains unreachable
 from this machine — local CLI is a different account and Modal is over its
 spend limit. Not routed around.
+
+
+---
+
+## 11. UPDATE 2026-09-21 (later): the data problem is solved; models retraining
+
+### The public-dataset extraction is the real unlock
+
+`asanaai-public-corpora` extracted **5,655 usable photos** across 21 classes
+from four public yoga datasets (27,065 candidates, 7,845 name-mapped). The
+photo pool went 587 -> ~6,200, and it landed exactly on the starved classes:
+
+| class | before | after |
+|---|---|---|
+| chaturanga | **0** | **271** |
+| seated_forward | 5 | 268 |
+| halfway_lift | **0** | **49** |
+| upward_dog | 1 | 51 |
+| plank | 14 | 891 |
+| triangle | 24 | 422 |
+| corpse | 18 | 260 |
+
+**848 byte-identical duplicates** were caught by hashing decoded pixels.
+Filename dedup would have missed every one, double-counting them AND letting
+the same photo straddle train/test.
+
+### MLP 3-head result (v3): 37.0% macro — clears the 35.5% bar
+
+| variant | pose macro | corr acc | dev MAE |
+|---|---|---|---|
+| photos_x365 | **37.0%** | 97.9%* | 0.62° |
+| photos_x2000 | 36.9% | 96.3%* | 1.42° |
+| photos_x1 | 19.1% | 98.4%* | 0.23° |
+
+Beats the live 35.5% AND the correctness/deviation heads are genuinely
+trained (they were at random init in the live checkpoint).
+
+**\* Those corr-acc numbers are LEAK-INFLATED and must not be quoted.** That
+kernel was pushed before the grouped-video-split patch was applied, so
+correctness was measured on frames it trained on — lesson #1 in
+`docs/TRAINING_LESSONS.md`, committed by me hours earlier. The 37.0% pose
+macro IS sound (frozen 103 photos, never trained on).
+
+### Running at handoff
+
+* `asanaai-mlp-v4` — the real run: full 10x corpus, 3-head loss, grouped
+  split. **Bar: 37.0%.** This tests whether the five 0% classes were simply
+  starved.
+* `asanaai-mlp-v3-three-head` v2 — grouped-split re-run. **Redundant now**
+  (v4 has the same split plus more data); safe to cancel to free a GPU slot.
+* `asanaai-photo-corpus-v2` — Openverse-fixed harvest, still going.
+* `asanaai-stgcn-v5` — **queued**, blocked on Kaggle's 2-GPU-session cap. A
+  watcher auto-pushes it when a slot frees. **Bar: 63.0% macro** on the same
+  two held-out videos.
+
+### ST-GCN was undertrained against a config already proven on it
+
+The transition scripts ran 30 epochs, no label smoothing, weight_decay 1e-4.
+The 2026-07-19 run that produced a working ST-GCN on this exact architecture
+used **120 epochs, patience 20, label_smoothing 0.1, weight_decay 1e-3,
+eta_min 1e-5**. v5 adopts all of it. `self.residual` naming verified, so the
+result loads into production with no key remap.
+
+Note the ST-GCN can gain nothing from the photo corpora — it needs 60-frame
+sequences. `kaggle_stgcn_new_people.py` targets a multi-person video dataset
+(~19 named people) for a **cross-person** holdout, which is strictly stronger
+than the current holdout of 2 clips from the same shoot.
+
+### Datasets now on anamitrasarkar007 (all ready)
+
+`asanaai-photo-corpus-v1`, `asanaai-master-mlp-dataset`,
+`asanaai-stgcn-source-v2`, `asanaai-mlp-dataset-zeroz-fullyclassified`
+(pre-existing).
+
+### Read this first
+
+`docs/TRAINING_LESSONS.md` — 12 measured lessons. The one that explains the
+whole project's history: a random split over frames from 12 densely-sampled
+videos is meaningless, which is why 90.86% validation coexisted with 10.5%
+real-world.
