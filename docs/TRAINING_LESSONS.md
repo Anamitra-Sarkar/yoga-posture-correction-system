@@ -183,9 +183,44 @@ forward pass, before upload.
 
 ---
 
+## 13. "Proven hyperparameters" are proven for a TASK, not an architecture
+
+**What happened.** The transition ST-GCN was training for 30 epochs, no label
+smoothing, `weight_decay=1e-4`. The 2026-07-19 run that produced a working
+ST-GCN used 120 epochs, patience 20, `label_smoothing=0.1`,
+`weight_decay=1e-3`, `eta_min=1e-5`. I adopted that config on the reasoning
+that it was "already proven on this exact architecture and data".
+
+**Result: macro 63.0% -> 31.8%.** Half.
+
+The config was proven on the **15-class non-transition** classifier. The
+transition-aware problem has 25 classes, several sitting just above the
+support floor, and is judged on **macro** — which weights every class equally.
+Label smoothing caps the confidence reachable on exactly those thin classes.
+Nothing about "same architecture, same data" made the setting transfer.
+
+**Worse, I changed five things at once** (epochs, patience, smoothing, weight
+decay, eta_min), so the run reports only "worse" and cannot say which one did
+it. Lesson 6 in this same document already warns about comparing across
+different class counts, and the project's own Zenyx notes say *change ONE
+thing at a time from the proven baseline*. I had written both down and still
+did it.
+
+**Rules.**
+* Hyperparameters transfer across tasks only as a hypothesis to test, never as
+  a justification to skip testing.
+* Change one thing at a time from a working baseline, or the result is
+  uninterpretable even when it is dramatic.
+* An incumbent that survives a challenge is the correct outcome, not a wasted
+  run — `stgcn_transitions_v1` (63.0%) stays live.
+
+---
+
 ## Proven hyperparameters (ST-GCN, from the 2026-07-19 run)
 
-Kept because they worked; change one at a time.
+Kept because they worked **on the 15-class non-transition task**. Measured NOT
+to transfer to the 25-class transition task (see lesson 13: 63.0% -> 31.8%).
+Change one at a time.
 
 ```python
 batch_size    = 64

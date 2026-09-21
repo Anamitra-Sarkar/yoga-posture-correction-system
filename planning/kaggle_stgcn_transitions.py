@@ -44,13 +44,24 @@ MIN_PAIR = 90
 MIN_SUPPORT = 100   # minimum windows for ANY class to be kept
 HOLD_FRAC = 0.85       # window is a hold if one pose covers >= this fraction
 MOTION_HOLD = 15.0     # deg/s — identical to backend MOTION_HOLD_MAX_DEG_PER_SEC
-# 120 epochs with patience-20 early stopping, taken from the 2026-07-19 run
-# that actually produced a working ST-GCN. The transition scripts had been
-# training for 30 epochs with no label smoothing and a 10x weaker weight
-# decay -- undertrained against a configuration already proven on this exact
-# architecture and data. See docs/TRAINING_LESSONS.md.
-EPOCHS = 120
-PATIENCE = 20
+# REVERTED 2026-09-21 after measuring the alternative.
+#
+# I replaced these with the 2026-07-19 run's hyperparameters (120 epochs,
+# patience 20, label_smoothing 0.1, weight_decay 1e-3, eta_min 1e-5) on the
+# argument that they were "already proven on this exact architecture". They
+# were proven on a DIFFERENT TASK: the 15-class non-transition classifier.
+# Applied to the 25-class transition-aware problem they took macro from
+# 63.0% to 31.8% -- half. Reverted to the configuration that actually
+# produced 63.0% on THIS task.
+#
+# Two mistakes worth naming, because both are already written down in
+# docs/TRAINING_LESSONS.md and I made them anyway:
+#   * "proven hyperparameters" are proven for a task, not an architecture;
+#   * I changed five things at once (epochs, patience, smoothing, weight
+#     decay, eta_min), so the run says only "worse", not which one.
+# Change ONE thing at a time from a working baseline.
+EPOCHS = 30
+PATIENCE = 10**9   # effectively off, matching the 63.0% run
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ---------------- production architecture, verbatim ----------------
@@ -361,16 +372,16 @@ def main():
         Xte = torch.tensor(X[te]); yte = torch.tensor(y[te])
         w = np.bincount(y[tr], minlength=len(classes)).astype(np.float32)
         w = np.where(w > 0, 1.0 / np.sqrt(w), 0.0); w = w / w.sum() * len(classes)
-        # label_smoothing 0.1 and weight_decay 1e-3 are from the proven run.
-        # Smoothing matters here specifically: several transition classes sit
-        # near the MIN_SUPPORT floor, and hard targets on a thin, noisy class
-        # invite memorisation of the few windows it has.
-        crit = nn.CrossEntropyLoss(weight=torch.tensor(w, device=DEV),
-                                   label_smoothing=0.1)
+        # No label smoothing: it was tried (0.1) and macro halved. Plausibly
+        # because macro weights every class equally while smoothing caps the
+        # confidence achievable on exactly the thin classes macro rewards --
+        # but that is a hypothesis, not a measurement, and the only measured
+        # fact is that it was worse here.
+        crit = nn.CrossEntropyLoss(weight=torch.tensor(w, device=DEV))
 
         m = YogaSequenceLSTM(99, 128, 2, len(classes)).to(DEV)
-        opt = torch.optim.AdamW(m.parameters(), lr=1e-3, weight_decay=1e-3)
-        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, EPOCHS, eta_min=1e-5)
+        opt = torch.optim.AdamW(m.parameters(), lr=1e-3, weight_decay=1e-4)
+        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, EPOCHS)
         best, best_state, stale = -1, None, 0
         for ep in range(EPOCHS):
             m.train(); perm = torch.randperm(len(Xtr))
