@@ -293,6 +293,7 @@ def main():
 
     df = pd.read_csv(csv_p)
     col = "imperfect_pose_label" if "imperfect_pose_label" in df.columns else "pose_label"
+    vid = df["video_id"].astype(str).values if "video_id" in df.columns else None
     Xv = df[FEATS].values.astype(np.float32)
     raw_v = df[col].astype(str).values
     yv = np.array([base_pose(v) for v in raw_v])
@@ -301,6 +302,26 @@ def main():
     cv = np.array([0.0 if (r.startswith("imperfect_") or r == "transition/unknown") else 1.0
                    for r in raw_v], dtype=np.float32)
     print(f"video frames: {len(yv)}  ({int((cv==0).sum())} imperfect)", flush=True)
+
+    # IN-DOMAIN VALIDATION MUST BE GROUPED BY SOURCE VIDEO.
+    # The 2026-07-19 run reported 90.86% val pose accuracy from a random
+    # train_test_split over frames. There are only 12 source videos and frames
+    # are densely sampled, so consecutive frames of a held pose are
+    # near-duplicates: a random split puts almost the same image on both sides
+    # and the number measures memorisation. That is how 90.9% validation
+    # coexisted with ~10.5% on real photographs. Holding out whole videos is
+    # what makes the in-domain number mean anything.
+    vid_val_mask = None
+    if vid is not None:
+        uniq = sorted(set(vid.tolist()))
+        rs = np.random.RandomState(0)
+        holdout = set(rs.choice(uniq, max(1, len(uniq) // 4), replace=False).tolist())
+        vid_val_mask = np.array([v in holdout for v in vid])
+        print(f"grouped split: {len(holdout)}/{len(uniq)} videos held out "
+              f"({int(vid_val_mask.sum())} frames)", flush=True)
+    else:
+        print("WARNING: no video_id column; the in-domain split cannot be "
+              "grouped and its accuracy will be leak-inflated", flush=True)
 
     classes = sorted(set(L.tolist()) | set(yv.tolist()))
     cidx = {c: i for i, c in enumerate(classes)}
@@ -333,11 +354,12 @@ def main():
     for tag, reps in VARIANTS.items():
         if reps is None:
             reps = max(1, int(len(yv) * 0.25 / max(1, len(yp_tr))))
-        Xtr = np.vstack([Xv] + [Xp_tr]*reps)
-        ytr = np.concatenate([yv] + [yp_tr]*reps)
-        Dtr = np.vstack([Dv] + [Dp]*reps)
-        Ctr = np.concatenate([cv] + [cp]*reps)
-        Mtr = np.concatenate([mv] + [mp]*reps)
+        tr_v = ~vid_val_mask if vid_val_mask is not None else np.ones(len(yv), bool)
+        Xtr = np.vstack([Xv[tr_v]] + [Xp_tr]*reps)
+        ytr = np.concatenate([yv[tr_v]] + [yp_tr]*reps)
+        Dtr = np.vstack([Dv[tr_v]] + [Dp]*reps)
+        Ctr = np.concatenate([cv[tr_v]] + [cp]*reps)
+        Mtr = np.concatenate([mv[tr_v]] + [mp]*reps)
         ytr_i = np.array([cidx[c] for c in ytr])
         keep = ~np.isnan(Xtr).any(1) & ~np.isinf(Xtr).any(1)
         Xtr, ytr_i, Dtr, Ctr, Mtr = Xtr[keep], ytr_i[keep], Dtr[keep], Ctr[keep], Mtr[keep]
@@ -387,8 +409,10 @@ def main():
             pe, _, _ = m(Xte_t.to(DEV))
             # correctness/deviation sanity on a VIDEO holdout, since that is
             # where real correct/incorrect labels exist
-            n = min(20000, len(Xv))
-            sel = np.random.RandomState(0).choice(len(Xv), n, replace=False)
+            pool = np.where(vid_val_mask)[0] if vid_val_mask is not None \
+                else np.arange(len(Xv))
+            n = min(20000, len(pool))
+            sel = np.random.RandomState(0).choice(pool, n, replace=False)
             pv, cvl, dvp = m(torch.tensor(Xv[sel]).to(DEV))
         corr_pred = (torch.sigmoid(cvl).cpu().numpy() > 0.5).astype(np.float32)
         corr_acc = float((corr_pred == cv[sel]).mean())
@@ -396,23 +420,32 @@ def main():
 
         r = {"frozen_103": per_class(list(yf), [classes[i] for i in pf.argmax(1).cpu().numpy()]),
              "expanded": per_class(list(yp_te), [classes[i] for i in pe.argmax(1).cpu().numpy()]),
-             "correctness_acc_on_video": round(corr_acc, 4),
-             "deviation_mae_deg_on_video": round(dev_mae, 3),
+             "correctness_acc_heldout_video": round(corr_acc, 4),
+             "deviation_mae_deg_heldout_video": round(dev_mae, 3),
+             "pose_acc_heldout_video": round(float(
+                 (pv.argmax(1).cpu().numpy() ==
+                  np.array([cidx[c] for c in yv[sel]])).mean()), 4),
              "n_train": int(len(ytr_i))}
         results[tag] = r
         torch.save(best_state, f"{OUT}/mlp_v3_{tag}.pth")
         np.save(f"{OUT}/mlp_v3_encoder.npy", np.array(classes, dtype=object))
         print(f"  BEST frozen={r['frozen_103']['macro']*100:.1f}%  "
+              f"heldout_vid_pose={r['pose_acc_heldout_video']*100:.1f}%  "
               f"expanded={r['expanded']['macro']*100:.1f}%  "
               f"corr_acc={corr_acc*100:.1f}%  dev_MAE={dev_mae:.2f}deg", flush=True)
 
     json.dump(results, open(f"{OUT}/mlp_v3_results.json","w"), indent=1)
     print("\n================ FINAL (all three heads trained) ================")
-    print(f"{'variant':<16}{'pose macro':>12}{'corr acc':>12}{'dev MAE':>10}")
+    print("in-domain numbers below are on HELD-OUT VIDEOS, so they are not")
+    print("comparable to the 90.86% the 2026-07-19 run reported from a random")
+    print("frame split -- that one had near-duplicate frames on both sides.\n")
+    print(f"{'variant':<16}{'photo macro':>13}{'heldvid pose':>14}"
+          f"{'corr acc':>10}{'dev MAE':>9}")
     for k, v in sorted(results.items(), key=lambda x: -x[1]["frozen_103"]["macro"]):
-        print(f"{k:<16}{v['frozen_103']['macro']*100:11.1f}%"
-              f"{v['correctness_acc_on_video']*100:11.1f}%"
-              f"{v['deviation_mae_deg_on_video']:9.2f}d")
+        print(f"{k:<16}{v['frozen_103']['macro']*100:12.1f}%"
+              f"{v['pose_acc_heldout_video']*100:13.1f}%"
+              f"{v['correctness_acc_heldout_video']*100:9.1f}%"
+              f"{v['deviation_mae_deg_heldout_video']:8.2f}d")
 
     bestk = max(results, key=lambda k: results[k]["frozen_103"]["macro"])
     bf = results[bestk]["frozen_103"]["macro"]*100

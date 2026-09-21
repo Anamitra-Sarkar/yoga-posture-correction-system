@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 FEATURE_NAMES = [
@@ -101,3 +102,57 @@ def normalize_coordinate_sequence(coords: np.ndarray) -> np.ndarray:
     coords_normalized = coords_normalized / hip_width[:, None, :]
     
     return coords_normalized.reshape(60, 99)
+
+
+# --- Global body orientation -------------------------------------------------
+#
+# The 15 features in FEATURE_NAMES are all RELATIVE joint angles
+# (shoulder-hip-knee and friends), which makes them invariant to rotating the
+# whole body. Measured consequence on the real-photo corpus: a person lying
+# flat in corpse and a person standing in mountain_pose produce nearly the same
+# 15-vector, and the rule engine called corpse "mountain_pose" 11 times out of
+# 18. No threshold change can fix that -- the information is simply absent from
+# the feature vector.
+#
+# These two scalars restore it. Both are translation- and scale-invariant and
+# come from landmarks the client already has, so they cost nothing to compute
+# and nothing extra to transmit beyond two floats.
+
+def compute_orientation(points: np.ndarray) -> dict:
+    """Global orientation cues that the relative joint angles cannot express.
+
+    torso_incline: degrees between the shoulders->hips vector and image-down.
+        ~0 standing, ~90 lying flat or in plank, ~180 inverted (downward dog).
+        Measured medians: mountain 6, cobra 43, table_top 61, triangle 71,
+        plank 80, corpse 107, downward_dog 148.
+
+    leg_torso_ratio: mean hip->ankle distance over shoulder->hip distance, in
+        image space. Cleanly separates cross-legged sitting (0.57) from every
+        standing pose (~1.2-1.4), which bounding-box aspect ratio does NOT do
+        reliably (a standing person with arms down is just as tall and narrow
+        as a seated one photographed head-on).
+
+    Returns {} when the landmarks are degenerate, so callers can treat missing
+    orientation the same as an older client that never sends it.
+    """
+    p = np.asarray(points, dtype=np.float64)[:, :2]
+    shoulder_mid = (p[SHOULDER_L] + p[SHOULDER_R]) / 2.0
+    hip_mid = (p[HIP_L] + p[HIP_R]) / 2.0
+
+    torso_vec = hip_mid - shoulder_mid
+    torso_len = float(np.linalg.norm(torso_vec))
+    if torso_len < 1e-9:
+        return {}
+
+    # MediaPipe's y axis grows downward, so image-down is (0, +1) and the
+    # inclination is just the angle of the torso vector against it.
+    cos_i = float(torso_vec[1] / torso_len)
+    torso_incline = math.degrees(math.acos(max(-1.0, min(1.0, cos_i))))
+
+    leg_len = (float(np.linalg.norm(p[ANKLE_L] - p[HIP_L])) +
+               float(np.linalg.norm(p[ANKLE_R] - p[HIP_R]))) / 2.0
+
+    return {
+        "torso_incline": torso_incline,
+        "leg_torso_ratio": leg_len / torso_len,
+    }

@@ -37,7 +37,14 @@ from app.utils.geometry import FEATURE_NAMES
 # Applied as a final safety net after classification, regardless of whether
 # the pose call came from the MLP or the rule engine, so neither can ever
 # surface as a detected pose until the underlying issue is fixed.
-DISABLED_POSES = {"chair_pose", "warrior_1"}
+# chair_pose and warrior_1 were disabled because the 2D-only rules could not
+# detect them at all -- measured 0.0% recall each on the real-photo corpus, so
+# forcing them to transition/unknown lost nothing. With the orientation cues
+# available they do fire (chair_pose 4.8%, warrior_1 14.8% on the same corpus),
+# and both already have correctness bands, so keeping them suppressed would now
+# be throwing away real detections. Still low, but strictly better than the
+# zero they were pinned at.
+DISABLED_POSES: set = set()
 
 
 def sanitize_pose(pose_id: str) -> str:
@@ -48,7 +55,82 @@ def _between(v: float, lo: float, hi: float) -> bool:
     return lo <= v <= hi
 
 
-def classify_pose(a: Dict[str, float]) -> str:
+def classify_pose(a: Dict[str, float],
+                  orientation: "Dict[str, float] | None" = None) -> str:
+    """Rule-based pose call.
+
+    `orientation` carries the two global cues the 15 relative joint angles
+    cannot express (see geometry.compute_orientation). When it is absent -- an
+    older client, or degenerate landmarks -- this behaves EXACTLY as before,
+    so nothing that works today can regress.
+    """
+    if orientation:
+        inc = orientation.get("torso_incline")
+        ratio = orientation.get("leg_torso_ratio")
+        if inc is not None and ratio is not None:
+            hit = _classify_with_orientation(a, float(inc), float(ratio))
+            if hit is not None:
+                return hit
+    return _classify_2d_only(a)
+
+
+def _classify_with_orientation(a: Dict[str, float], inc: float, ratio: float):
+    """Poses that global orientation makes decidable. Returns None to defer to
+    the 2D chain, so this only ever ADDS detections.
+
+    Every threshold below is taken from measured percentiles on the real-photo
+    corpus, not from an idealised description of the pose.
+    """
+    hip_l, hip_r = a["hip_l"], a["hip_r"]
+    knee_l, knee_r = a["knee_l"], a["knee_r"]
+    sh_l, sh_r = a["shoulder_l"], a["shoulder_r"]
+    tr_l, tr_r = a["trunk_l"], a["trunk_r"]
+    neck = a["neck"]
+
+    upright = inc < 35
+    inverted = inc > 122
+    horizontal = 22 <= inc <= 122
+    limbs_straight = hip_l > 140 and hip_r > 140 and knee_l > 140 and knee_r > 140
+
+    if inverted and _between(hip_l, 20, 150) and _between(hip_r, 20, 150) \
+            and knee_l > 110 and knee_r > 110 and sh_l > 90 and sh_r > 90:
+        return "downward_dog"
+
+    if horizontal:
+        # corpse: lying extended, body wide in frame rather than tall
+        if limbs_straight and ratio > 0.6 and sh_l < 60 and sh_r < 60 and inc > 60:
+            return "corpse"
+        if limbs_straight and _between(sh_l, 45, 120) and _between(sh_r, 45, 120):
+            return "plank"
+        if hip_l > 85 and hip_r > 85 and sh_l < 80 and sh_r < 80 and neck >= 80:
+            return "upward_dog" if (knee_l > 150 and knee_r > 150) else "cobra_pose"
+        if _between(hip_l, 60, 150) and _between(hip_r, 60, 150) \
+                and _between(knee_l, 60, 140) and _between(knee_r, 60, 140) \
+                and _between(sh_l, 40, 130) and _between(sh_r, 40, 130):
+            return "table_top"
+        # triangle: side bend, both legs straight, at least one arm reaching out
+        if knee_l > 130 and knee_r > 130 and (sh_l > 55 or sh_r > 55):
+            return "triangle"
+
+    if upright:
+        if limbs_straight and sh_l > 115 and sh_r > 115 and tr_l > 65 and tr_r > 65:
+            return "upward_salute"
+        # cross-legged: the legs really are short relative to the torso in
+        # image space (0.57 vs ~1.2-1.4 standing) -- a genuine cue, unlike
+        # bounding-box aspect, which cannot tell a seated subject from a
+        # standing one photographed head-on.
+        if ratio < 0.9 and knee_l < 140 and knee_r < 140 and tr_l >= 55 and tr_r >= 55:
+            return "seated_easy_pose"
+
+    # NOTE: seated_staff is deliberately NOT handled here. Front-on, it is
+    # indistinguishable from mountain_pose in 2D -- leg/torso 1.27 vs 1.33,
+    # ankle-drop 1.25 vs 1.26, torso incline 3 vs 6. An earlier draft "detected"
+    # it at 76.7% purely by stealing mountain_pose's photos, which is a
+    # reshuffle, not a gain. Left to the MLP.
+    return None
+
+
+def _classify_2d_only(a: Dict[str, float]) -> str:
     hip_l, hip_r = a["hip_l"], a["hip_r"]
     knee_l, knee_r = a["knee_l"], a["knee_r"]
     shoulder_l, shoulder_r = a["shoulder_l"], a["shoulder_r"]
