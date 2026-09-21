@@ -44,7 +44,13 @@ MIN_PAIR = 90
 MIN_SUPPORT = 100   # minimum windows for ANY class to be kept
 HOLD_FRAC = 0.85       # window is a hold if one pose covers >= this fraction
 MOTION_HOLD = 15.0     # deg/s — identical to backend MOTION_HOLD_MAX_DEG_PER_SEC
-EPOCHS = 30
+# 120 epochs with patience-20 early stopping, taken from the 2026-07-19 run
+# that actually produced a working ST-GCN. The transition scripts had been
+# training for 30 epochs with no label smoothing and a 10x weaker weight
+# decay -- undertrained against a configuration already proven on this exact
+# architecture and data. See docs/TRAINING_LESSONS.md.
+EPOCHS = 120
+PATIENCE = 20
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ---------------- production architecture, verbatim ----------------
@@ -355,12 +361,17 @@ def main():
         Xte = torch.tensor(X[te]); yte = torch.tensor(y[te])
         w = np.bincount(y[tr], minlength=len(classes)).astype(np.float32)
         w = np.where(w > 0, 1.0 / np.sqrt(w), 0.0); w = w / w.sum() * len(classes)
-        crit = nn.CrossEntropyLoss(weight=torch.tensor(w, device=DEV))
+        # label_smoothing 0.1 and weight_decay 1e-3 are from the proven run.
+        # Smoothing matters here specifically: several transition classes sit
+        # near the MIN_SUPPORT floor, and hard targets on a thin, noisy class
+        # invite memorisation of the few windows it has.
+        crit = nn.CrossEntropyLoss(weight=torch.tensor(w, device=DEV),
+                                   label_smoothing=0.1)
 
         m = YogaSequenceLSTM(99, 128, 2, len(classes)).to(DEV)
-        opt = torch.optim.AdamW(m.parameters(), lr=1e-3, weight_decay=1e-4)
-        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, EPOCHS)
-        best, best_state = -1, None
+        opt = torch.optim.AdamW(m.parameters(), lr=1e-3, weight_decay=1e-3)
+        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, EPOCHS, eta_min=1e-5)
+        best, best_state, stale = -1, None, 0
         for ep in range(EPOCHS):
             m.train(); perm = torch.randperm(len(Xtr))
             for i in range(0, len(perm), 64):
@@ -377,9 +388,19 @@ def main():
             accs = [float((p[yte.numpy()==c]==c).mean()) for c in range(len(classes)) if (yte.numpy()==c).any()]
             macro = float(np.mean(accs))
             if macro > best:
-                best, best_state = macro, {k: v.detach().cpu().clone() for k, v in m.state_dict().items()}
+                best = macro
+                best_state = {k: v.detach().cpu().clone() for k, v in m.state_dict().items()}
+                stale = 0
+            else:
+                stale += 1
             if ep % 5 == 0 or ep == EPOCHS-1:
-                print(f"[{tag}] ep{ep:02d} macro={macro*100:.1f}% overall={float((p==yte.numpy()).mean())*100:.1f}%", flush=True)
+                print(f"[{tag}] ep{ep:02d} macro={macro*100:.1f}% "
+                      f"overall={float((p==yte.numpy()).mean())*100:.1f}% "
+                      f"best={best*100:.1f}% stale={stale}", flush=True)
+            if stale >= PATIENCE:
+                print(f"[{tag}] early stop at ep{ep} (no macro gain in "
+                      f"{PATIENCE} epochs; best {best*100:.1f}%)", flush=True)
+                break
 
         m.load_state_dict(best_state); m.eval()
         preds = []
