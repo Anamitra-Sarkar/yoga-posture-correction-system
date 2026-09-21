@@ -44,6 +44,27 @@ print('joints forgiven by calibration:', forgiven or '(none)')
 assert p is None or p >= u, 'personal score must never be below universal'
 print('OK')"
 
+say "orientation: SAME 15 angles, upright then lying (expect mountain_pose then corpse)"
+ORI='[180,180,20,20,180,180,180,180,180,180,100,100,160,180,180]'
+post /api/analyse_frame "{\"angles\":$ORI,\"orientation\":{\"torso_incline\":5.0,\"leg_torso_ratio\":1.3}}" \
+  | python3 -c "import sys,json;print('  upright ->',json.load(sys.stdin)['pose_id'])"
+post /api/analyse_frame "{\"angles\":$ORI,\"orientation\":{\"torso_incline\":100.0,\"leg_torso_ratio\":1.2}}" \
+  | python3 -c "import sys,json;print('  lying   ->',json.load(sys.stdin)['pose_id'])"
+cat <<'NOTE'
+   These two requests carry IDENTICAL joint angles. All 15 features are
+   relative angles and so are blind to whole-body rotation; without the
+   orientation field both read as mountain_pose. If "lying" does not say
+   corpse, the orientation path is not reaching the rule engine.
+NOTE
+
+say "correction escalation (expect: plain cue, then quantified, then back off)"
+for A in 0 1 2; do
+  printf '  attempt %s -> ' "$A"
+  post /api/generate_correction \
+    "{\"pose_id\":\"warrior_2\",\"deviations\":{\"knee_l\":24.0},\"language\":\"en\",\"attempt\":$A}" \
+    | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['correction_text'][:88],'| joint:',d.get('target_joint'))"
+done
+
 say "analyse_sequence  (60x99; sequence_kind is 'hold' until the transition model is wired in)"
 python3 -c "
 import json, random

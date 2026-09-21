@@ -268,7 +268,33 @@ _POSE_FEATURE_BANDS: Dict[str, List[Tuple[str, float, float]]] = {
     "table_top": [("hip_l", 60, 125), ("hip_r", 60, 125), ("knee_l", 60, 125), ("knee_r", 60, 125),
                    ("shoulder_l", 60, 125), ("shoulder_r", 60, 125)],
     "standing_pose": [("hip_l", 140, 180), ("hip_r", 140, 180), ("knee_l", 140, 180), ("knee_r", 140, 180)],
+    # triangle and corpse became detectable once global orientation was
+    # available, but a detected pose with no band here falls back to a generic
+    # score and gives the user no per-joint feedback at all -- which is half
+    # the point of detecting it. Bands below are set from the MEASURED p10-p90
+    # of each angle across the real-photo corpus (triangle n=24, corpse n=18),
+    # not from an idealised description of the asana.
+    #
+    # triangle: both legs stay straight and the top arm reaches away; the hip
+    # and trunk angles are deliberately NOT constrained because the pose is
+    # a side bend whose hip angle spans 38-159 degrees in real photographs
+    # depending entirely on which side the camera is on.
+    "triangle": [("knee_l", 130, 180), ("knee_r", 130, 180),
+                 ("shoulder_l", 55, 180)],
+    # corpse: everything extended and the arms resting near the body. Scored
+    # loosely on purpose -- it is a rest pose, and reporting "deviations"
+    # against a relaxed body would be both wrong and irritating.
+    "corpse": [("hip_l", 140, 180), ("hip_r", 140, 180),
+               ("knee_l", 140, 180), ("knee_r", 140, 180),
+               ("shoulder_l", 0, 60), ("shoulder_r", 0, 60)],
 }
+
+# DELIBERATELY ABSENT: chaturanga, seated_forward and upward_dog.
+# The real-photo corpus holds 0, 5 and 1 usable examples of them respectively,
+# which is not enough to fit an honest band -- any numbers here would be
+# invented, and a fabricated band produces confident per-joint corrections
+# that have never been checked against anything. They keep the generic
+# fallback score until the corpus actually covers them.
 
 
 def hybrid_classify(
