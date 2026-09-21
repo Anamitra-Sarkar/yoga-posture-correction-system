@@ -311,3 +311,105 @@ Once the retrain finishes, it self-reports a verdict against **35.5%** (the
 checkpoint already live) on the frozen 103-photo test set, and says "do NOT
 promote" if it does not clear that bar. Only wire it into `hf_loader.py` if it
 does.
+
+
+---
+
+## 10. UPDATE 2026-09-21: coverage, closed-loop coaching, APK
+
+### Poses with a real correctness score: 14 -> 19 (none disabled)
+
+Root cause of the coverage ceiling, measured rather than guessed: **all 15
+features are RELATIVE joint angles, so they are invariant to rotating the
+whole body.** On the real-photo corpus the rule engine called corpse
+"mountain_pose" 11 times out of 18 — lying flat and standing upright produce
+nearly the same 15-vector. No threshold change could ever fix that; the
+information was absent from the feature vector.
+
+Fix: two global cues (`torso_incline`, `leg_torso_ratio`) computed client-side
+from landmarks already on hand, wired through `FrameInput` ->
+`hybrid_classify` -> `classify_pose`. The orientation path returns `None` to
+defer to the existing 2D chain, so it can only ADD detections and older
+clients are bit-identical.
+
+| pose | before | after |
+|---|---|---|
+| triangle | 0% | 75.0% |
+| seated_easy_pose | 45.5% | 80.5% |
+| corpse | 0% | 33.3% |
+| table_top | 0% | 20.0% |
+| plank | 21.4% | 28.6% |
+| warrior_1 | 0% | 11.1% (un-disabled) |
+| **overall recall** | **23.7%** | **36.3%** |
+
+`DISABLED_POSES` is now empty. chair_pose and warrior_1 were suppressed only
+because the 2D rules detected them 0% of the time, so suppression cost
+nothing; they fire now and already had bands.
+
+triangle and corpse got bands fitted from measured p10-p90. **chaturanga,
+seated_forward and upward_dog deliberately have NO bands** — the corpus holds
+0, 5 and 1 usable examples, too few to fit honestly, and invented numbers
+would produce confident corrections never checked against anything.
+
+**Verified live**, not just locally: identical 15 angles return
+`mountain_pose` at torso_incline 5 and `corpse` at 100.
+
+### Known hard limit (do not "fix" by widening bands)
+
+Front-on **seated_staff is genuinely indistinguishable from mountain_pose** in
+2D: leg/torso 1.27 vs 1.33, ankle-drop 1.25 vs 1.26, incline 3 vs 6. An early
+draft "detected" it at 76.7% purely by taking mountain_pose's photos — a
+reshuffle, not a gain. That rule was removed. Needs real depth, not tuning.
+
+### Correction-efficacy loop (the novel contribution)
+
+The backend now returns `target_joint`; the client measures THAT joint over an
+8s window and escalates on `attempt`: 0 plain cue, 1 adds the measured
+magnitude, 2 backs the user OUT of the shape. Escalation deliberately ends in
+backing off — repeating "bend deeper" at someone whose hip will not go further
+is the hyperextension mechanism the project exists to prevent. A test asserts
+tier 2 contains none of more/deeper/further/harder.
+
+### Display stabilisation
+
+Sticky label with hysteresis + EMAs on scores and deviations. Changes only
+WHEN the display updates, never what the model predicts.
+
+### APK — public download, no GitHub account needed
+
+https://github.com/Anamitra-Sarkar/yoga-posture-correction-system/releases
+
+`AsanaAI-<sha>.apk`, 8.9MB. Capacitor **server mode**, so it is a native shell
+around the live site: web fixes reach it with no reinstall. Debug-signed —
+installable anywhere, fine for review, NOT Play Store (needs a persistent
+keystore as a secret; offered, not done).
+
+Rebuild: `gh workflow run android_build.yml -f publish_release=true`
+
+### Audit of the two 2026-07-19 notebooks (user asked: are they real?)
+
+**Both real.** Real data loads, real split, early stopping, genuine 3-head
+loss. The eval notebook is honest work — it confirmed zero recurrent modules
+and then REFUSED to promote stgcn_sequence_model_v2 with
+`"has_real_validation_data": false`.
+
+**But**: that run's 90.86% val pose accuracy came from a RANDOM
+`train_test_split` over frames from only 12 videos. Densely sampled frames
+mean near-duplicates on both sides — it measured memorisation. That is how
+90.9% coexisted with 10.5% on real photos, and it matches "good metrics but
+only ~3 poses right in the real world". `kaggle_mlp_photo_v3.py` now holds out
+WHOLE VIDEOS and says in its output that the number is not comparable to
+90.86%.
+
+### Still running at handoff (anamitrasarkar007 account)
+
+* `asanaai-mlp-v3-three-head` — 3-head retrain. **Bar: 35.5%** photo macro.
+  Also fixes the untrained correctness/deviation heads.
+* `asanaai-photo-corpus-v2` — Openverse-fixed harvest (first run silently
+  returned 0 Openverse images for all 22 classes: anonymous page_size is
+  capped at 20 and the code asked for 100).
+* `asanaai-public-corpora` — MediaPipe over four public datasets (~4.3GB).
+
+`arkosarkarhehe/asanaai-stgcn-transitions` (attempt 4) remains unreachable
+from this machine — local CLI is a different account and Modal is over its
+spend limit. Not routed around.
