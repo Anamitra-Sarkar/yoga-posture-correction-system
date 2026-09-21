@@ -225,11 +225,16 @@ export default function PracticeScreen() {
       if (!next.granted) return;
     }
     setCameraActive(true); setSessionActive(true); setServiceState("checking"); setLastError("");
-    await recordPractice(pose.id); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // history is written on completion from the DETECTED pose; there is no
+    // target to record at session start any more
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const endSession = async () => {
-    if (result) await completePractice({ poseId: pose.id, score: result.score, detectedPoseId: result.poseId, durationSeconds: elapsedSeconds, correction: result.correction });
+    if (result) {
+      await recordPractice(result.poseId);
+      await completePractice({ poseId: result.poseId, score: result.score, detectedPoseId: result.poseId, durationSeconds: elapsedSeconds, correction: result.correction });
+    }
     setSessionActive(false); setCameraActive(false); setDetectorRequest(null); frameInFlight.current = false; setProcessing(false); Speech.stop(); setServiceState("idle");
   };
 
@@ -247,6 +252,21 @@ export default function PracticeScreen() {
 
   const status = serviceCopy(serviceState);
   const score = result ? `${Math.round(result.score * 100)}%` : "—";
+
+  // "warrior_2" is a database key, not something to show a person mid-posture.
+  const prettyPose = (id?: string | null) => {
+    if (!id || id === "transition/unknown") return "—";
+    return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+  const motionLabel =
+    result?.motionState === "transitioning" ? "Moving"
+    : result?.motionState === "holding" ? "Holding"
+    : result?.motionState === "unrecognized" ? "Not recognised"
+    : "—";
+  const motionTone =
+    result?.motionState === "transitioning" ? colors.moss
+    : result?.motionState === "holding" ? colors.moss
+    : colors.mist;
   const timer = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
 
   const renderCameraStage = (fullScreen = false) => (
@@ -256,7 +276,7 @@ export default function PracticeScreen() {
       {permission?.granted && cameraActive && landmarks.length === 0 ? <View pointerEvents="none" style={styles.frameGuide}><View style={styles.frameGuideInner} /></View> : null}
       {fullScreen ? <>
         <View style={styles.fullscreenTop}><View style={styles.fullscreenStatus}><StatusDot tone={sessionActive ? "moss" : "mist"} /><Text style={styles.fullscreenStatusText}>{processing ? "Checking frame" : sessionActive ? "Camera live" : "Camera off"}</Text></View><View style={styles.fullscreenControls}>{permission?.granted && cameraActive ? <IconButton label="Switch camera" icon="flip-camera-android" onPress={flipCamera} /> : null}<IconButton label="Exit full-screen camera" icon="fullscreen-exit" onPress={() => setImmersiveMode(false)} /></View></View>
-        <View style={styles.fullscreenBottom}><View style={styles.fullscreenMetrics}><Text style={styles.fullscreenPose}>{pose.name}</Text><Text style={styles.fullscreenMetric}>{result ? `${score} · ${result.poseId}` : status.title}</Text></View>{result?.correction ? <Text numberOfLines={2} style={styles.fullscreenCue}>{result.correction}</Text> : null}<PrimaryButton label={sessionActive ? "End session" : permission?.granted ? "Start coaching" : "Enable camera"} icon={sessionActive ? "stop-circle" : "videocam"} tone={sessionActive ? "terracotta" : "moss"} onPress={sessionActive ? endSession : beginSession} disabled={Platform.OS === "web"} /></View>
+        <View style={styles.fullscreenBottom}><View style={styles.fullscreenMetrics}><Text style={styles.fullscreenPose}>{result ? prettyPose(result.poseId) : "—"}</Text><Text style={styles.fullscreenMetric}>{result ? `${score} · ${motionLabel}` : status.title}</Text></View>{result?.correction ? <Text numberOfLines={2} style={styles.fullscreenCue}>{result.correction}</Text> : null}<PrimaryButton label={sessionActive ? "End session" : permission?.granted ? "Start coaching" : "Enable camera"} icon={sessionActive ? "stop-circle" : "videocam"} tone={sessionActive ? "terracotta" : "moss"} onPress={sessionActive ? endSession : beginSession} disabled={Platform.OS === "web"} /></View>
       </> : <>
         <View style={styles.cameraLabel}><StatusDot tone={sessionActive ? "moss" : "mist"} /><Text style={styles.cameraLabelText}>{processing ? "Checking frame" : sessionActive ? "Camera live" : "Camera off"}</Text></View>
         <View style={styles.stageControls}>{permission?.granted && cameraActive ? <IconButton label="Switch camera" icon="flip-camera-android" onPress={flipCamera} /> : null}<IconButton label="Open full-screen camera" icon="fullscreen" onPress={() => setImmersiveMode(true)} /></View>
@@ -280,24 +300,62 @@ export default function PracticeScreen() {
           <AsanaMark />
           <View style={styles.topActions}>
             <View style={styles.timerPill}><StatusDot tone={sessionActive ? "moss" : "mist"} /><Text style={styles.timer}>{timer}</Text></View>
-            <Pressable onPress={() => setPickerOpen(true)} style={({ pressed }) => [styles.poseControl, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Change target pose">
-              <Text style={styles.poseControlText}>{pose.name}</Text><MaterialIcons name="expand-more" size={18} color={colors.ink} />
+            {/* No longer a target selector -- nothing downstream reads it.
+                It stays as a reference library so a practitioner can look up
+                what the coach is able to recognise. */}
+            <Pressable onPress={() => setPickerOpen(true)} style={({ pressed }) => [styles.poseControl, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Browse the pose library">
+              <MaterialIcons name="menu-book" size={16} color={colors.ink} />
+              <Text style={styles.poseControlText}>Library</Text>
             </Pressable>
           </View>
         </View>
 
         <ScrollView style={styles.scroller} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.context}><SectionLabel>Live practice</SectionLabel><Text style={styles.title}>{sessionActive ? "Hold your shape." : "Set your stance."}</Text><Text style={styles.subtitle}>{pose.cue}</Text><Pressable onPress={() => setGuideOpen(true)} accessibilityRole="button" style={({ pressed }) => [styles.guideLink, pressed && styles.pressed]}><MaterialIcons name="menu-book" size={16} color={colors.moss} /><Text style={styles.guideLinkText}>View pose guide</Text></Pressable></View>
+          <View style={styles.context}>
+            <SectionLabel>Live practice</SectionLabel>
+            <Text style={styles.title}>
+              {!sessionActive ? "Move into any posture."
+                : result?.motionState === "transitioning" ? "Flowing…"
+                : result && result.poseId !== "transition/unknown" ? prettyPose(result.poseId)
+                : "Reading your shape…"}
+            </Text>
+            <Text style={styles.subtitle}>
+              {sessionActive
+                ? "There is nothing to select — the coach recognises what you are doing and checks your alignment against it."
+                : "Frame your whole body, then hold any asana. The coach identifies it for you."}
+            </Text>
+            <Pressable onPress={() => setGuideOpen(true)} accessibilityRole="button" style={({ pressed }) => [styles.guideLink, pressed && styles.pressed]}><MaterialIcons name="menu-book" size={16} color={colors.moss} /><Text style={styles.guideLinkText}>Pose reference</Text></Pressable>
+          </View>
           {renderCameraStage()}
 
           <View style={styles.metricRow}>
             <View style={styles.scoreCard}><Text style={styles.metricLabel}>Posture score</Text><Text style={styles.score}>{score}</Text><Text style={styles.metricHint}>{result ? result.score >= 0.7 ? "On target" : "Needs adjustment" : "Awaiting check"}</Text></View>
-            <View style={styles.detectCard}><Text style={styles.metricLabel}>Detected pose</Text><Text numberOfLines={2} style={styles.detected}>{result?.poseId ?? "Waiting"}</Text><Text style={styles.metricHint}>{result ? result.poseId === pose.name ? "Target confirmed" : "Compare with target" : "Camera analysis"}</Text></View>
+            <View style={styles.detectCard}>
+              <Text style={styles.metricLabel}>Detected pose</Text>
+              <Text numberOfLines={2} style={styles.detected}>{result ? prettyPose(result.poseId) : "Waiting"}</Text>
+              {/* Holding vs moving, rather than a comparison against a target
+                  that no longer exists. Correcting alignment mid-transition is
+                  useless, so the user benefits from seeing which state they
+                  are in. */}
+              <View style={styles.motionRow}>
+                <StatusDot tone={motionTone === colors.moss ? "moss" : "mist"} />
+                <Text style={styles.metricHint}>{result ? motionLabel : "Camera analysis"}</Text>
+              </View>
+            </View>
           </View>
 
           <View style={[styles.statusPanel, serviceState === "offline" && styles.statusPanelError]}><View style={[styles.statusIcon, { backgroundColor: serviceState === "offline" ? colors.clay : colors.sage }]}><MaterialIcons name={serviceState === "offline" ? "wifi-off" : serviceState === "no-person" ? "person-search" : "self-improvement"} size={20} color={serviceState === "offline" ? colors.terracotta : colors.moss} /></View><View style={{ flex: 1 }}><Text style={styles.statusTitle}>{status.title}</Text><Text style={styles.statusDetail}>{lastError || status.detail}</Text></View></View>
 
-          {result?.correction ? <View style={[styles.correctionPanel, !result.safe && styles.correctionPanelAlert]}><MaterialIcons name={result.safe ? "tips-and-updates" : "warning-amber"} size={20} color={result.safe ? colors.moss : colors.terracotta} /><View style={{ flex: 1 }}><Text style={styles.correctionLabel}>{result.safe ? "Coach cue" : "Pause and adjust"}</Text><Text style={styles.correctionText}>{result.correction}</Text></View></View> : null}
+          {result?.correction ? <View style={[styles.correctionPanel, !result.safe && styles.correctionPanelAlert]}><MaterialIcons name={result.safe ? "tips-and-updates" : "warning-amber"} size={20} color={result.safe ? colors.moss : colors.terracotta} /><View style={{ flex: 1 }}><Text style={styles.correctionLabel}>{result.safe ? "Coach cue" : "Pause and adjust"}</Text><Text style={styles.correctionText}>{result.correction}</Text>
+            {/* Did the last cue actually move the joint it targeted? Saying so
+                is more useful than repeating the instruction, and explains why
+                the next cue will be worded differently if nothing changed. */}
+            {result.efficacy ? <Text style={[styles.efficacyText, result.efficacy.worked ? styles.efficacyGood : styles.efficacyFlat]}>
+              {result.efficacy.worked
+                ? `${prettyPose(result.efficacy.joint)} improved ${Math.round(result.efficacy.improvementDeg)}°`
+                : "No change yet — trying a different cue"}
+            </Text> : null}
+          </View></View> : null}
 
           <View style={styles.actions}>{!sessionActive ? <PrimaryButton label={permission?.granted ? "Start coaching" : "Enable camera"} icon="videocam" onPress={beginSession} disabled={Platform.OS === "web"} /> : <PrimaryButton label="End session" icon="stop-circle" tone="terracotta" onPress={endSession} />}</View>
           <Text style={styles.privacyNote}>Your camera stays off until you start. Landmark and alignment requests are made only while coaching is active.</Text>
@@ -311,5 +369,5 @@ export default function PracticeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, minHeight: 0 }, immersiveRoot: { flex: 1, backgroundColor: colors.ink }, topBar: { paddingHorizontal: 20, paddingTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }, topActions: { flexDirection: "row", alignItems: "center", gap: 8 }, timerPill: { flexDirection: "row", alignItems: "center", gap: 6, height: 34, paddingHorizontal: 10, borderRadius: 17, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line }, timer: { color: colors.ink, fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums"] }, poseControl: { maxWidth: 130, flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, paddingLeft: 11, paddingRight: 6, height: 38, borderRadius: 19 }, poseControlText: { color: colors.ink, fontSize: 12, fontWeight: "700", flexShrink: 1 }, scroller: { flex: 1 }, content: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 26, gap: 14 }, context: { gap: 7 }, title: { color: colors.ink, fontSize: 31, letterSpacing: -0.8, fontWeight: "700" }, subtitle: { color: colors.mist, fontSize: 14, lineHeight: 20 }, guideLink: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, minHeight: 32 }, guideLinkText: { color: colors.moss, fontSize: 13, fontWeight: "800" }, cameraFrame: { backgroundColor: "#E9ECE5", borderRadius: 26, overflow: "hidden", position: "relative" }, fullscreenCameraFrame: { flex: 1, backgroundColor: "#172019", overflow: "hidden", position: "relative" }, cameraEmpty: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 10 }, cameraIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.line, marginBottom: 2 }, cameraEmptyTitle: { color: colors.ink, fontSize: 17, fontWeight: "700" }, cameraEmptyDetail: { color: colors.mist, fontSize: 13, lineHeight: 19, textAlign: "center" }, cameraLabel: { position: "absolute", top: 14, left: 14, flexDirection: "row", gap: 7, alignItems: "center", paddingHorizontal: 10, height: 31, borderRadius: 15.5, backgroundColor: "rgba(248,247,242,0.94)" }, cameraLabelText: { color: colors.ink, fontSize: 11, fontWeight: "700" }, stageControls: { position: "absolute", top: 10, right: 10, flexDirection: "row", gap: 8 }, frameGuide: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" }, frameGuideInner: { height: "78%", width: "58%", borderWidth: 1.5, borderColor: "rgba(248,247,242,0.78)", borderRadius: 80 }, recoveryPill: { position: "absolute", bottom: 13, left: 13, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, height: 29, borderRadius: 14.5, backgroundColor: "rgba(31,38,33,0.78)" }, recoveryText: { color: colors.paper, fontSize: 10, fontWeight: "700" }, fullscreenTop: { position: "absolute", top: 16, left: 16, right: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, fullscreenStatus: { flexDirection: "row", alignItems: "center", gap: 7, height: 34, paddingHorizontal: 11, borderRadius: 17, backgroundColor: "rgba(248,247,242,0.94)" }, fullscreenStatusText: { color: colors.ink, fontSize: 11, fontWeight: "800" }, fullscreenControls: { flexDirection: "row", gap: 8 }, fullscreenBottom: { position: "absolute", left: 16, right: 16, bottom: 20, gap: 11, padding: 15, borderRadius: 22, backgroundColor: "rgba(248,247,242,0.94)" }, fullscreenMetrics: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }, fullscreenPose: { flex: 1, color: colors.ink, fontSize: 18, fontWeight: "800" }, fullscreenMetric: { color: colors.moss, fontSize: 12, fontWeight: "800" }, fullscreenCue: { color: colors.ink, fontSize: 13, lineHeight: 18 }, metricRow: { flexDirection: "row", gap: 10 }, scoreCard: { flex: 0.9, minHeight: 100, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 14, justifyContent: "space-between" }, detectCard: { flex: 1.1, minHeight: 100, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 14, justifyContent: "space-between" }, metricLabel: { color: colors.mist, fontSize: 10, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }, score: { color: colors.moss, fontSize: 31, fontWeight: "800", letterSpacing: -1 }, detected: { color: colors.ink, fontSize: 16, lineHeight: 19, fontWeight: "700" }, metricHint: { color: colors.mist, fontSize: 11, marginTop: 2 }, statusPanel: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.white, alignItems: "center" }, statusPanelError: { borderColor: "#D7AAA0", backgroundColor: "#FFF9F6" }, statusIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" }, statusTitle: { color: colors.ink, fontSize: 14, fontWeight: "700" }, statusDetail: { color: colors.mist, fontSize: 12, lineHeight: 17, marginTop: 3 }, correctionPanel: { flexDirection: "row", gap: 11, padding: 15, borderRadius: 18, backgroundColor: colors.sage, borderWidth: 1, borderColor: "#CBD4C4", alignItems: "flex-start" }, correctionPanelAlert: { backgroundColor: "#FFF6F2", borderColor: "#E5BCB1" }, correctionLabel: { color: colors.ink, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }, correctionText: { color: colors.ink, fontSize: 13, lineHeight: 19 }, actions: { marginTop: 1 }, privacyNote: { color: colors.mist, fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 13 }, pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
+  root: { flex: 1, minHeight: 0 }, immersiveRoot: { flex: 1, backgroundColor: colors.ink }, topBar: { paddingHorizontal: 20, paddingTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }, topActions: { flexDirection: "row", alignItems: "center", gap: 8 }, timerPill: { flexDirection: "row", alignItems: "center", gap: 6, height: 34, paddingHorizontal: 10, borderRadius: 17, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line }, timer: { color: colors.ink, fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums"] }, poseControl: { maxWidth: 130, flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, paddingLeft: 11, paddingRight: 6, height: 38, borderRadius: 19 }, poseControlText: { color: colors.ink, fontSize: 12, fontWeight: "700", flexShrink: 1 }, scroller: { flex: 1 }, content: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 26, gap: 14 }, context: { gap: 7 }, title: { color: colors.ink, fontSize: 31, letterSpacing: -0.8, fontWeight: "700" }, subtitle: { color: colors.mist, fontSize: 14, lineHeight: 20 }, guideLink: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, minHeight: 32 }, guideLinkText: { color: colors.moss, fontSize: 13, fontWeight: "800" }, cameraFrame: { backgroundColor: "#E9ECE5", borderRadius: 26, overflow: "hidden", position: "relative" }, fullscreenCameraFrame: { flex: 1, backgroundColor: "#172019", overflow: "hidden", position: "relative" }, cameraEmpty: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 10 }, cameraIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.line, marginBottom: 2 }, cameraEmptyTitle: { color: colors.ink, fontSize: 17, fontWeight: "700" }, cameraEmptyDetail: { color: colors.mist, fontSize: 13, lineHeight: 19, textAlign: "center" }, cameraLabel: { position: "absolute", top: 14, left: 14, flexDirection: "row", gap: 7, alignItems: "center", paddingHorizontal: 10, height: 31, borderRadius: 15.5, backgroundColor: "rgba(248,247,242,0.94)" }, cameraLabelText: { color: colors.ink, fontSize: 11, fontWeight: "700" }, stageControls: { position: "absolute", top: 10, right: 10, flexDirection: "row", gap: 8 }, frameGuide: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" }, frameGuideInner: { height: "78%", width: "58%", borderWidth: 1.5, borderColor: "rgba(248,247,242,0.78)", borderRadius: 80 }, recoveryPill: { position: "absolute", bottom: 13, left: 13, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, height: 29, borderRadius: 14.5, backgroundColor: "rgba(31,38,33,0.78)" }, recoveryText: { color: colors.paper, fontSize: 10, fontWeight: "700" }, fullscreenTop: { position: "absolute", top: 16, left: 16, right: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, fullscreenStatus: { flexDirection: "row", alignItems: "center", gap: 7, height: 34, paddingHorizontal: 11, borderRadius: 17, backgroundColor: "rgba(248,247,242,0.94)" }, fullscreenStatusText: { color: colors.ink, fontSize: 11, fontWeight: "800" }, fullscreenControls: { flexDirection: "row", gap: 8 }, fullscreenBottom: { position: "absolute", left: 16, right: 16, bottom: 20, gap: 11, padding: 15, borderRadius: 22, backgroundColor: "rgba(248,247,242,0.94)" }, fullscreenMetrics: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }, fullscreenPose: { flex: 1, color: colors.ink, fontSize: 18, fontWeight: "800" }, fullscreenMetric: { color: colors.moss, fontSize: 12, fontWeight: "800" }, fullscreenCue: { color: colors.ink, fontSize: 13, lineHeight: 18 }, metricRow: { flexDirection: "row", gap: 10 }, scoreCard: { flex: 0.9, minHeight: 100, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 14, justifyContent: "space-between" }, detectCard: { flex: 1.1, minHeight: 100, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 14, justifyContent: "space-between" }, metricLabel: { color: colors.mist, fontSize: 10, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }, score: { color: colors.moss, fontSize: 31, fontWeight: "800", letterSpacing: -1 }, detected: { color: colors.ink, fontSize: 16, lineHeight: 19, fontWeight: "700" }, motionRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }, efficacyText: { marginTop: 6, fontSize: 12, fontWeight: "600" }, efficacyGood: { color: colors.moss }, efficacyFlat: { color: colors.mist }, metricHint: { color: colors.mist, fontSize: 11, marginTop: 2 }, statusPanel: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.white, alignItems: "center" }, statusPanelError: { borderColor: "#D7AAA0", backgroundColor: "#FFF9F6" }, statusIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" }, statusTitle: { color: colors.ink, fontSize: 14, fontWeight: "700" }, statusDetail: { color: colors.mist, fontSize: 12, lineHeight: 17, marginTop: 3 }, correctionPanel: { flexDirection: "row", gap: 11, padding: 15, borderRadius: 18, backgroundColor: colors.sage, borderWidth: 1, borderColor: "#CBD4C4", alignItems: "flex-start" }, correctionPanelAlert: { backgroundColor: "#FFF6F2", borderColor: "#E5BCB1" }, correctionLabel: { color: colors.ink, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }, correctionText: { color: colors.ink, fontSize: 13, lineHeight: 19 }, actions: { marginTop: 1 }, privacyNote: { color: colors.mist, fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 13 }, pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
 });

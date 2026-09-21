@@ -322,7 +322,7 @@ const TRANSLATIONS: {
     personalScore: "Your Calibrated Form",
     digitalTwinProfile: "Digital Twin Profile",
     activeProfile: "✓ Active Calibration Profile",
-    uncalibratedTwin: "Digital Twin is uncalibrated. Select a pose and start the camera stream to calibrate your joint ranges.",
+    uncalibratedTwin: "Digital Twin is uncalibrated. Start the camera and hold a few comfortable postures — your personal joint ranges are learned from what you actually do.",
     calibratingTwin: "Calibrating... recording joint ranges.",
     apiConfig: "API Configuration",
     backendApiUrl: "Backend API URL",
@@ -334,7 +334,7 @@ const TRANSLATIONS: {
     startVideo: "Start Video",
     calibratingProgress: "Calibrating Digital Twin",
     stayInView: "Stay in camera view...",
-    cameraInactive: "Camera is inactive. Click 'Start Video' to begin.",
+    cameraInactive: "Start the camera and move into any posture. AsanaAI recognises what you are doing — there is nothing to select.",
     alignBody: "Align your body with the camera...",
     exit: "Exit",
     postureScore: "Posture Score",
@@ -375,7 +375,7 @@ const TRANSLATIONS: {
     personalScore: "आपका अंशांकित रूप",
     digitalTwinProfile: "डिजिटल ट्विन प्रोफ़ाइल",
     activeProfile: "✓ सक्रिय अंशांकन प्रोफ़ाइल",
-    uncalibratedTwin: "डिजिटल ट्विन अंशांकित नहीं है। एक मुद्रा चुनें और अपनी संयुक्त सीमाओं को अंशांकित करने के लिए कैमरा स्ट्रीम शुरू करें।",
+    uncalibratedTwin: "डिजिटल ट्विन अंशांकित नहीं है। कैमरा शुरू करें और कुछ सहज मुद्राएँ धारण करें — आपकी व्यक्तिगत जोड़ सीमाएँ आपके अभ्यास से ही सीखी जाती हैं।",
     calibratingTwin: "अंशांकन हो रहा है... संयुक्त सीमाओं को रिकॉर्ड किया जा रहा है।",
     apiConfig: "एपीआई कॉन्फ़िगरेशन",
     backendApiUrl: "बैकएंड एपीआई यूआरएल",
@@ -387,7 +387,7 @@ const TRANSLATIONS: {
     startVideo: "वीडियो शुरू करें",
     calibratingProgress: "डिजिटल ट्विन का अंशांकन",
     stayInView: "कैमरे के सामने बने रहें...",
-    cameraInactive: "कैमरा निष्क्रिय है। शुरू करने के लिए 'वीडियो शुरू करें' पर क्लिक करें।",
+    cameraInactive: "कैमरा शुरू करें और कोई भी मुद्रा करें। AsanaAI स्वयं पहचान लेगा — कुछ चुनने की ज़रूरत नहीं।",
     alignBody: "कैमरे के साथ अपने शरीर को संरेखित करें...",
     exit: "बाहर निकलें",
     postureScore: "मुद्रा स्कोर",
@@ -428,7 +428,7 @@ const TRANSLATIONS: {
     personalScore: "আপনার ক্যালিব্রেটেড ভঙ্গি",
     digitalTwinProfile: "ডিজিটাল টুইন প্রোফাইল",
     activeProfile: "✓ সক্রিয় ক্যালিব্রেশন প্রোফাইল",
-    uncalibratedTwin: "ডিজিটাল টুইন ক্যালিব্রেট করা নেই। একটি আসন নির্বাচন করুন এবং আপনার জয়েন্ট সীমা ক্যালিব্রেট করতে ক্যামেরা স্ট্রীম শুরু করুন।",
+    uncalibratedTwin: "ডিজিটাল টুইন ক্যালিব্রেট করা নেই। ক্যামেরা চালু করে কয়েকটি স্বচ্ছন্দ আসন ধরে রাখুন — আপনার নিজস্ব জয়েন্ট সীমা আপনার অনুশীলন থেকেই শেখা হয়।",
     calibratingTwin: "ক্যালিব্রেট করা হচ্ছে... জয়েন্ট রেঞ্জ রেকর্ড করা হচ্ছে।",
     apiConfig: "এপিআই কনফিগারেশন",
     backendApiUrl: "ব্যাকএন্ড এপিআই ইউআরএল",
@@ -440,7 +440,7 @@ const TRANSLATIONS: {
     startVideo: "ভিডিও চালু করুন",
     calibratingProgress: "ডিজিটাল টুইন ক্যালিব্রেট হচ্ছে",
     stayInView: "ক্যামেরার সামনে থাকুন...",
-    cameraInactive: "ক্যামেরা নিষ্ক্রিয় আছে। শুরু করতে 'ভিডিও চালু করুন' ক্লিক করুন।",
+    cameraInactive: "ক্যামেরা চালু করে যেকোনো আসন করুন। AsanaAI নিজেই চিনে নেবে — কিছু নির্বাচন করার দরকার নেই।",
     alignBody: "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন...",
     exit: "প্রস্থান",
     postureScore: "আসন স্কোর",
@@ -2299,7 +2299,20 @@ export default function Dashboard() {
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].detectedPose}</span>
                     <span className="kpi-value">{activePose === "transition/unknown" ? "—" : getSanskritName(activePose, lang)}</span>
-                    <span className="kpi-sub">
+                    {/* Motion state is one of this system's distinguishing
+                        capabilities -- telling a genuine HOLD apart from a
+                        TRANSITION, rather than lumping both into one
+                        "unknown" bucket. It was rendered as grey sub-text
+                        indistinguishable from a caption. As a colour-coded
+                        badge the user can read it at a glance from across a
+                        mat, which is the only distance it is ever read from. */}
+                    <span
+                      className={`state-pill ${
+                        isTransitioning ? "moving" : isUnrecognized ? "unknown" : "holding"
+                      }`}
+                      aria-live="polite"
+                    >
+                      <span className="state-dot" aria-hidden="true" />
                       {isTransitioning
                         ? TRANSLATIONS[lang].stateTransitioning
                         : isUnrecognized

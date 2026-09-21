@@ -14,6 +14,10 @@ on:
       - 'frontend/android/**'
       - 'frontend/capacitor.config.ts'
       - 'frontend/package.json'
+      # The Expo companion has no node_modules on the dev machine (3.7GB box,
+      # npm install avoided), so CI is the ONLY place its TypeScript is
+      # checked. Without this path its changes shipped unverified.
+      - 'mobile/**'
   workflow_dispatch:
     inputs:
       publish_release:
