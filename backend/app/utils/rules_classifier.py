@@ -277,6 +277,7 @@ def hybrid_classify(
     mlp_devs: Dict[str, float],
     angles_2d: Dict[str, float],
     world_angles: "Dict[str, float] | None" = None,
+    orientation: "Dict[str, float] | None" = None,
 ) -> Tuple[str, float, Dict[str, float]]:
     """
     Combines the learned MLP's pose call with the deterministic 2D-rule engine
@@ -292,7 +293,7 @@ def hybrid_classify(
     comparison (unchanged behavior for any caller that hasn't been updated to
     send world landmarks yet).
     """
-    rule_pose_2d = classify_pose(angles_2d)
+    rule_pose_2d = classify_pose(angles_2d, orientation)
 
     if world_angles is None:
         if rule_pose_2d == mlp_pose:
@@ -302,7 +303,7 @@ def hybrid_classify(
             correctness, devs = score_pose(rule_pose_2d, angles_2d)
         return sanitize_pose(predicted_pose), correctness, devs
 
-    rule_pose_world = classify_pose(world_angles)
+    rule_pose_world = classify_pose(world_angles, orientation)
 
     if mlp_pose == rule_pose_2d:
         # MLP and the proven 2D-rule path already agree -- keep the MLP's

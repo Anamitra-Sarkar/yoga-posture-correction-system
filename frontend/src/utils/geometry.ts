@@ -81,3 +81,57 @@ export function extractAnglesFromLandmarks(rawPts: Point3D[], zeroZ: boolean = t
     calculateAngle3D(pts[HIP_L], pts[HIP_R], pts[KNEE_R]), // hip_abduct_r
   ];
 }
+
+/**
+ * Global body orientation, which the 15 angle features cannot express.
+ *
+ * Every entry in FEATURE_NAMES is a RELATIVE joint angle (shoulder-hip-knee
+ * and friends), so all of them are invariant to rotating the whole body.
+ * Measured on the real-photo corpus, that blindness is not theoretical: the
+ * rule engine called corpse "mountain_pose" 11 times out of 18, because a
+ * person lying flat and a person standing upright produce nearly the same
+ * 15-vector. No threshold change can fix it -- the information is simply not
+ * in the feature vector.
+ *
+ * torsoIncline    degrees between shoulders->hips and image-down.
+ *                 ~0 standing, ~90 lying or plank, ~180 inverted.
+ *                 Measured medians: mountain 6, cobra 43, table_top 61,
+ *                 triangle 71, plank 80, corpse 107, downward_dog 148.
+ * legTorsoRatio   mean hip->ankle distance over shoulder->hip distance.
+ *                 Separates cross-legged sitting (0.57) from every standing
+ *                 pose (~1.2-1.4). Bounding-box aspect ratio does NOT do this
+ *                 reliably: a standing person with arms down is just as tall
+ *                 and narrow as someone seated facing the camera.
+ *
+ * Returns null on degenerate landmarks so the caller can simply omit the
+ * field, which the backend treats exactly like an older client.
+ */
+export function computeOrientation(
+  landmarks: { x: number; y: number }[],
+): { torso_incline: number; leg_torso_ratio: number } | null {
+  if (!landmarks || landmarks.length < 33) return null;
+  const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  });
+  const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.hypot(a.x - b.x, a.y - b.y);
+
+  const shoulderMid = mid(landmarks[SHOULDER_L], landmarks[SHOULDER_R]);
+  const hipMid = mid(landmarks[HIP_L], landmarks[HIP_R]);
+  const torsoLen = dist(shoulderMid, hipMid);
+  if (!Number.isFinite(torsoLen) || torsoLen < 1e-9) return null;
+
+  // MediaPipe's y axis grows downward, so image-down is (0, +1) and the
+  // inclination is the angle of the torso vector against it.
+  const cos = (hipMid.y - shoulderMid.y) / torsoLen;
+  const torsoIncline = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+
+  const legLen =
+    (dist(landmarks[ANKLE_L], landmarks[HIP_L]) +
+      dist(landmarks[ANKLE_R], landmarks[HIP_R])) / 2;
+
+  const ratio = legLen / torsoLen;
+  if (!Number.isFinite(torsoIncline) || !Number.isFinite(ratio)) return null;
+  return { torso_incline: torsoIncline, leg_torso_ratio: ratio };
+}

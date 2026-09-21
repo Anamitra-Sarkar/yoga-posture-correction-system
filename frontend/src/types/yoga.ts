@@ -8,6 +8,9 @@ export interface FrameInput {
   world_angles?: number[]; // Optional: angles derived from MediaPipe's poseWorldLandmarks (metric-scale 3D)
   motion?: number; // Mean absolute angular velocity (deg/s) over the recent frame buffer
   calibration?: CalibrationProfile; // Digital Twin profile, enables personalised scoring
+  // Global body orientation. The 15 angle features are relative joint angles
+  // and so cannot tell standing from lying down; these two scalars can.
+  orientation?: { torso_incline: number; leg_torso_ratio: number };
 }
 
 /**

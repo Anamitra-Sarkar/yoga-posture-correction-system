@@ -30,6 +30,15 @@ class FrameInput(BaseModel):
     # alongside the universal one, crediting joints the user is already within
     # their own calibrated comfortable range for.
     calibration: Optional[Dict[str, Dict[str, float]]] = None
+    # Global body orientation (torso_incline, leg_torso_ratio), computed by the
+    # client from the landmarks it already has. The 15 angle features are all
+    # RELATIVE joint angles and so are invariant to rotating the whole body:
+    # measured on the real-photo corpus, the rule engine called corpse
+    # "mountain_pose" 11 times out of 18 because lying flat and standing
+    # upright produce nearly the same 15-vector. These two scalars restore the
+    # missing information. Omitted by older clients, in which case
+    # classification falls back to the 2D-only chain unchanged.
+    orientation: Optional[Dict[str, float]] = None
 
 class FrameResponse(BaseModel):
     pose_id: str
@@ -197,7 +206,8 @@ def analyse_frame(data: FrameInput):
             world_angles_dict = {FEATURE_NAMES[idx]: data.world_angles[idx] for idx in range(15)}
 
         predicted_pose, correctness_prob, devs_dict = hybrid_classify(
-            mlp_pose, mlp_correctness, mlp_devs, angles_dict, world_angles_dict
+            mlp_pose, mlp_correctness, mlp_devs, angles_dict, world_angles_dict,
+            data.orientation
         )
 
         # Motion state. The old vocabulary collapsed two completely different

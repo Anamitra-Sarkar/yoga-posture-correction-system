@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FrameResponse, SequenceResponse, CalibrationProfile, MotionState } from "../types/yoga";
 import { analyseFrame, analyseSequence, recoverOcclusion, generateCorrection } from "../utils/api";
+import { computeOrientation } from "../utils/geometry";
 import { StickyLabel, Ema, EmaMap } from "../utils/stability";
 import { CorrectionEfficacyTracker, EfficacyRecord } from "../utils/correctionEfficacy";
 
@@ -123,11 +124,17 @@ export function useYogaPipeline({
       // The calibration profile now goes to the backend, which returns BOTH a
       // universal correctness score and a personalised one, so "wrong" and
       // "just a different body" stay distinguishable.
+      // Computed from the OCCLUSION-FUSED landmarks, so a briefly hidden
+      // ankle doesn't throw the leg/torso ratio off and flip the pose call.
+      const orientation = computeOrientation(
+        fusedCoords.map((pt) => ({ x: pt[0], y: pt[1] }))) ?? undefined;
+
       const frameReq = {
         angles: currentAngles,
         world_angles: worldAngles,
         motion,
         calibration: calibrationProfile,
+        orientation,
       };
       let currentMotionState: MotionState = "unknown";
 
