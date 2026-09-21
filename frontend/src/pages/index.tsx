@@ -168,6 +168,29 @@ const FEATURE_NAMES_ORDER = [
   "neck", "hip_abduct_l", "hip_abduct_r"
 ];
 
+/** "knee_l" -> "Left knee". Used by the closed-loop efficacy chip, which
+ *  names the joint it measured so the feedback is specific rather than a
+ *  generic "better"/"worse". */
+function formatJointName(joint: string, lang: "en" | "hi" | "bn"): string {
+  const side = joint.endsWith("_l")
+    ? { en: "Left", hi: "बायाँ", bn: "বাম" }[lang]
+    : joint.endsWith("_r")
+    ? { en: "Right", hi: "दायाँ", bn: "ডান" }[lang]
+    : "";
+  const base = joint.replace(/_(l|r)$/, "").replace("hip_abduct", "hip");
+  const names: { [k: string]: { en: string; hi: string; bn: string } } = {
+    elbow: { en: "elbow", hi: "कोहनी", bn: "কনুই" },
+    shoulder: { en: "shoulder", hi: "कंधा", bn: "কাঁধ" },
+    hip: { en: "hip", hi: "कूल्हा", bn: "নিতম্ব" },
+    knee: { en: "knee", hi: "घुटना", bn: "হাঁটু" },
+    ankle: { en: "ankle", hi: "टखना", bn: "গোড়ালি" },
+    trunk: { en: "torso", hi: "धड़", bn: "ধড়" },
+    neck: { en: "neck", hi: "गर्दन", bn: "ঘাড়" },
+  };
+  const n = names[base]?.[lang] ?? base;
+  return side ? `${side} ${n}` : n.charAt(0).toUpperCase() + n.slice(1);
+}
+
 const SANSKRIT_NAMES: {
   [lang: string]: { [key: string]: string }
 } = {
@@ -1030,6 +1053,7 @@ export default function Dashboard() {
     flowConfidence,
     correctionText,
     correctionIsSafe,
+    lastEfficacy,
     motionState,
     personalCorrectness,
     deviations,
@@ -2368,6 +2392,29 @@ export default function Dashboard() {
                     )}
                   </span>
                   <span className="guidance-text">{correctionText}</span>
+                  {/* Closed-loop feedback: we measured whether the joint this
+                      cue targeted actually moved. Telling the user the real
+                      number is far more useful than repeating the instruction,
+                      and it is the visible half of the escalation logic -- if
+                      nothing moved, the next cue will not be the same sentence. */}
+                  {lastEfficacy && (
+                    <span
+                      className={`efficacy-chip ${lastEfficacy.worked ? "good" : "flat"}`}
+                      aria-live="polite"
+                    >
+                      {lastEfficacy.worked
+                        ? `${formatJointName(lastEfficacy.joint, lang)} ${
+                            lang === "hi" ? "में" : lang === "bn" ? "" : "improved"
+                          } ${Math.round(lastEfficacy.improvementDeg)}°${
+                            lang === "hi" ? " सुधार" : lang === "bn" ? " উন্নত" : ""
+                          }`
+                        : lang === "hi"
+                        ? "कोई बदलाव नहीं — अलग तरीके से बताता हूँ"
+                        : lang === "bn"
+                        ? "পরিবর্তন হয়নি — অন্যভাবে বলছি"
+                        : "No change yet — I'll try a different cue"}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (

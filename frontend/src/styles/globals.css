@@ -1504,6 +1504,49 @@ button, [role="button"] { user-select: none; }
   color: var(--color-text);
 }
 
+/* Closed-loop efficacy readout: whether the joint the last cue targeted
+   actually moved. Deliberately understated -- it sits under the instruction
+   as supporting evidence, and must not compete with the instruction itself
+   for attention while someone is holding a posture. */
+.efficacy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  animation: efficacy-in 240ms ease-out;
+}
+
+.efficacy-chip.good {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
+}
+
+.efficacy-chip.flat {
+  color: var(--color-text-muted, var(--color-text));
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+@keyframes efficacy-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Respect users who have asked the OS for less motion: the chip still
+   appears, it just does not slide in. */
+@media (prefers-reduced-motion: reduce) {
+  .efficacy-chip { animation: none; }
+}
+
 /* ── Occlusion Alert ─────────────────────────────────────── */
 .occlusion-alert {
   margin-top: var(--space-4);
