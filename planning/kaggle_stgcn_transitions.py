@@ -36,6 +36,12 @@ IN = "/kaggle/input/asanaai-stgcn-source"
 OUT = "/kaggle/working"
 WIN, STRIDE = 60, 12
 HOLDOUT = {"4ORRiN2_aVI", "SZU7Sbgu57o"}   # same videos as before, for comparability
+
+# When the 19-person corpus is mounted, a quarter of those PEOPLE are held out
+# as well. Holding out bodies is strictly stronger than holding out clips from
+# one shoot, and it is the condition the app actually faces.
+# Set to 0.0 to reproduce the original video-only comparison exactly.
+PERSON_HOLDOUT_FRAC = 0.25
 # 12 was far too low: it named 69 transition classes, many with n=12-20, which
 # shattered the label space into 92 classes and collapsed macro to 12.6% (vs
 # 63.0% with 24 classes). Macro averages over classes, so a long tail of
@@ -211,6 +217,12 @@ def rule_pose(a):
     if hl>140 and hr>140 and kl>140 and kr>140: return "standing_pose"
     return "transition/unknown"
 
+def _find_one(pattern):
+    import glob as _g
+    hits = sorted(_g.glob(f"/kaggle/input/**/{pattern}", recursive=True))
+    return hits[0] if hits else None
+
+
 def base_pose(l):
     l = str(l)
     if l.startswith("imperfect_"): l = l[len("imperfect_"):]
@@ -342,6 +354,38 @@ def main():
         print(f"\ndropping {len(dropped)} classes below {MIN_SUPPORT} windows:", flush=True)
         for k, v in sorted(dropped.items(), key=lambda x: -x[1]):
             print(f"    {k:<48} {v}", flush=True)
+    # --- fold in the multi-person corpus, if the extraction kernel is mounted ---
+    # Its windows are already normalised the same way and sampled at the same
+    # 3fps, so a window means the same thing in both corpora. Each person
+    # becomes their own "video id" so the existing holdout machinery treats
+    # them as independent sources without further changes.
+    npf = _find_one("newpeople_feats.npy")
+    npl = _find_one("newpeople_labels.npy")
+    npp = _find_one("newpeople_person.npy")
+    if npf and npl and npp:
+        nf = np.load(npf)
+        nl = [str(x) for x in np.load(npl, allow_pickle=True)]
+        npr = [str(x) for x in np.load(npp, allow_pickle=True)]
+        people = sorted(set(npr))
+        rs = np.random.RandomState(0)
+        n_hold = max(1, int(round(len(people) * PERSON_HOLDOUT_FRAC)))
+        held = set(rs.choice(people, n_hold, replace=False).tolist())
+        print(f"\nmulti-person corpus: {len(nl)} windows, {len(people)} people; "
+              f"holding out {sorted(held)}", flush=True)
+        for i in range(len(nl)):
+            feats_raw.append(nf[i])
+            # no bone-length correction is defined for these, so the corrected
+            # variant reuses the raw window rather than silently inventing one
+            feats_bc.append(nf[i])
+            labels.append(nl[i])
+            vids.append("person:" + npr[i])
+        HOLDOUT.update("person:" + p for p in held)
+        cnt = Counter(labels)
+        print(f"combined: {len(labels)} windows across {len(cnt)} raw classes", flush=True)
+    else:
+        print("\nmulti-person corpus not mounted -- video-only run", flush=True)
+
+    keep_cls = {k for k, v in Counter(labels).items() if v >= MIN_SUPPORT}
     keep_i = [i for i, l in enumerate(labels) if l in keep_cls]
     labels = [labels[i] for i in keep_i]
     feats_raw = [feats_raw[i] for i in keep_i]
