@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { FrameResponse, SequenceResponse, CalibrationProfile, MotionState } from "../types/yoga";
 import { analyseFrame, analyseSequence, recoverOcclusion, generateCorrection } from "../utils/api";
+import { StickyLabel, Ema, EmaMap } from "../utils/stability";
+import { CorrectionEfficacyTracker, EfficacyRecord } from "../utils/correctionEfficacy";
 
 interface UseYogaPipelineProps {
   language?: "en" | "hi" | "bn";
@@ -27,6 +29,22 @@ export function useYogaPipeline({
   const [recoveredJoints, setRecoveredJoints] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [predictionTimestamp, setPredictionTimestamp] = useState<number>(0);
+  const [lastEfficacy, setLastEfficacy] = useState<EfficacyRecord | null>(null);
+
+  // Display stabilisers. The classifier is right roughly a third to a half of
+  // the time on real input, so the RAW label flips several times a second and
+  // the readout looks broken even when the model is behaving exactly as
+  // measured. These change only when the display updates, never what the
+  // model predicts.
+  const poseSticky = useRef(new StickyLabel("transition/unknown"));
+  const flowSticky = useRef(new StickyLabel("transition/unknown"));
+  const correctnessEma = useRef(new Ema(0.35));
+  const personalEma = useRef(new Ema(0.35));
+  const deviationEma = useRef(new EmaMap(0.35));
+
+  // Closed-loop coaching: measures whether the cue we just spoke actually
+  // moved the joint it targeted, and escalates when it did not.
+  const efficacy = useRef(new CorrectionEfficacyTracker());
 
   // Buffers and timers
   const coordBuffer = useRef<number[][]>([]); // Holds 60 frames of coordinates [60, 99]
@@ -115,31 +133,39 @@ export function useYogaPipeline({
 
       if (fallbackRequired) {
         const frameRes = await analyseFrame(frameReq);
-        currentPoseId = frameRes.pose_id;
-        currentCorrectness = frameRes.correctness_score;
-        activeDeviations = frameRes.calibrated_deviations ?? frameRes.deviations;
+        const rawDevs = frameRes.calibrated_deviations ?? frameRes.deviations;
+        currentPoseId = poseSticky.current.push(frameRes.pose_id);
+        currentCorrectness = correctnessEma.current.push(frameRes.correctness_score);
+        activeDeviations = deviationEma.current.push(rawDevs);
         currentMotionState = frameRes.motion_state ?? "unknown";
 
         setActivePose(currentPoseId);
         setCorrectness(currentCorrectness);
-        setPersonalCorrectness(frameRes.personal_correctness_score ?? null);
+        setPersonalCorrectness(
+          frameRes.personal_correctness_score == null
+            ? null
+            : personalEma.current.push(frameRes.personal_correctness_score));
         setMotionState(currentMotionState);
-        setDeviations(frameRes.calibrated_deviations ?? frameRes.deviations);
+        setDeviations(activeDeviations);
       } else {
         // If sequence model is confident, sync Pose ID with the sequence target
-        currentPoseId = flowPose;
-        currentCorrectness = flowConfidence;
-        setActivePose(flowPose);
-        setCorrectness(flowConfidence);
+        currentPoseId = poseSticky.current.push(flowPose);
+        currentCorrectness = correctnessEma.current.push(flowConfidence);
+        setActivePose(currentPoseId);
+        setCorrectness(currentCorrectness);
 
         // Fetch frame deviations for sequence flow to provide rich context to the correction generator
         try {
           const frameRes = await analyseFrame(frameReq);
-          activeDeviations = frameRes.calibrated_deviations ?? frameRes.deviations;
+          activeDeviations = deviationEma.current.push(
+            frameRes.calibrated_deviations ?? frameRes.deviations);
           currentMotionState = frameRes.motion_state ?? "unknown";
-          setPersonalCorrectness(frameRes.personal_correctness_score ?? null);
+          setPersonalCorrectness(
+            frameRes.personal_correctness_score == null
+              ? null
+              : personalEma.current.push(frameRes.personal_correctness_score));
           setMotionState(currentMotionState);
-          setDeviations(frameRes.calibrated_deviations ?? frameRes.deviations);
+          setDeviations(activeDeviations);
         } catch (err) {
           console.error("Error fetching deviations for sequence:", err);
         }
@@ -162,6 +188,13 @@ export function useYogaPipeline({
 
       // 6. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
       const now = Date.now();
+
+      // Close the loop on the PREVIOUS cue before considering a new one: did
+      // the joint it targeted actually move? This must run every frame, not
+      // only when a cue is due, because the response window is shorter than
+      // the correction debounce.
+      const verdict = efficacy.current.onFrame(activeDeviations, now);
+      if (verdict) setLastEfficacy(verdict);
       if (currentMotionState === "transitioning") {
         // Don't correct alignment while the body is still moving -- it's
         // useless mid-flow and a real instructor waits for the hold. This is
@@ -177,15 +210,26 @@ export function useYogaPipeline({
       } else if (currentPoseId !== "transition/unknown") {
         if (currentCorrectness < correctnessThreshold) {
           if (now - lastCorrectionTime.current > DEBOUNCE_MS) {
+            // Tell the backend how many times this exact cue has already been
+            // given without the targeted joint moving, so it escalates instead
+            // of repeating itself.
+            const attempt = efficacy.current.attemptFor(
+              currentPoseId,
+              // the joint we expect to be targeted: the worst deviation
+              Object.entries(activeDeviations)
+                .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "");
             const corrRes = await generateCorrection({
               pose_id: currentPoseId,
               deviations: activeDeviations,
               language,
-              groq_api_key: groqApiKey
+              groq_api_key: groqApiKey,
+              attempt,
             });
             setCorrectionText(corrRes.correction_text);
             setCorrectionIsSafe(corrRes.is_safe);
             lastCorrectionTime.current = now;
+            efficacy.current.onCueDelivered(
+              currentPoseId, corrRes.target_joint, activeDeviations, now);
           }
         } else {
           // Pose is correct - notify user visually in real-time
@@ -274,6 +318,8 @@ export function useYogaPipeline({
     flowConfidence,
     correctionText,
     correctionIsSafe,
+    lastEfficacy,
+    efficacySummary: () => efficacy.current.summary(),
     motionState,
     personalCorrectness,
     deviations,

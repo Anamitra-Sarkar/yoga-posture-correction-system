@@ -13,10 +13,19 @@ class CorrectionInput(BaseModel):
     deviations: Dict[str, float]
     language: str = "en"
     groq_api_key: Optional[str] = None
+    # How many times this same cue has ALREADY been delivered without the
+    # targeted joint measurably improving. Drives escalation: 0 is the plain
+    # cue, 1 adds the measured magnitude, 2+ backs the user out of the shape.
+    # Clients that don't run the efficacy loop simply omit it.
+    attempt: int = 0
 
 class CorrectionResponse(BaseModel):
     correction_text: str
     is_safe: bool
+    # Which joint this cue is trying to change. The client needs it to measure
+    # whether the cue actually worked -- without it, efficacy can only be
+    # guessed from the whole-body score, which moves for unrelated reasons.
+    target_joint: Optional[str] = None
 
 class OcclusionInput(BaseModel):
     mp_landmarks: List[List[float]] # Shape [33, 4]
@@ -30,15 +39,17 @@ class OcclusionResponse(BaseModel):
 @router.post("/generate_correction", response_model=CorrectionResponse)
 def generate_correction(data: CorrectionInput):
     try:
-        text, safe = generate_safe_correction(
+        text, safe, target_joint = generate_safe_correction(
             pose_id=data.pose_id,
             deviations=data.deviations,
             language=data.language,
-            groq_api_key=data.groq_api_key
+            groq_api_key=data.groq_api_key,
+            attempt=data.attempt,
         )
         return CorrectionResponse(
             correction_text=text,
-            is_safe=safe
+            is_safe=safe,
+            target_joint=target_joint,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Correction generation failed: {str(e)}")

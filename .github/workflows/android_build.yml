@@ -14,7 +14,15 @@ on:
       - 'frontend/android/**'
       - 'frontend/capacitor.config.ts'
       - 'frontend/package.json'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Attach the APK to a public GitHub Release (shareable download link)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -52,6 +60,16 @@ jobs:
           mkdir -p .next
           npx cap sync android
 
+      # The Expo companion in mobile/ has no node_modules on the dev machine
+      # (a 3.7GB box where npm install is avoided), so its TypeScript is
+      # checked here instead of going unverified.
+      - name: Typecheck Expo companion
+        working-directory: mobile
+        continue-on-error: true
+        run: |
+          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+          npx tsc --noEmit -p tsconfig.json
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
@@ -59,9 +77,46 @@ jobs:
         working-directory: frontend/android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Upload debug APK artifact
+      - name: Name the APK for humans
+        working-directory: frontend/android
+        run: |
+          # "app-debug.apk" tells a reviewer nothing. Stamp the short SHA so a
+          # downloaded file can always be traced back to the exact commit.
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             "AsanaAI-${GITHUB_SHA::7}.apk"
+          ls -lh AsanaAI-*.apk
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: asanaai-debug-apk
-          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          name: asanaai-apk
+          path: frontend/android/AsanaAI-*.apk
+          retention-days: 90
+
+      # A workflow artifact needs a GitHub login to download, which is no good
+      # for handing the app to an external reviewer. A Release gives a plain
+      # public link. Opt-in, so ordinary pushes don't spam releases.
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_release
+        working-directory: frontend/android
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="apk-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          gh release create "$TAG" AsanaAI-*.apk \
+            --title "AsanaAI Android ${TAG}" \
+            --notes "Installable Android build of AsanaAI.
+
+          **Install:** download the .apk, open it on an Android phone, and allow
+          installation from unknown sources when prompted.
+
+          This is a Capacitor build in *server mode*: the app is a native shell
+          around the live production site, so it always runs the current
+          backend and frontend without needing a reinstall. It therefore needs
+          an internet connection, which the camera analysis requires anyway.
+
+          Signed with the standard Android debug key -- installable on any
+          device and appropriate for review and sideloading, but not for Play
+          Store distribution, which would need a persistent release keystore.
+
+          Built from commit ${GITHUB_SHA}."

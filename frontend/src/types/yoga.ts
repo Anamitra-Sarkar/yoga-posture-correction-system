@@ -50,11 +50,17 @@ export interface CorrectionInput {
   deviations: { [jointName: string]: number };
   language?: "en" | "hi" | "bn";
   groq_api_key?: string;
+  // Times this same cue was already given without the targeted joint moving.
+  // Drives backend escalation: 0 plain, 1 quantified, 2+ back off.
+  attempt?: number;
 }
 
 export interface CorrectionResponse {
   correction_text: string;
   is_safe: boolean;
+  // Joint the cue is trying to move; the client measures THIS joint to decide
+  // whether the cue worked.
+  target_joint?: string | null;
 }
 
 export interface OcclusionInput {

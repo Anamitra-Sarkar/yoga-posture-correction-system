@@ -14,14 +14,19 @@ import { PoseGuide } from "@/components/pose-guide";
 import { PoseSkeleton } from "@/components/pose-skeleton";
 import { ScreenContainer } from "@/components/screen-container";
 import { DEFAULT_POSE_ID, getPose, serviceCopy, type Pose, type ServiceState } from "@/lib/asana";
-import { getCoachingDiagnostic } from "@/lib/coaching-diagnostics";
 import { extractAnglesFromLandmarks, landmarksFromRows, type Landmark } from "@/lib/pose-geometry";
 import { DEFAULT_PREFERENCES, loadPreferences, savePreferences, type Preferences } from "@/lib/preferences";
 import { completePractice, recordPractice } from "@/lib/practice-history";
-import { analyseFrame, generateCorrection, recoverOcclusion } from "@/lib/yoga-api";
+import { analyseFrame, generateCorrection, recoverOcclusion, type MotionState } from "@/lib/yoga-api";
+import { StickyLabel, Ema, EmaMap } from "@/lib/stability";
+import { CorrectionEfficacyTracker, type EfficacyRecord } from "@/lib/correctionEfficacy";
 
 type DetectorRequest = { id: string; base64: string } | null;
-type CoachingResult = { poseId: string; score: number; deviations: Record<string, number>; correction: string; safe: boolean; recovered: string[] };
+type CoachingResult = {
+  poseId: string; score: number; deviations: Record<string, number>;
+  correction: string; safe: boolean; recovered: string[];
+  motionState: MotionState; efficacy: EfficacyRecord | null;
+};
 
 export default function PracticeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -38,6 +43,22 @@ export default function PracticeScreen() {
   const [landmarks, setLandmarks] = useState<Landmark[]>([]);
   const [result, setResult] = useState<CoachingResult | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Display stabilisers, identical in behaviour to the web pipeline. The
+  // classifier is right roughly a third to a half of the time on real input,
+  // so the RAW per-frame label flips constantly and the readout looks broken
+  // even when the model is behaving exactly as measured.
+  const poseSticky = useRef(new StickyLabel("transition/unknown"));
+  const scoreEma = useRef(new Ema(0.35));
+  const devEma = useRef(new EmaMap(0.35));
+
+  // Rolling angle history, used only to measure how fast the body is moving,
+  // so a genuine HOLD can be told apart from a TRANSITION between poses.
+  const angleHistory = useRef<{ t: number; angles: number[] }[]>([]);
+
+  // Closed-loop coaching: did the cue we just spoke actually move the joint
+  // it targeted?
+  const efficacy = useRef(new CorrectionEfficacyTracker());
   const [processing, setProcessing] = useState(false);
   const [lastError, setLastError] = useState("");
   const cameraRef = useRef<CameraView>(null);
@@ -94,6 +115,23 @@ export default function PracticeScreen() {
     Speech.speak(text, { language: preferences.language === "hi" ? "hi-IN" : preferences.language === "bn" ? "bn-IN" : "en-US", rate: 0.92 });
   }, [preferences.language, preferences.voiceEnabled]);
 
+  /** Mean absolute angular velocity (deg/s) over the recent window. */
+  const computeMotion = useCallback((angles: number[], now: number): number | undefined => {
+    const MOTION_WINDOW_MS = 1500;
+    const hist = angleHistory.current;
+    hist.push({ t: now, angles });
+    while (hist.length > 1 && now - hist[0].t > MOTION_WINDOW_MS) hist.shift();
+    if (hist.length < 2) return undefined;
+    const first = hist[0];
+    const dt = (now - first.t) / 1000;
+    if (dt <= 0) return undefined;
+    let total = 0;
+    for (let i = 0; i < angles.length; i += 1) {
+      total += Math.abs(angles[i] - first.angles[i]);
+    }
+    return total / angles.length / dt;
+  }, []);
+
   const processLandmarks = useCallback(async (_id: string, detected: Landmark[]) => {
     if (detected.length !== 33) {
       frameInFlight.current = false; setProcessing(false); setLastError("Move far enough back to keep your head, hands, and feet inside the guide."); setServiceState("no-person"); setLandmarks([]); return;
@@ -101,16 +139,55 @@ export default function PracticeScreen() {
     try {
       const occlusion = await recoverOcclusion(detected);
       const fused = landmarksFromRows(occlusion.fused_landmarks);
-      const frame = await analyseFrame(extractAnglesFromLandmarks(fused));
-      const diagnostic = getCoachingDiagnostic(pose.name, pose.id, frame.pose_id, frame.correctness_score);
-      let correction = diagnostic.correction;
-      let safe = diagnostic.safe;
-      if (!diagnostic.isMismatch && (frame.correctness_score < 0.7 || Date.now() - lastCorrectionAt.current > 30000)) {
-        const generated = await generateCorrection(frame.pose_id, frame.deviations, preferences.language);
-        correction = generated.correction_text; safe = generated.is_safe; lastCorrectionAt.current = Date.now();
+      const angles = extractAnglesFromLandmarks(fused);
+      const now = Date.now();
+      const motion = computeMotion(angles, now);
+
+      // Free-form: the app analyses whatever posture is actually being
+      // performed. The old flow compared the detection against a pose the
+      // user had picked from a list and refused to coach on any mismatch,
+      // which meant doing a different (perfectly good) asana produced a
+      // scolding instead of feedback.
+      const frame = await analyseFrame(angles, { motion });
+      const rawDevs = frame.calibrated_deviations ?? frame.deviations;
+      const poseId = poseSticky.current.push(frame.pose_id);
+      const score = scoreEma.current.push(frame.correctness_score);
+      const deviations = devEma.current.push(rawDevs);
+      const motionState: MotionState = frame.motion_state ?? "unknown";
+
+      // Judge the PREVIOUS cue before considering a new one.
+      const verdict = efficacy.current.onFrame(deviations, now);
+
+      let correction: string;
+      let safe = true;
+      if (motionState === "transitioning") {
+        // Correcting alignment mid-movement is useless; a real instructor
+        // waits for the hold. Only possible now that motion is measured
+        // separately from recognition failure.
+        correction = "Flowing… hold your next posture and I'll guide you.";
+      } else if (poseId === "transition/unknown") {
+        correction = "Hold a posture with your whole body in frame so I can read it.";
+      } else if (score >= 0.7) {
+        correction = "Alignment is on track. Keep breathing steadily.";
+      } else if (now - lastCorrectionAt.current > 30000 || !result?.correction) {
+        const worst = Object.entries(deviations).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+        const attempt = efficacy.current.attemptFor(poseId, worst);
+        const generated = await generateCorrection(poseId, deviations, preferences.language, attempt);
+        correction = generated.correction_text;
+        safe = generated.is_safe;
+        lastCorrectionAt.current = now;
+        efficacy.current.onCueDelivered(poseId, generated.target_joint, deviations, now);
+      } else {
+        correction = result?.correction ?? "Hold steady while I check your alignment.";
+        safe = result?.safe ?? true;
       }
+
       setLandmarks(fused);
-      setResult({ poseId: diagnostic.detectedPose, score: frame.correctness_score, deviations: frame.deviations, correction, safe, recovered: occlusion.occluded_joints_recovered });
+      setResult({
+        poseId, score, deviations, correction, safe,
+        recovered: occlusion.occluded_joints_recovered,
+        motionState, efficacy: verdict,
+      });
       setServiceState("available");
       void speakIfNeeded(correction);
     } catch (error) {
@@ -119,7 +196,7 @@ export default function PracticeScreen() {
     } finally {
       frameInFlight.current = false; setProcessing(false);
     }
-  }, [pose.id, pose.name, preferences.language, speakIfNeeded]);
+  }, [preferences.language, speakIfNeeded, computeMotion, result]);
 
   const captureFrame = useCallback(async () => {
     if (Platform.OS === "web" || !sessionActive || !cameraRef.current || frameInFlight.current || !detectorReady) return;

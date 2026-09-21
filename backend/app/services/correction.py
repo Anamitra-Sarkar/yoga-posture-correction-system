@@ -148,11 +148,49 @@ DEFAULT_CORRECTIONS = {
     "bn": "আপনার অঙ্গভঙ্গি বজায় রাখুন, নিয়মিত শ্বাস নিন।"
 }
 
+# Escalation wrappers for the correction-efficacy loop.
+#
+# When a cue has been delivered and the targeted joint did NOT measurably
+# improve, repeating the identical sentence is the least useful thing the
+# system can do -- it is what makes automated coaching feel deaf. These are
+# pose-agnostic so they compose with any base cue in any of the three
+# languages, instead of needing 3 hand-written variants per pose per joint.
+#
+# Tier 2 adds the measured magnitude, which turns a vague instruction into a
+# quantified one. Tier 3 stops asking for more and backs off, because a cue
+# that has failed twice usually means the range of motion is not available
+# today -- pushing harder there is exactly the injury risk this system exists
+# to avoid.
+_ESCALATION = {
+    1: {
+        "en": "{base} You're about {deg} degrees off.",
+        "hi": "{base} आप लगभग {deg} डिग्री दूर हैं।",
+        "bn": "{base} আপনি প্রায় {deg} ডিগ্রি দূরে আছেন।",
+    },
+    2: {
+        "en": "Ease out of the shape and reset. Come back only as far as feels comfortable today.",
+        "hi": "मुद्रा से धीरे-धीरे बाहर आएं और फिर से शुरू करें। आज जितना सहज लगे, उतना ही करें।",
+        "bn": "ভঙ্গি থেকে ধীরে বেরিয়ে আসুন এবং আবার শুরু করুন। আজ যতটা স্বচ্ছন্দ, ততটুকুই করুন।",
+    },
+}
+
+
+def _escalate(text: str, language: str, attempt: int, deg: float) -> str:
+    """attempt counts PRIOR deliveries of this cue that produced no measured
+    improvement. 0 -> the plain cue."""
+    tier = min(int(attempt), 2)
+    if tier <= 0:
+        return text
+    tmpl = _ESCALATION[tier].get(language) or _ESCALATION[tier]["en"]
+    return tmpl.format(base=text, deg=int(round(deg)))
+
+
 def generate_safe_correction(
     pose_id: str,
     deviations: Dict[str, float],
     language: str = "en",
-    groq_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None,
+    attempt: int = 0,
 ) -> tuple:
     """
     Enforces a 3-stage validation pipeline:
@@ -176,8 +214,13 @@ def generate_safe_correction(
         correction_text = pose_templates[target_joint]["issue_low"].get(language, "Adjust your alignment.")
     else:
         correction_text = DEFAULT_CORRECTIONS.get(language, "Adjust your alignment.")
-        
+
     is_safe = True
+
+    # Tier 2 replaces the cue outright with a back-off instruction, so there is
+    # nothing left to paraphrase and no reason to spend an LLM call on it.
+    if target_joint and attempt >= 2:
+        return _escalate(correction_text, language, attempt, max_dev), True, target_joint
     
     # Stage 2: Paraphrase using LLM if Groq API key is available
     api_key = groq_api_key or os.environ.get("GROQ_API_KEY")
@@ -234,4 +277,7 @@ def generate_safe_correction(
         except Exception as e:
             logger.warning(f"Groq correction call failed, falling back to template: {e}")
             
-    return correction_text, is_safe
+    if target_joint and attempt >= 1:
+        correction_text = _escalate(correction_text, language, attempt, max_dev)
+
+    return correction_text, is_safe, target_joint
