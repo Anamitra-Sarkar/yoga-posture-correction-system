@@ -2,7 +2,13 @@
 
 The scratchpad gets wiped; anything worth keeping lives here.
 
-* `SESSION_HANDOFF_2026-09-19.md` — **start here.** Two Kaggle kernels left
+* `SESSION_HANDOFF_2026-09-21.md` — **START HERE.** Current state: MLP v4 live
+  at 47.8%, ST-GCN v6 and MLP v4-rerun training, the untrained-heads
+  regression and its fix, and the one action that needs you (the Space's Groq
+  key is invalid).
+* `../docs/TRAINING_LESSONS.md` — 13 lessons, each measured here. Read before
+  writing another training script.
+* `SESSION_HANDOFF_2026-09-19.md` — previous. Two Kaggle kernels left
   running (ST-GCN attempt 4 vs the 63.0% bar; photo corpus v2), the one-line
   loader change awaiting sign-off, live-verification results, four real bugs
   fixed, and what was deliberately left undone.

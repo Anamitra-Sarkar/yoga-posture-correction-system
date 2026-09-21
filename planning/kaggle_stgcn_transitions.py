@@ -366,6 +366,20 @@ def main():
         nf = np.load(npf)
         nl = [str(x) for x in np.load(npl, allow_pickle=True)]
         npr = [str(x) for x in np.load(npp, allow_pickle=True)]
+        # Merge near-duplicate name spellings BEFORE choosing the holdout.
+        # The extractor lowercases and strips trailing digits, so santosh/
+        # santosh2 and veena/Veena already collapse -- but shiv/shiva and
+        # sathak/sarthak survived as separate "people". If those are the same
+        # body, splitting them across the holdout leaks exactly the thing this
+        # holdout exists to measure. Merging is the conservative error: it
+        # costs a little training data if they are genuinely different people,
+        # whereas not merging silently inflates the score if they are not.
+        def _canon(name):
+            for a, b in (("shiva", "shiv"), ("sarthak", "sathak")):
+                if name == a:
+                    return b
+            return name
+        npr = [_canon(x) for x in npr]
         people = sorted(set(npr))
         rs = np.random.RandomState(0)
         n_hold = max(1, int(round(len(people) * PERSON_HOLDOUT_FRAC)))
