@@ -123,6 +123,36 @@ QUERIES = {
     "seated_easy_pose": ["Sukhasana", "easy pose yoga", "cross legged meditation yoga"],
 }
 
+
+# Openverse matches all query words (AND), so the long descriptive phrasings
+# that work well on Commons return literally nothing there -- measured:
+# "Utkatasana chair pose yoga" -> 0 results, "chair pose" -> 240. These are
+# the short forms, one to two words, checked against the live API.
+OV_TERMS = {
+    "upward_dog": ["upward dog", "Urdhva Mukha Svanasana", "updog yoga"],
+    "standing_forward_fold": ["forward fold", "Uttanasana", "forward bend"],
+    "plank": ["plank yoga", "Phalakasana", "plank pose"],
+    "cobra_pose": ["Bhujangasana", "cobra pose", "cobra yoga"],
+    "chair_pose": ["chair pose", "Utkatasana"],
+    "halfway_lift": ["Ardha Uttanasana", "half forward bend"],
+    "chaturanga": ["Chaturanga", "Chaturanga Dandasana"],
+    "table_top": ["cat cow", "Marjaryasana", "tabletop yoga"],
+    "seated_forward": ["Paschimottanasana", "seated forward bend"],
+    "upward_salute": ["Urdhva Hastasana", "arms overhead yoga"],
+    "standing_pose": ["yoga pose", "asana", "yoga"],
+    "child_pose": ["Balasana", "child pose"],
+    "corpse": ["Savasana", "Shavasana", "corpse pose"],
+    "warrior_2": ["Virabhadrasana", "warrior pose", "warrior yoga"],
+    "lunge_pose": ["Anjaneyasana", "yoga lunge", "low lunge"],
+    "downward_dog": ["downward dog", "Adho Mukha Svanasana"],
+    "warrior_1": ["Virabhadrasana I", "warrior one"],
+    "mountain_pose": ["Tadasana", "mountain pose"],
+    "tree_pose": ["Vrksasana", "tree pose"],
+    "triangle": ["Trikonasana", "triangle pose"],
+    "seated_staff": ["Dandasana", "staff pose"],
+    "seated_easy_pose": ["Sukhasana", "easy pose", "lotus pose"],
+}
+
 # Classes already well covered do not need another 180 images; the starved ones
 # do. Spending the (rate-limited) request budget uniformly would mostly buy more
 # seated_easy_pose, which is already the largest class at 77.
@@ -134,7 +164,19 @@ sess = requests.Session()
 sess.headers.update({"User-Agent": UA})
 
 
+_GET_FAILURES = {}
+
+
 def _get(url, params, tries=4):
+    """Returns parsed JSON, or None after `tries` attempts.
+
+    Every non-retryable failure is RECORDED. The first version of this
+    swallowed them completely, and the result was that Openverse returned
+    nothing at all for all 22 classes in the first full run while the harvest
+    reported "0 openverse" as if that were simply the available supply. A
+    source going totally dark must never look like a source that is merely
+    empty -- the same lesson the Groq correction path taught this project.
+    """
     for a in range(tries):
         try:
             r = sess.get(url, params=params, timeout=45)
@@ -143,9 +185,20 @@ def _get(url, params, tries=4):
                 continue
             if r.status_code >= 500:
                 time.sleep(3 * (a + 1)); continue
+            if r.status_code >= 400:
+                key = f"{url} -> {r.status_code}: {r.text[:120]}"
+                if key not in _GET_FAILURES:
+                    print(f"    [API FAILURE] {key}", flush=True)
+                _GET_FAILURES[key] = _GET_FAILURES.get(key, 0) + 1
+                return None
             r.raise_for_status()
             return r.json()
-        except Exception:
+        except Exception as e:
+            if a == tries - 1:
+                key = f"{url} -> {type(e).__name__}: {str(e)[:120]}"
+                if key not in _GET_FAILURES:
+                    print(f"    [API FAILURE] {key}", flush=True)
+                _GET_FAILURES[key] = _GET_FAILURES.get(key, 0) + 1
             time.sleep(3 * (a + 1))
     return None
 
@@ -167,10 +220,20 @@ def search_commons(term, limit=120, offset=0):
     return out
 
 
-def search_openverse(term, page=1, page_size=100):
+# Anonymous Openverse requests are hard-capped at page_size 20; anything
+# larger is rejected with 401 "page_size may not exceed 20 for anonymous
+# requests". The first run asked for 100 and therefore got NOTHING, for every
+# class. It was not caught earlier because the pre-flight probe that "verified
+# Openverse works" used page_size=3 -- verifying with different parameters
+# than the code actually sends is not verification at all.
+OPENVERSE_MAX_ANON_PAGE_SIZE = 20
+
+
+def search_openverse(term, page=1, page_size=OPENVERSE_MAX_ANON_PAGE_SIZE):
     """Openverse is a different image pool from Commons, which is the entire
     point -- more ordinary-practitioner photography, the distribution the app
     is actually judged on."""
+    page_size = min(page_size, OPENVERSE_MAX_ANON_PAGE_SIZE)
     d = _get(OPENVERSE, {"q": term, "page": page, "page_size": page_size,
                          "license_type": "all-cc", "mature": "false"})
     out = []
@@ -232,6 +295,18 @@ def split_of(stable_id, test_frac=0.25):
 def gather(label, terms, budget):
     """Interleave the two sources so a slow/empty one never starves the other."""
     cands, seen_ids = [], set()
+    # Openverse is queried with its own short terms, not the Commons phrasings.
+    for t in OV_TERMS.get(label, []):
+        for page in range(1, 11):
+            got = search_openverse(t, page)
+            for c in got:
+                if c["id"] not in seen_ids:
+                    seen_ids.add(c["id"]); cands.append(c)
+            time.sleep(1.0)
+            if not got:
+                break
+        if len(cands) > budget * 8:
+            break
     for t in terms:
         for off in (0, 120, 240, 360):
             for c in search_commons(t, 120, off):
@@ -239,14 +314,6 @@ def gather(label, terms, budget):
                     seen_ids.add(c["id"]); cands.append(c)
             time.sleep(1.2)
             if len(cands) > budget * 8:
-                break
-        for page in (1, 2, 3):
-            got = search_openverse(t, page)
-            for c in got:
-                if c["id"] not in seen_ids:
-                    seen_ids.add(c["id"]); cands.append(c)
-            time.sleep(1.0)
-            if not got:
                 break
         if len(cands) > budget * 8:
             break
