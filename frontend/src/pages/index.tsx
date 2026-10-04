@@ -1949,7 +1949,7 @@ export default function Dashboard() {
                   {TRANSLATIONS[lang].modeGuided}
                 </button>
               </div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.55)", lineHeight: 1.4, marginBottom: 8 }}>
+              <div style={{ fontSize: "11px", color: "var(--color-text-muted)", lineHeight: 1.4, marginBottom: 8 }}>
                 {practiceMode === "guided" ? TRANSLATIONS[lang].modeGuidedHint : TRANSLATIONS[lang].modeFreeHint}
               </div>
               <div className="pose-card-grid">
