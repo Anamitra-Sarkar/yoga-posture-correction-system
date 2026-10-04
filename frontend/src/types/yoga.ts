@@ -11,6 +11,8 @@ export interface FrameInput {
   // Global body orientation. The 15 angle features are relative joint angles
   // and so cannot tell standing from lying down; these two scalars can.
   orientation?: { torso_incline: number; leg_torso_ratio: number };
+  // GUIDED mode only: the pose the user chose to practise. Omit in FREE mode.
+  target_pose?: string;
 }
 
 /**
@@ -28,6 +30,14 @@ export interface FrameResponse {
   motion_state?: MotionState;
   personal_correctness_score?: number | null; // present when calibration was sent
   calibrated_deviations?: { [jointName: string]: number } | null;
+  // Top-3 pose guesses (lets ambiguous pairs be shown honestly).
+  candidates?: { pose_id: string; probability: number }[] | null;
+  // Present only when the server-side pose cascade is on.
+  cascade?: { active: boolean; reason?: string | null; gated?: boolean | null; gate_pose?: string | null;
+              gate_other_prob?: number | null; correctness_source?: string | null; deviations_source?: string | null } | null;
+  // Present only when the request carried target_pose (Guided mode).
+  guided?: { target_pose: string; matches: boolean; target_correctness: number;
+             target_deviations: { [jointName: string]: number }; target_has_bands: boolean } | null;
 }
 
 export interface SequenceInput {

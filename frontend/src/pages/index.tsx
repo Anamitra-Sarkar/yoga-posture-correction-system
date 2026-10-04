@@ -314,6 +314,13 @@ const TRANSLATIONS: {
     appTitle: "AsanaAI — Smart Yoga Coach",
     newSession: "New Session",
     recognisedAsanas: "Recognised Asanas",
+    modeFree: "Free mode",
+    modeGuided: "Guided mode",
+    modeFreeHint: "Do any pose. I'll recognise it and score that pose.",
+    modeGuidedHint: "Pick a pose, then perform it. I'll check you against it.",
+    targetPose: "Target Pose",
+    wrongPoseDetected: "This looks like {detected}, not your selected {target}. Adjust into {target} to get scored.",
+    wrongPoseBadge: "Wrong Pose",
     detectedPose: "Detected Pose",
     stateHolding: "Holding",
     stateTransitioning: "In Transition",
@@ -367,6 +374,13 @@ const TRANSLATIONS: {
     appTitle: "असनएआई — स्मार्ट योग कोच",
     newSession: "नया सत्र",
     recognisedAsanas: "पहचानी जाने वाली मुद्राएँ",
+    modeFree: "मुक्त मोड",
+    modeGuided: "निर्देशित मोड",
+    modeFreeHint: "कोई भी मुद्रा करें। उसे पहचानकर उसी का स्कोर दिया जाएगा।",
+    modeGuidedHint: "एक मुद्रा चुनें, फिर उसे करें। आपकी जाँच उसी मुद्रा से होगी।",
+    targetPose: "लक्ष्य मुद्रा",
+    wrongPoseDetected: "यह {detected} जैसा लग रहा है, आपकी चुनी हुई {target} नहीं। स्कोर पाने के लिए {target} में आएं।",
+    wrongPoseBadge: "गलत मुद्रा",
     detectedPose: "पहचानी गई मुद्रा",
     stateHolding: "स्थिर",
     stateTransitioning: "संक्रमण में",
@@ -420,6 +434,13 @@ const TRANSLATIONS: {
     appTitle: "আসনএআই — স্মার্ট যোগ কোচ",
     newSession: "নতুন সেশন",
     recognisedAsanas: "চেনা আসনসমূহ",
+    modeFree: "মুক্ত মোড",
+    modeGuided: "নির্দেশিত মোড",
+    modeFreeHint: "যেকোনো আসন করুন। আসনটি শনাক্ত করে সেটির স্কোর দেওয়া হবে।",
+    modeGuidedHint: "একটি আসন বেছে নিন, তারপর করুন। সেই আসনের সাথে মিলিয়ে দেখা হবে।",
+    targetPose: "লক্ষ্য আসন",
+    wrongPoseDetected: "এটি {detected} বলে মনে হচ্ছে, আপনার নির্বাচিত {target} নয়। স্কোর পেতে {target} ভঙ্গিতে আসুন।",
+    wrongPoseBadge: "ভুল আসন",
     detectedPose: "শনাক্ত আসন",
     stateHolding: "স্থির",
     stateTransitioning: "পরিবর্তনে",
@@ -620,6 +641,24 @@ function ScoreRing({ correctness }: ScoreRingProps) {
 export default function Dashboard() {
   const [apiURL, setApiURL] = useState("http://localhost:8000/api");
   const [lang, setLang] = useState<"en" | "hi" | "bn">("en");
+  // Two ways to practise. FREE: do any pose, the app recognises it and scores THAT pose (the default).
+  // GUIDED: pick a pose first; the app checks you against it and says so when you hold a different one.
+  const [practiceMode, setPracticeMode] = useState<"free" | "guided">("free");
+  const [targetPose, setTargetPose] = useState<PresetPoseId>("warrior_2");
+  useEffect(() => {
+    try {
+      const m = window.localStorage.getItem("asana.practiceMode");
+      if (m === "free" || m === "guided") setPracticeMode(m);
+      const t = window.localStorage.getItem("asana.targetPose");
+      if (t && POSE_LIBRARY.some((p) => p.id === t)) setTargetPose(t as PresetPoseId);
+    } catch { /* storage unavailable (private mode, blocked): the defaults are fine */ }
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("asana.practiceMode", practiceMode);
+      window.localStorage.setItem("asana.targetPose", targetPose);
+    } catch { /* ignore */ }
+  }, [practiceMode, targetPose]);
   const [langDropOpen, setLangDropOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
@@ -1055,6 +1094,7 @@ export default function Dashboard() {
     correctionIsSafe,
     lastEfficacy,
     motionState,
+    poseMismatch,
     personalCorrectness,
     deviations,
     predictionTimestamp,
@@ -1066,7 +1106,8 @@ export default function Dashboard() {
     language: lang,
     groqApiKey: undefined,
     calibrationProfile: calibratedProfile || undefined,
-    correctnessThreshold: 0.75
+    correctnessThreshold: 0.75,
+    targetPose: practiceMode === "guided" ? targetPose : null,
   });
 
   // Free-form practice: there is no selected target pose any more. The app
@@ -1080,17 +1121,29 @@ export default function Dashboard() {
   // they moved between postures, which is visually jarring.
   const [guidePose, setGuidePose] = useState<string>("mountain_pose");
   useEffect(() => {
+    if (practiceMode === "guided") {
+      setGuidePose(targetPose);
+      return;
+    }
     if (activePose && activePose !== "transition/unknown" && POSE_GUIDE[activePose]) {
       setGuidePose(activePose);
     }
-  }, [activePose]);
+  }, [activePose, practiceMode, targetPose]);
 
   const isTransitioning = motionState === "transitioning";
   const isUnrecognized = motionState === "unrecognized" || activePose === "transition/unknown";
-  const displayCorrectionText = correctionText;
+  // GUIDED only: a recognised pose that is not the chosen one. The form score describes the DETECTED pose, so showing it
+  // (or coaching it) as if it were the target would be misleading. Re-checked live: the hook's flag is only recomputed once
+  // per ~10 s prediction cycle, but the target or the detection can change sooner.
+  const showMismatch = practiceMode === "guided" && poseMismatch && activePose !== targetPose && !isTransitioning;
+  const displayCorrectionText = showMismatch
+    ? TRANSLATIONS[lang].wrongPoseDetected
+        .replace("{detected}", getSanskritName(activePose, lang))
+        .replace(/{target}/g, getSanskritName(targetPose, lang))
+    : correctionText;
   // While moving, a form score is meaningless (it describes a held shape), so
   // don't show a number that will swing wildly mid-flow.
-  const effectiveCorrectness = isTransitioning ? 0 : correctness;
+  const effectiveCorrectness = isTransitioning || showMismatch ? 0 : correctness;
   // Personalised score, when the user has calibrated their Digital Twin.
   const effectivePersonalCorrectness = isTransitioning ? null : personalCorrectness;
 
@@ -1882,16 +1935,30 @@ export default function Dashboard() {
               detected pose highlighted live. */}
           <div className="sidebar-group">
             <div className="sidebar-group-header" onClick={() => setOpenGroupPose(!openGroupPose)}>
-              <span>{TRANSLATIONS[lang].recognisedAsanas}</span>
+              <span>{practiceMode === "guided" ? TRANSLATIONS[lang].targetPose : TRANSLATIONS[lang].recognisedAsanas}</span>
               <ChevronDown size={16} className={`chevron-icon ${!openGroupPose ? "collapsed" : ""}`} />
             </div>
             <div className={`sidebar-group-body ${!openGroupPose ? "collapsed" : ""}`}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }} role="group" aria-label="Practice mode">
+                <button type="button" className={`btn-toggle ${practiceMode === "free" ? "active" : ""}`}
+                  aria-pressed={practiceMode === "free"} onClick={() => setPracticeMode("free")}>
+                  {TRANSLATIONS[lang].modeFree}
+                </button>
+                <button type="button" className={`btn-toggle ${practiceMode === "guided" ? "active" : ""}`}
+                  aria-pressed={practiceMode === "guided"} onClick={() => setPracticeMode("guided")}>
+                  {TRANSLATIONS[lang].modeGuided}
+                </button>
+              </div>
+              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.55)", lineHeight: 1.4, marginBottom: 8 }}>
+                {practiceMode === "guided" ? TRANSLATIONS[lang].modeGuidedHint : TRANSLATIONS[lang].modeFreeHint}
+              </div>
               <div className="pose-card-grid">
                 {POSE_LIBRARY.map(({ id, icon }) => (
                   <div
                     key={id}
-                    className={`pose-card ${activePose === id ? "active" : ""}`}
+                    className={`pose-card ${(practiceMode === "guided" ? targetPose === id : activePose === id) ? "active" : ""}`}
                     title={getSanskritName(id, lang)}
+                    onClick={practiceMode === "guided" ? () => { setTargetPose(id); setSidebarOpen(false); } : undefined}
                   >
                     <span className="pose-card-icon">{icon}</span>
                     <span className="pose-card-label">{getSanskritName(id, lang)}</span>
@@ -2249,7 +2316,7 @@ export default function Dashboard() {
 
                     {/* Score badge */}
                     <div className={`fullscreen-score-badge ${effectiveCorrectness >= 0.75 ? 'good' : 'warn'}`}>
-                      {isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}
+                      {showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}
                     </div>
                   </>
                 )}
@@ -2280,7 +2347,7 @@ export default function Dashboard() {
                 <>
                   <div className="kpi-card">
                     <span className="kpi-label">{TRANSLATIONS[lang].postureScore}</span>
-                    <span className="kpi-value">{isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}</span>
+                    <span className="kpi-value">{showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}</span>
                     <span className="kpi-sub">{effectiveCorrectness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
                   </div>
                   {/* Personalised score, shown only once the user has
@@ -2382,6 +2449,14 @@ export default function Dashboard() {
                 <div className="guidance-content">
                   <span className="guidance-label-text">{TRANSLATIONS[lang].systemStatus}</span>
                   <span className="guidance-text">{TRANSLATIONS[lang].detectingPose}</span>
+                </div>
+              </div>
+            ) : showMismatch ? (
+              <div className="guidance-box" key="pose-mismatch">
+                <ShieldAlert size={24} />
+                <div className="guidance-content">
+                  <span className="guidance-label-text">{TRANSLATIONS[lang].wrongPoseBadge}</span>
+                  <span className="guidance-text">{displayCorrectionText}</span>
                 </div>
               </div>
             ) : isTransitioning ? (

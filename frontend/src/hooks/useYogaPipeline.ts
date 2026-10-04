@@ -10,6 +10,8 @@ interface UseYogaPipelineProps {
   groqApiKey?: string;
   calibrationProfile?: CalibrationProfile;
   correctnessThreshold?: number; // e.g. 0.70
+  // GUIDED mode: the pose the user chose to practise. null/undefined = FREE mode (detect whatever they do).
+  targetPose?: string | null;
 }
 
 export function useYogaPipeline({
@@ -17,12 +19,15 @@ export function useYogaPipeline({
   groqApiKey,
   calibrationProfile,
   correctnessThreshold = 0.70,
+  targetPose = null,
 }: UseYogaPipelineProps = {}) {
   const [activePose, setActivePose] = useState<string>("transition/unknown");
   const [correctness, setCorrectness] = useState<number>(1.0);
   const [personalCorrectness, setPersonalCorrectness] = useState<number | null>(null);
   const [motionState, setMotionState] = useState<MotionState>("unknown");
   const [deviations, setDeviations] = useState<{ [joint: string]: number }>({});
+  const [poseMismatch, setPoseMismatch] = useState<boolean>(false);
+  const [guided, setGuided] = useState<FrameResponse["guided"]>(null);
   const [flowPose, setFlowPose] = useState<string>("transition/unknown");
   const [flowConfidence, setFlowConfidence] = useState<number>(0.0);
   const [correctionText, setCorrectionText] = useState<string>("");
@@ -135,6 +140,7 @@ export function useYogaPipeline({
         motion,
         calibration: calibrationProfile,
         orientation,
+        target_pose: targetPose || undefined,
       };
       let currentMotionState: MotionState = "unknown";
 
@@ -154,6 +160,7 @@ export function useYogaPipeline({
             : personalEma.current.push(frameRes.personal_correctness_score));
         setMotionState(currentMotionState);
         setDeviations(activeDeviations);
+        setGuided(frameRes.guided ?? null);
       } else {
         // If sequence model is confident, sync Pose ID with the sequence target
         currentPoseId = poseSticky.current.push(flowPose);
@@ -173,6 +180,7 @@ export function useYogaPipeline({
               : personalEma.current.push(frameRes.personal_correctness_score));
           setMotionState(currentMotionState);
           setDeviations(activeDeviations);
+          setGuided(frameRes.guided ?? null);
         } catch (err) {
           console.error("Error fetching deviations for sequence:", err);
         }
@@ -191,7 +199,11 @@ export function useYogaPipeline({
       // completely different one would still show a high correctness score,
       // since that score only ever describes form quality for the DETECTED
       // pose, never whether it matches the user's chosen target.
-      // (No target pose any more: the app detects whatever the user is doing.)
+      // FREE mode (no targetPose): the app detects whatever the user is doing and scores THAT.
+      // GUIDED mode: the form score only describes the DETECTED pose, so if the user is holding a
+      // different (recognised) pose than the one they chose, say so instead of praising or coaching it.
+      const isMismatch = !!targetPose && currentPoseId !== "transition/unknown" && currentPoseId !== targetPose;
+      setPoseMismatch(isMismatch);
 
       // 6. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
       const now = Date.now();
@@ -214,6 +226,9 @@ export function useYogaPipeline({
           : "Flowing… hold your next posture and I'll guide you.";
         setCorrectionText(movingMsg);
         setCorrectionIsSafe(true);
+      } else if (isMismatch) {
+        // The UI layer owns the mismatch message (it has the localized pose names); no coaching for the wrong pose.
+        setCorrectionText("");
       } else if (currentPoseId !== "transition/unknown") {
         if (currentCorrectness < correctnessThreshold) {
           if (now - lastCorrectionTime.current > DEBOUNCE_MS) {
@@ -281,6 +296,7 @@ export function useYogaPipeline({
     // Re-translate the standing message when the language changes. Skipped
     // while moving, so the pipeline's "flowing" message is not overwritten.
     if (motionState === "transitioning") return;
+    if (poseMismatch) return;
     if (activePose !== "transition/unknown") {
       if (correctness >= correctnessThreshold) {
         const successMsg = language === "hi"
@@ -300,7 +316,7 @@ export function useYogaPipeline({
       setCorrectionText(alignMsg);
       setCorrectionIsSafe(true);
     }
-  }, [language, activePose, correctness, correctnessThreshold, motionState]);
+  }, [language, activePose, correctness, correctnessThreshold, motionState, poseMismatch]);
 
   const resetPipeline = () => {
     coordBuffer.current = [];
@@ -313,6 +329,8 @@ export function useYogaPipeline({
     setCorrectionIsSafe(true);
     setPersonalCorrectness(null);
     setMotionState("unknown");
+    setPoseMismatch(false);
+    setGuided(null);
     setDeviations({});
     angleHistory.current = [];
     setRecoveredJoints([]);
@@ -328,6 +346,8 @@ export function useYogaPipeline({
     lastEfficacy,
     efficacySummary: () => efficacy.current.summary(),
     motionState,
+    poseMismatch,
+    guided,
     personalCorrectness,
     deviations,
     predictionTimestamp,
