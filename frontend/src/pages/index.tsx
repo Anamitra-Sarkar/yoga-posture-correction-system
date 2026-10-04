@@ -25,6 +25,7 @@ import {
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
 import { extractAnglesFromLandmarks } from "../utils/geometry";
+import { pickVoice, splitForSpeech, utteranceLang, voiceMissing as isVoiceMissing } from "../utils/speechText";
 
 /* eslint-disable */
 type PresetPoseId = "warrior_2" | "cobra_pose" | "mountain_pose" | "tree_pose" | "plank" | "downward_dog";
@@ -321,6 +322,7 @@ const TRANSLATIONS: {
     targetPose: "Target Pose",
     wrongPoseDetected: "This looks like {detected}, not your selected {target}. Adjust into {target} to get scored.",
     wrongPoseBadge: "Wrong Pose",
+    voiceMissing: "No voice for this language was found on this device, so spoken guidance may be silent or in English. Captions still work. Add a voice in your device's speech settings.",
     detectedPose: "Detected Pose",
     stateHolding: "Holding",
     stateTransitioning: "In Transition",
@@ -381,6 +383,7 @@ const TRANSLATIONS: {
     targetPose: "लक्ष्य मुद्रा",
     wrongPoseDetected: "यह {detected} जैसा लग रहा है, आपकी चुनी हुई {target} नहीं। स्कोर पाने के लिए {target} में आएं।",
     wrongPoseBadge: "गलत मुद्रा",
+    voiceMissing: "इस डिवाइस में इस भाषा की आवाज़ नहीं मिली, इसलिए बोला गया मार्गदर्शन शांत या अंग्रेज़ी में हो सकता है। कैप्शन फिर भी दिखेंगे। डिवाइस की स्पीच सेटिंग में आवाज़ जोड़ें।",
     detectedPose: "पहचानी गई मुद्रा",
     stateHolding: "स्थिर",
     stateTransitioning: "संक्रमण में",
@@ -441,6 +444,7 @@ const TRANSLATIONS: {
     targetPose: "লক্ষ্য আসন",
     wrongPoseDetected: "এটি {detected} বলে মনে হচ্ছে, আপনার নির্বাচিত {target} নয়। স্কোর পেতে {target} ভঙ্গিতে আসুন।",
     wrongPoseBadge: "ভুল আসন",
+    voiceMissing: "এই ডিভাইসে এই ভাষার কণ্ঠস্বর পাওয়া যায়নি, তাই বলা নির্দেশনা নীরব বা ইংরেজিতে হতে পারে। ক্যাপশন তবুও দেখানো হবে। ডিভাইসের স্পিচ সেটিংসে কণ্ঠস্বর যোগ করুন।",
     detectedPose: "শনাক্ত আসন",
     stateHolding: "স্থির",
     stateTransitioning: "পরিবর্তনে",
@@ -662,6 +666,19 @@ export default function Dashboard() {
   const [langDropOpen, setLangDropOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  // Installed speech voices. Chrome fills this list asynchronously, so listen for `voiceschanged`.
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const synth = window.speechSynthesis;
+    const load = () => setVoices(synth.getVoices ? synth.getVoices() : []);
+    load();
+    synth.addEventListener?.("voiceschanged", load);
+    return () => synth.removeEventListener?.("voiceschanged", load);
+  }, []);
+  const speechTokenRef = useRef(0); // bumped on every announcement; a stale chunk chain stops when it no longer matches
+  // True only when the voice list HAS loaded and nothing in it speaks the chosen language (never on an empty, still-loading list).
+  const voiceMissingForLang = speechEnabled && isVoiceMissing(voices, lang);
   // Digital Twin Calibration States
   const [calibrationState, setCalibrationState] = useState<"idle" | "calibrating" | "complete">("idle");
   const [calibrationCountdown, setCalibrationCountdown] = useState(5);
@@ -978,42 +995,27 @@ export default function Dashboard() {
     }
 
     // Small delay to allow cancel/resume to register in browser engine
+    const token = ++speechTokenRef.current;
     setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Find voice matching the language if possible (improves desktop synthesis quality)
-      if (window.speechSynthesis.getVoices) {
-        const voices = window.speechSynthesis.getVoices();
-        const langCode = lang === 'hi' ? 'hi-IN' : lang === 'bn' ? 'bn-IN' : 'en-US';
-        const voice = voices.find(v => v.lang.includes(langCode) || v.lang.startsWith(lang === 'hi' ? 'hi' : lang === 'bn' ? 'bn' : 'en'));
-        if (voice) {
-          utterance.voice = voice;
-        }
-      }
-      utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'bn' ? 'bn-IN' : 'en-US';
-      utterance.rate = 0.92;   // Slightly slower for yoga instruction clarity
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      
-      // Chrome bug: long utterances silently stop after ~15s. Split and chain.
-      const MAX_CHUNK = 180;
-      if (text.length > MAX_CHUNK) {
-        const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
-        let idx = 0;
-        const speakNext = () => {
-          if (idx >= sentences.length || !speechEnabled) return;
-          const u = new SpeechSynthesisUtterance(sentences[idx].trim());
-          u.lang = utterance.lang;
-          if (utterance.voice) u.voice = utterance.voice;
-          u.rate = utterance.rate;
-          u.onend = () => { idx++; speakNext(); };
-          window.speechSynthesis.speak(u);
-        };
-        speakNext();
-        return;
-      }
-      
-      window.speechSynthesis.speak(utterance);
+      const synth = window.speechSynthesis;
+      const available = voices.length ? voices : (synth.getVoices ? synth.getVoices() : []);
+      const voice = pickVoice(available, lang);
+      // Chrome silently stops a long utterance after ~15 s, so chain short ones. The splitter understands the Hindi/Bengali
+      // danda (। ॥) as well as . ! ?, and falls back to word boundaries, so no language gets a single un-split block.
+      const chunks = splitForSpeech(text, 180);
+      let idx = 0;
+      const speakNext = () => {
+        if (token !== speechTokenRef.current || idx >= chunks.length) return; // a newer message took over, or done
+        const u = new SpeechSynthesisUtterance(chunks[idx]);
+        u.lang = utteranceLang(lang);
+        if (voice) u.voice = voice;
+        u.rate = 0.92;   // Slightly slower for yoga instruction clarity
+        u.pitch = 1.0;
+        u.volume = 1.0;
+        u.onend = () => { idx++; speakNext(); };
+        synth.speak(u);
+      };
+      speakNext();
     }, 50);
   };
 
@@ -2100,6 +2102,11 @@ export default function Dashboard() {
                     {speechEnabled ? "On" : "Muted"}
                   </span>
                 </div>
+                {voiceMissingForLang && (
+                  <div role="status" style={{ fontSize: "11px", color: "var(--color-warning)", lineHeight: 1.4, padding: "4px 2px" }}>
+                    {TRANSLATIONS[lang].voiceMissing}
+                  </div>
+                )}
                 {/* Pose */}
                 <div className="session-stat-row">
                   <div className="session-stat-dot active" />
