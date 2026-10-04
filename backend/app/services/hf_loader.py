@@ -97,6 +97,38 @@ def initialize_models():
         print(f"CRITICAL ERROR during model loading: {e}", file=sys.stderr)
         raise e
 
+# ---- optional stage-1 "gate" model of the pose cascade (a second 3-head MLP) -------------------------
+gate_model = None
+gate_classes: list = []
+gate_load_error = None  # why the gate is unavailable, surfaced in responses instead of failing silently
+
+
+def get_gate_model():
+    """Returns (model, classes) for the cascade's stage-1 screen, or (None, []) when the cascade is
+    disabled or the checkpoint cannot be loaded. Never raises: the endpoint then uses the original path."""
+    global gate_model, gate_classes, gate_load_error
+    if not settings.ENABLE_POSE_CASCADE:
+        return None, []
+    if gate_model is not None:
+        return gate_model, gate_classes
+    if gate_load_error is not None:
+        return None, []
+    try:
+        mp = hf_hub_download(repo_id=settings.GATE_REPO, filename=settings.GATE_MODEL_FILE, token=settings.HF_TOKEN)
+        ep = hf_hub_download(repo_id=settings.GATE_REPO, filename=settings.GATE_ENCODER_FILE, token=settings.HF_TOKEN)
+        classes = list(np.load(ep, allow_pickle=True))
+        model = Yoga3HeadMLP(input_dim=15, num_poses=len(classes))
+        model.load_state_dict(torch.load(mp, map_location=settings.DEVICE))
+        model.eval()
+        gate_model, gate_classes = model, classes
+        print(f"Pose cascade gate loaded: {settings.GATE_REPO}/{settings.GATE_MODEL_FILE} ({len(classes)} classes)", flush=True)
+        return gate_model, gate_classes
+    except Exception as e:  # noqa: BLE001 -- must never take the endpoint down
+        gate_load_error = f"{type(e).__name__}: {e}"
+        print(f"WARNING: pose cascade gate unavailable, using the original hybrid path: {gate_load_error}", file=sys.stderr, flush=True)
+        return None, []
+
+
 def get_mlp_model():
     initialize_models()
     return mlp_model, mlp_classes

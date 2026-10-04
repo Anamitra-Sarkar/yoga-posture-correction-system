@@ -4,7 +4,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from app.config import settings
-from app.services.hf_loader import get_mlp_model, get_stgcn_model
+from app.services import hf_loader
+from app.services.hf_loader import get_mlp_model, get_stgcn_model, get_gate_model
+from app.services.cascade import cascade_decide, guided_report
 from app.utils.geometry import FEATURE_NAMES, normalize_coordinate_sequence
 from app.utils.rules_classifier import hybrid_classify
 
@@ -39,6 +41,29 @@ class FrameInput(BaseModel):
     # missing information. Omitted by older clients, in which case
     # classification falls back to the 2D-only chain unchanged.
     orientation: Optional[Dict[str, float]] = None
+    # GUIDED mode only: the pose the user chose to practise. When present the response adds a `guided`
+    # block scored against THAT pose. Omit it for FREE mode (detect whatever the user is doing).
+    target_pose: Optional[str] = None
+
+class Candidate(BaseModel):
+    pose_id: str
+    probability: float
+
+class CascadeInfo(BaseModel):
+    active: bool
+    reason: Optional[str] = None            # why inactive (only when it was requested but unavailable)
+    gated: Optional[bool] = None            # stage 1 said "not one of my poses"
+    gate_pose: Optional[str] = None
+    gate_other_prob: Optional[float] = None
+    correctness_source: Optional[str] = None
+    deviations_source: Optional[str] = None
+
+class GuidedInfo(BaseModel):
+    target_pose: str
+    matches: bool
+    target_correctness: float
+    target_deviations: Dict[str, float]
+    target_has_bands: bool
 
 class FrameResponse(BaseModel):
     pose_id: str
@@ -51,6 +76,10 @@ class FrameResponse(BaseModel):
     # Deviations after the user's calibrated range is taken into account --
     # what a personalised correction should actually be based on.
     calibrated_deviations: Optional[Dict[str, float]] = None
+    # All optional: older clients (e.g. the Expo app) ignore unknown fields and keep working unchanged.
+    candidates: Optional[List[Candidate]] = None     # top-3 pose guesses, so ambiguous pairs can be shown honestly
+    cascade: Optional[CascadeInfo] = None            # present only when ENABLE_POSE_CASCADE is on
+    guided: Optional[GuidedInfo] = None              # present only when the request carried target_pose
 
 class SequenceInput(BaseModel):
     coordinates: List[List[float]] # Shape [60, 99]
@@ -193,6 +222,7 @@ def analyse_frame(data: FrameInput):
             mlp_correctness = torch.sigmoid(correctness_logit).item()
             devs_deg = (deviations_pred[0].cpu().numpy() * 180.0).tolist()
             mlp_devs = {FEATURE_NAMES[idx]: min(180.0, max(0.0, float(devs_deg[idx]))) for idx in range(15)}
+            namer_probs = torch.softmax(pose_logits, 1)[0].cpu().numpy()
 
         # Deterministic rule engine as a real-time sanity check on the MLP's
         # pose call (see Section "Real-World Generalization Gap" in the paper):
@@ -205,10 +235,39 @@ def analyse_frame(data: FrameInput):
         if data.world_angles is not None and len(data.world_angles) == 15:
             world_angles_dict = {FEATURE_NAMES[idx]: data.world_angles[idx] for idx in range(15)}
 
-        predicted_pose, correctness_prob, devs_dict = hybrid_classify(
-            mlp_pose, mlp_correctness, mlp_devs, angles_dict, world_angles_dict,
-            data.orientation
-        )
+        # Pose cascade (off unless ENABLE_POSE_CASCADE=1 AND the gate checkpoint loaded). When active, the live MLP
+        # names the pose, a second 3-head MLP screens "is this one of my poses?" and supplies the form score, and
+        # the rule engine no longer overrides either on the pose NAME. Otherwise: the original hybrid path, unchanged.
+        cascade_info = None
+        candidates = None
+        gate_model, gate_classes = get_gate_model()
+        if gate_model is not None:
+            with torch.no_grad():
+                g_logits, g_corr, g_dev = gate_model(x_tensor)
+                gate_probs = torch.softmax(g_logits, 1)[0].cpu().numpy()
+                g_corr_p = torch.sigmoid(g_corr).item()
+                g_devs_deg = (g_dev[0].cpu().numpy() * 180.0).tolist()
+            res = cascade_decide(
+                namer_pose=mlp_pose,
+                namer_dist={c: float(p) for c, p in zip(classes, namer_probs)},
+                gate_dist={c: float(p) for c, p in zip(gate_classes, gate_probs)},
+                angles=angles_dict,
+                gate_correctness=g_corr_p,
+                gate_devs={FEATURE_NAMES[i]: g_devs_deg[i] for i in range(15)},
+            )
+            predicted_pose, correctness_prob, devs_dict = res.pose_id, res.correctness, res.deviations
+            candidates = [Candidate(pose_id=n, probability=round(p, 4)) for n, p in res.candidates]
+            cascade_info = CascadeInfo(
+                active=True, gated=res.gated, gate_pose=res.gate_pose,
+                gate_other_prob=round(res.gate_other_prob, 4),
+                correctness_source=res.correctness_source, deviations_source=res.deviations_source)
+        else:
+            predicted_pose, correctness_prob, devs_dict = hybrid_classify(
+                mlp_pose, mlp_correctness, mlp_devs, angles_dict, world_angles_dict,
+                data.orientation
+            )
+            if settings.ENABLE_POSE_CASCADE:  # requested but unavailable: say so instead of failing silently
+                cascade_info = CascadeInfo(active=False, reason=hf_loader.gate_load_error or "gate unavailable")
 
         # Motion state. The old vocabulary collapsed two completely different
         # situations into the single "transition/unknown" label: the user
@@ -233,6 +292,9 @@ def analyse_frame(data: FrameInput):
             motion_state=motion_state,
             personal_correctness_score=personal_score,
             calibrated_deviations=calibrated_devs,
+            candidates=candidates,
+            cascade=cascade_info,
+            guided=GuidedInfo(**guided_report(data.target_pose, predicted_pose, angles_dict)) if data.target_pose else None,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Frame analysis failed: {str(e)}")
