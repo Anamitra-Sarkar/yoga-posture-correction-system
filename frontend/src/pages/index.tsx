@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import Script from "next/script";
-import { CpuPose, cpuEngineSupported, readEngineMode, saveEngineMode, warmEngineCache, type EngineMode } from "../utils/cpuPose";
+import { CpuPose, cpuEngineSupported, gpuKnownBad, readEngineMode, saveEngineMode, warmEngineCache, type EngineMode } from "../utils/cpuPose";
 import { 
   Volume2, 
   VolumeX, 
@@ -391,8 +391,6 @@ const TRANSLATIONS: {
     poseEngineSlow: "Pose engine is slow to load. Check your connection.",
     graphicsTitle: "Can't start the pose engine",
     graphicsDetails: "Details",
-    compatMode: "Compatibility mode",
-    compatTip: "Your phone cannot use graphics acceleration in this browser, so pose tracking runs on the processor. Tap to try the faster mode again.",
     offlineReady: "Ready to work offline",
     graphicsBody: "Your browser couldn't turn on graphics acceleration, which the pose engine needs. Close other tabs and apps, turn off battery saver, make sure hardware acceleration is on, or open this page in Chrome or Safari, then tap Retry.",
     practice: "Practice",
@@ -522,8 +520,6 @@ const TRANSLATIONS: {
     poseEngineSlow: "पोज़ इंजन देर से लोड हो रहा है। इंटरनेट जाँचें।",
     graphicsTitle: "पोज़ इंजन शुरू नहीं हो सका",
     graphicsDetails: "विवरण",
-    compatMode: "संगतता मोड",
-    compatTip: "इस ब्राउज़र में आपका फ़ोन ग्राफ़िक्स एक्सेलेरेशन इस्तेमाल नहीं कर सकता, इसलिए पोज़ ट्रैकिंग प्रोसेसर पर चल रही है। तेज़ मोड फिर आज़माने के लिए दबाएँ।",
     offlineReady: "ऑफ़लाइन चलने के लिए तैयार",
     graphicsBody: "आपका ब्राउज़र ग्राफ़िक्स एक्सेलेरेशन चालू नहीं कर सका, जो पोज़ इंजन के लिए ज़रूरी है। दूसरे टैब और ऐप बंद करें, बैटरी सेवर बंद करें, हार्डवेयर एक्सेलेरेशन चालू रखें, या इस पेज को Chrome या Safari में खोलें, फिर \"फिर कोशिश करें\" दबाएँ।",
     practice: "अभ्यास",
@@ -653,8 +649,6 @@ const TRANSLATIONS: {
     poseEngineSlow: "পোজ ইঞ্জিন লোড হতে দেরি হচ্ছে। ইন্টারনেট দেখুন।",
     graphicsTitle: "পোজ ইঞ্জিন চালু করা যায়নি",
     graphicsDetails: "বিস্তারিত",
-    compatMode: "সামঞ্জস্য মোড",
-    compatTip: "এই ব্রাউজারে আপনার ফোন গ্রাফিক্স অ্যাক্সিলারেশন ব্যবহার করতে পারছে না, তাই পোজ ট্র্যাকিং প্রসেসরে চলছে। দ্রুত মোড আবার চেষ্টা করতে চাপুন।",
     offlineReady: "অফলাইনে চলার জন্য প্রস্তুত",
     graphicsBody: "আপনার ব্রাউজার গ্রাফিক্স অ্যাক্সিলারেশন চালু করতে পারেনি, যা পোজ ইঞ্জিনের জন্য দরকার। অন্য ট্যাব ও অ্যাপ বন্ধ করুন, ব্যাটারি সেভার বন্ধ করুন, হার্ডওয়্যার অ্যাক্সিলারেশন চালু রাখুন, অথবা পেজটি Chrome বা Safari-তে খুলুন, তারপর \"আবার চেষ্টা করুন\" চাপুন।",
     practice: "অনুশীলন",
@@ -1279,7 +1273,8 @@ export default function Dashboard() {
   // files in the browser cache so the app keeps working later with no internet at all. Already-cached files are not downloaded again.
   // This never touches WebGL and never delays the camera: it pauses the moment the camera starts.
   useEffect(() => {
-    const remembered = readEngineMode();
+    let remembered = readEngineMode();
+    if (remembered === "gpu" && cpuEngineSupported() && gpuKnownBad()) { saveEngineMode("cpu"); remembered = "cpu"; }   // known-bad GPU: go straight to the CPU engine
     engineModeRef.current = remembered;
     setEngineMode(remembered);
     let cancelled = false;
@@ -1991,18 +1986,6 @@ export default function Dashboard() {
     engineErrorsRef.current = 0;
     setEngineState("loading");
     initMediaPipe();                     // creates the compatibility engine; the frame loop picks it up
-  };
-  // Tap on the "Compatibility mode" chip: forget the choice and try the fast engine again (it falls back by itself if it fails again).
-  const tryFastEngine = () => {
-    saveEngineMode("gpu");
-    engineModeRef.current = "gpu";
-    setEngineMode("gpu");
-    releasePose();
-    graphicsFailedRef.current = false;
-    engineErrorsRef.current = 0;
-    lastResultAtRef.current = 0;
-    setEngineState("loading");
-    initMediaPipe();
   };
   const failGraphics = () => {
     // MediaPipe's WebGL alert: a phone that ran the fast engine switches engines; alerts still arriving from the engine we just released are ignored.
@@ -2891,11 +2874,6 @@ export default function Dashboard() {
                           <span className="ap-engine basic" role="status" title={coachReason === "offline" ? T.coachOffline : coachReason === "waking" ? T.coachWaking : T.coachDown}>
                             <ScanLine size={14} />{T.basicMode}
                           </span>
-                        )}
-                        {engineMode === "cpu" && (
-                          <button className="ap-engine basic compat" onClick={tryFastEngine} title={T.compatTip} aria-label={T.compatTip}>
-                            <ScanLine size={14} />{T.compatMode}
-                          </button>
                         )}
                         {framing === "partial" && !bodyMissing ? (
                           <span className="ap-engine" role="status"><PersonStanding size={14} />{T.stepBack}</span>

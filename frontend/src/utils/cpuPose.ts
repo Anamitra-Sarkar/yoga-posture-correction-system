@@ -29,25 +29,38 @@ const MODEL_ROOT = "https://tfhub.dev/mediapipe/tfjs-model/blazepose_3d/";
 const TF_DETECTOR = `${MODEL_ROOT}detector/1`;
 const TF_LANDMARK_LITE = `${MODEL_ROOT}landmark/lite/2`;
 
-// ---- which engine this device uses (remembered, so a phone that needed the compatibility engine goes straight to it) ----
+// ---- which engine this device uses (decided automatically and remembered; the user is never asked and sees nothing) ----
 const MODE_KEY = "asana.engine";
-const MODE_TTL_MS = 3 * 24 * 60 * 60 * 1000;   // after 3 days the fast engine is tried again (browsers and drivers get updates)
+const MODE_TTL_MS = 30 * 24 * 60 * 60 * 1000;   // re-test after a month, or at once when the browser is updated (drivers/ANGLE change with it)
 export type EngineMode = "gpu" | "cpu";
+const browserMajor = (): number => Number((navigator.userAgent.match(/(?:Chrome|CriOS|Firefox|Version)\/(\d+)/) || [])[1] || 0);
 export const readEngineMode = (): EngineMode => {
   try {
     const raw = window.localStorage.getItem(MODE_KEY);
     if (!raw) return "gpu";
-    const { mode, at } = JSON.parse(raw);
-    return mode === "cpu" && Date.now() - Number(at) < MODE_TTL_MS ? "cpu" : "gpu";
+    const { mode, at, v } = JSON.parse(raw);
+    return mode === "cpu" && Date.now() - Number(at) < MODE_TTL_MS && Number(v) === browserMajor() ? "cpu" : "gpu";
   } catch { return "gpu"; }
 };
 export const saveEngineMode = (mode: EngineMode) => {
   try {
-    if (mode === "cpu") window.localStorage.setItem(MODE_KEY, JSON.stringify({ mode, at: Date.now() }));
+    if (mode === "cpu") window.localStorage.setItem(MODE_KEY, JSON.stringify({ mode, at: Date.now(), v: browserMajor() }));
     else { window.localStorage.removeItem(MODE_KEY); window.localStorage.removeItem(TFJS_KEY); }
   } catch { /* private mode: the choice just is not remembered */ }
 };
 export const cpuEngineSupported = (): boolean => typeof WebAssembly !== "undefined";
+
+/** GPUs whose driver is known to break MediaPipe's WebGL pipeline (measured: PowerVR BXM-8-256, e.g. MediaTek Dimensity 7020/7025/930).
+ *  Recognised up front so those phones go straight to the CPU engine instead of failing first. Unknown bad GPUs are still caught when
+ *  the fast engine fails (see switchToCompatibility in the app). Reads the renderer name only; the probe context is left to the browser. */
+export const gpuKnownBad = (): boolean => {
+  try {
+    const gl: any = document.createElement("canvas").getContext("webgl2") || document.createElement("canvas").getContext("webgl");
+    if (!gl) return false;
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    return /PowerVR.*BXM-8-256/i.test(ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : "");
+  } catch { return false; }
+};
 
 // remembers that this device needed the no-WebGL engine, so its files are also kept ready for offline use
 const TFJS_KEY = "asana.engine.tfjs";
