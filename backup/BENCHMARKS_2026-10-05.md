@@ -242,3 +242,21 @@ the occluder is a synthetic grey box, not a real object; a neutral SMPL stand-in
 **Fallback ladder in the app (automatic, nothing is shown to the user):** MediaPipe (GPU) -> if the renderer is the known-bad PowerVR BXM-8-256 (recognised at page load) or the engine aborts / raises its WebGL alert -> MediaPipe Tasks CPU in a worker (`frontend/public/engine/pose-worker.js`, `frontend/src/utils/cpuPose.ts`) -> if the worker cannot start (no WebGL / no worker) -> TF.js WASM. The decision is remembered per browser version for up to 30 days. A second MediaPipe module cannot share the page with the legacy one (global `Module` collision), hence the worker.
 **Quality check, GPU engine vs CPU engine (desktop, same photos, lite models):** mean joint-angle difference 2.4 deg (tree), 2.5 deg (cobra), 4.8 deg (warrior 2); on a mountain-pose photo the two engines tracked different people; the CPU engine found a plank that the GPU engine missed. Same model family, not bit-identical. **Latency:** ~20 skeleton updates/s (two instances) vs ~25-30 on a good GPU; the 1.5 s coaching cadence, the scoring and the recognition are unaffected.
 **Not measured:** a phone with a different broken GPU; sustained battery/thermal behaviour; the ST-GCN row (needs 25 fps: it shows "Static Check" on this path). The Dimensity 700 (Mali-G57) works on the normal GPU path (user report, not measured here).
+
+## 12. On-phone prediction test with photos (the real production path on the POCO M7 Pro, 2026-10-05)
+**What was run:** `backup/phone_debug/photo_pose_test.py`: the app (production) runs on the phone with the CPU pose engine (this phone's GPU path is broken, section 11); the camera is replaced by Wikimedia Commons yoga photos (looked up by the tab itself, 2-6 photos per pose, plus the app's own reference photo where it has one); every answer of the live server (`/analyse_frame`, cascade on) is logged. A photo counts as correct when the most frequent of its 3 answers equals the expected pose; a pose passes when >= 50% of its photos are correct. Raw results: `backup/phone_debug/photo_pose_test_last.json`.
+| Pose | Photos correct | Verdict | Notes |
+|---|---|---|---|
+| tree | 6 / 6 | pass | |
+| triangle | 5 / 5 | pass | |
+| warrior 2 | 3 / 3 | pass | |
+| downward dog | 4 / 4 | pass | one photo: no person found |
+| seated easy | 4 / 5 | pass | the miss was called child pose |
+| plank | 3 / 4 | pass | one photo: no person found; forearm plank called transition |
+| chair | 3 / 5 | pass | side view and one frontal photo missed |
+| corpse | 2 / 4 | pass (50%) | two lying photos called transition/unknown |
+| child's pose | 1 / 3 | **miss** | |
+| cobra | 1 / 5 | **miss** | the app's own reference photo was called warrior 2 |
+| mountain | 0 / 5 | **miss** | called seated staff / corpse / tree: known weak (section 7) |
+**Result: 8 of 11 poses pass.** Of the 7 poses that passed the held-out benchmark (section 4), the 6 tested here (chair, corpse, downward dog, tree, triangle, warrior 2) all pass on the phone; seated easy and plank also pass; mountain, cobra and child's pose do not (mountain and cobra were already weak in section 7).
+**Caveats (read before quoting):** still photos, not a moving person; labels come from file titles (not verified frame by frame); these are public Commons photos and the models were trained on Commons photos, so some of them may have been seen in training: this is an end-to-end check of the on-phone path (engine -> landmarks -> server -> label), not a generalisation number. A first search for "cobra" returned a helicopter (no person found, no prediction, not scored); the filter now excludes it. A live test with a person was attempted but nobody was in view, so there is no live-person accuracy yet.
