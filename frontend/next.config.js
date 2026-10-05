@@ -22,6 +22,12 @@ const withPWA = require('next-pwa')({
         cacheableResponse: { statuses: [0, 200] }
       }
     },
+    // The compatibility engine's worker script: always served from the cache (works offline), refreshed in the background.
+    {
+      urlPattern: ({ url }) => url.pathname === '/engine/pose-worker.js',
+      handler: 'StaleWhileRevalidate',
+      options: { cacheName: 'asana-engine-v1' }
+    },
     // Pose engines (MediaPipe and the CPU compatibility engine): cache-first in ONE cache that the page also fills during the first
     // visit (utils/cpuPose.ts warmEngineCache), so the app can start with no internet later. No expiry plugin: bump the name to refresh.
     {

@@ -81,6 +81,9 @@ export class CpuPose {
   private callback: ((results: any) => void) | null = null;
   private closed = false;
 
+  /** True when inference runs in a worker: the interface is not blocked, so frames can be analysed back to back. */
+  get offMainThread(): boolean { return !!this.worker; }
+
   setOptions(_options?: unknown) { /* the compatibility engines use one lite model */ }
   onResults(callback: (results: any) => void) { this.callback = callback; }
 
@@ -227,7 +230,7 @@ export async function warmEngineCache(kind: EngineMode, coarsePointer: boolean, 
       ...(coarsePointer ? [] : [`${MP}pose_landmark_full.tflite`]),
     ];
   } else {
-    urls = [`${TASKS}/vision_bundle.mjs`, `${TASKS}/wasm/vision_wasm_internal.js`, `${TASKS}/wasm/vision_wasm_internal.wasm`, TASKS_MODEL];
+    urls = [`${location.origin}/engine/pose-worker.js`, `${TASKS}/vision_bundle.mjs`, `${TASKS}/wasm/vision_wasm_internal.js`, `${TASKS}/wasm/vision_wasm_internal.wasm`, TASKS_MODEL];
     if (usedTfjs()) {
       urls.push(...TF_SCRIPTS, `${WASM_BASE}tfjs-backend-wasm-simd.wasm`, `${WASM_BASE}tfjs-backend-wasm.wasm`);
       urls.push(...(await modelFiles(cache, TF_DETECTOR)), ...(await modelFiles(cache, TF_LANDMARK_LITE)));

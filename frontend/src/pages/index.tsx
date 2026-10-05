@@ -391,7 +391,7 @@ const TRANSLATIONS: {
     poseEngineSlow: "Pose engine is slow to load. Check your connection.",
     graphicsTitle: "Can't start the pose engine",
     graphicsDetails: "Details",
-    compatMode: "Compatibility mode (slower)",
+    compatMode: "Compatibility mode",
     compatTip: "Your phone cannot use graphics acceleration in this browser, so pose tracking runs on the processor. Tap to try the faster mode again.",
     offlineReady: "Ready to work offline",
     graphicsBody: "Your browser couldn't turn on graphics acceleration, which the pose engine needs. Close other tabs and apps, turn off battery saver, make sure hardware acceleration is on, or open this page in Chrome or Safari, then tap Retry.",
@@ -522,7 +522,7 @@ const TRANSLATIONS: {
     poseEngineSlow: "पोज़ इंजन देर से लोड हो रहा है। इंटरनेट जाँचें।",
     graphicsTitle: "पोज़ इंजन शुरू नहीं हो सका",
     graphicsDetails: "विवरण",
-    compatMode: "संगतता मोड (धीमा)",
+    compatMode: "संगतता मोड",
     compatTip: "इस ब्राउज़र में आपका फ़ोन ग्राफ़िक्स एक्सेलेरेशन इस्तेमाल नहीं कर सकता, इसलिए पोज़ ट्रैकिंग प्रोसेसर पर चल रही है। तेज़ मोड फिर आज़माने के लिए दबाएँ।",
     offlineReady: "ऑफ़लाइन चलने के लिए तैयार",
     graphicsBody: "आपका ब्राउज़र ग्राफ़िक्स एक्सेलेरेशन चालू नहीं कर सका, जो पोज़ इंजन के लिए ज़रूरी है। दूसरे टैब और ऐप बंद करें, बैटरी सेवर बंद करें, हार्डवेयर एक्सेलेरेशन चालू रखें, या इस पेज को Chrome या Safari में खोलें, फिर \"फिर कोशिश करें\" दबाएँ।",
@@ -653,7 +653,7 @@ const TRANSLATIONS: {
     poseEngineSlow: "পোজ ইঞ্জিন লোড হতে দেরি হচ্ছে। ইন্টারনেট দেখুন।",
     graphicsTitle: "পোজ ইঞ্জিন চালু করা যায়নি",
     graphicsDetails: "বিস্তারিত",
-    compatMode: "সামঞ্জস্য মোড (ধীর)",
+    compatMode: "সামঞ্জস্য মোড",
     compatTip: "এই ব্রাউজারে আপনার ফোন গ্রাফিক্স অ্যাক্সিলারেশন ব্যবহার করতে পারছে না, তাই পোজ ট্র্যাকিং প্রসেসরে চলছে। দ্রুত মোড আবার চেষ্টা করতে চাপুন।",
     offlineReady: "অফলাইনে চলার জন্য প্রস্তুত",
     graphicsBody: "আপনার ব্রাউজার গ্রাফিক্স অ্যাক্সিলারেশন চালু করতে পারেনি, যা পোজ ইঞ্জিনের জন্য দরকার। অন্য ট্যাব ও অ্যাপ বন্ধ করুন, ব্যাটারি সেভার বন্ধ করুন, হার্ডওয়্যার অ্যাক্সিলারেশন চালু রাখুন, অথবা পেজটি Chrome বা Safari-তে খুলুন, তারপর \"আবার চেষ্টা করুন\" চাপুন।",
@@ -1859,7 +1859,7 @@ export default function Dashboard() {
         let engineInFlight: any = null;
         if (!stream.active || !videoRef.current) return;
         const v = videoRef.current;
-        const minGap = engineModeRef.current === "cpu" ? 100 : coarse ? 45 : 0; // phones: at most ~22 analyses/s (compatibility engine ~10/s, it runs on the CPU)
+        const minGap = engineModeRef.current === "cpu" ? (poseRef.current?.offMainThread ? 0 : 100) : coarse ? 45 : 0; // phones: at most ~22 analyses/s; compatibility engine: back to back in its worker (~10/s), spaced out when it has to run on the main thread
         if (v.readyState >= 2 && v.videoWidth > 0 && (poseRef.current || initMediaPipe()) && performance.now() - lastSendRef.current >= minGap) {
           lastSendRef.current = performance.now();
           try {

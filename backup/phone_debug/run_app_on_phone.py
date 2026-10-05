@@ -12,6 +12,8 @@ HOOK = r"""
   if (window.OffscreenCanvas) { const o2 = OffscreenCanvas.prototype.getContext; OffscreenCanvas.prototype.getContext = function (t, a) { const r = o2.call(this, t, a); if (/webgl/i.test(t)) window.__ctx.push({ t, attrs: a ? JSON.stringify(a) : '', ok: !!r, off: true, at: Math.round(performance.now()) }); return r; }; }
   addEventListener('webglcontextcreationerror', e => window.__ev.push('creationerror: ' + (e.statusMessage || '').slice(0, 300)), true);
   addEventListener('webglcontextlost', e => window.__ev.push('contextlost'), true);
+  window.__clr = 0; const cr = CanvasRenderingContext2D.prototype.clearRect;
+  CanvasRenderingContext2D.prototype.clearRect = function (...a) { if (this.canvas && this.canvas.className === 'ap-canvas') window.__clr++; return cr.apply(this, a); };
   window.__alerts = []; const al = window.alert; window.__rawAlert = al;
   window.addEventListener('error', e => window.__ev.push('error: ' + String(e.message).slice(0, 200)));
   window.addEventListener('unhandledrejection', e => window.__ev.push('rejection: ' + String(e.reason && e.reason.message || e.reason).slice(0, 200)));
@@ -44,11 +46,12 @@ async def main():
             t0 = time.time()
             while time.time() - t0 < SECS:
                 await asyncio.sleep(5)
-                st = await ev("JSON.stringify({ctx: window.__ctx.length, err: !!document.querySelector('.ap-idle.err'), errTitle: (document.querySelector('.ap-idle.err h2')||{}).textContent||'', compat: !!document.querySelector('.compat'), hud: [...document.querySelectorAll('.ap-hud span, .ap-hud button')].map(x=>x.textContent.trim()).filter(Boolean).slice(0,4), pose: (document.querySelector('.ap-pose-name, .ap-live-col h3')||{}).textContent||''})")
+                st = await ev("JSON.stringify({ctx: window.__ctx.length, err: !!document.querySelector('.ap-idle.err'), errTitle: (document.querySelector('.ap-idle.err h2')||{}).textContent||'', compat: !!document.querySelector('.compat'), hud: [...document.querySelectorAll('.ap-hud span, .ap-hud button')].map(x=>x.textContent.trim()).filter(Boolean).slice(0,4), results: window.__clr, mode: localStorage.getItem('asana.engine') ? 'cpu' : 'gpu'})")
                 print(f"t+{int(time.time()-t0)}s {st}")
             print("WebGL context requests:", await ev("JSON.stringify(window.__ctx)"))
             print("events:", await ev("JSON.stringify(window.__ev)"))
             print("console:", logs[-12:])
+            print("fallback TF.js loaded:", await ev("typeof window.tf"), "| tfjs flag:", await ev("localStorage.getItem('asana.engine.tfjs')"))
             print("stored engine mode:", await ev("localStorage.getItem('asana.engine')"))
             print("details panel:", await ev("(document.querySelector('.ap-gfx pre')||{}).textContent||'none'"))
             await ev("document.querySelector('.ap-dock-main.stop, .ap-btn.dark') && document.querySelector('.ap-dock-main.stop, .ap-btn.dark').click()")
