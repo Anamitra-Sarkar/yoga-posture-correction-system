@@ -1,805 +1,289 @@
 import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { 
-  Menu, 
-  X, 
-  Sparkles, 
-  Activity, 
-  ShieldCheck, 
-  Volume2, 
-  Cpu, 
-  Layers, 
-  Globe, 
-  Server, 
-  Cloud, 
-  HelpCircle,
+import {
+  Menu,
+  X,
   Smartphone,
-  CheckCircle2
+  PersonStanding,
+  Volume2,
+  ShieldCheck,
+  Languages,
+  WifiOff,
+  Gauge,
+  Lock,
+  ChevronDown,
+  Camera,
+  Ruler,
 } from "lucide-react";
+
+/* ── pose figures: simple joint-and-bone drawings in the same style as the app's live overlay ───────────────── */
+type Pt = [number, number];
+interface Figure { head: Pt; lines: Pt[][]; ground?: number; accent?: Pt }
+
+const FIGURES: { [id: string]: Figure } = {
+  mountain: {
+    head: [60, 18],
+    lines: [[[60, 28], [60, 72]], [[50, 34], [70, 34]], [[54, 72], [66, 72]], [[50, 34], [46, 54], [45, 74]], [[70, 34], [74, 54], [75, 74]], [[54, 72], [54, 102], [54, 132]], [[66, 72], [66, 102], [66, 132]]],
+  },
+  tree: {
+    head: [60, 22],
+    lines: [[[60, 30], [60, 72]], [[50, 36], [70, 36]], [[54, 72], [66, 72]], [[50, 36], [44, 20], [58, 8]], [[70, 36], [76, 20], [62, 8]], [[54, 72], [54, 102], [54, 132]], [[66, 72], [84, 90], [58, 98]]],
+  },
+  warrior: {
+    head: [60, 21],
+    lines: [[[60, 34], [60, 70]], [[50, 36], [70, 36]], [[52, 72], [68, 72]], [[50, 36], [26, 37], [6, 37]], [[70, 36], [94, 37], [114, 37]], [[52, 72], [28, 96], [24, 130]], [[68, 72], [92, 100], [108, 130]]],
+    accent: [28, 96],
+  },
+  cobra: {
+    head: [36, 68], ground: 124,
+    lines: [[[44, 84], [70, 112]], [[70, 112], [96, 118], [116, 122]], [[44, 84], [46, 104], [48, 122]]],
+  },
+  plank: {
+    head: [20, 60], ground: 112,
+    lines: [[[34, 66], [70, 76], [92, 82], [112, 88]], [[34, 66], [34, 88], [34, 110]]],
+  },
+  dog: {
+    head: [38, 88], ground: 114,
+    lines: [[[104, 112], [88, 82], [70, 50]], [[70, 50], [42, 76], [20, 112]]],
+  },
+};
+
+function PoseFigure({ id, stroke = "var(--ink)", joint = "var(--brand)", ground = "var(--line-2)", width = 3 }: { id: string; stroke?: string; joint?: string; ground?: string; width?: number }) {
+  const f = FIGURES[id];
+  const dots = new Map<string, Pt>();
+  f.lines.forEach((l) => l.forEach((p) => dots.set(p.join(","), p)));
+  return (
+    <svg viewBox="0 0 120 140" role="img" aria-hidden="true" className="lp-figure">
+      {f.ground !== undefined && <line x1="6" y1={f.ground} x2="114" y2={f.ground} stroke={ground} strokeWidth="2" strokeLinecap="round" />}
+      <g fill="none" stroke={stroke} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx={f.head[0]} cy={f.head[1]} r="8" />
+        {f.lines.map((l, i) => <polyline key={i} points={l.map((p) => p.join(",")).join(" ")} />)}
+      </g>
+      {[...dots.values()].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3.4" fill={joint} />)}
+      {f.accent && <circle cx={f.accent[0]} cy={f.accent[1]} r="5.2" fill="#f2b84b" stroke="rgba(20,19,16,0.4)" strokeWidth="1.5" />}
+    </svg>
+  );
+}
+
+const POSES = [
+  { fig: "mountain", sanskrit: "Tadasana", name: "Mountain", line: "Stand tall and find your balance." },
+  { fig: "tree", sanskrit: "Vrikshasana", name: "Tree", line: "Steady focus, steady legs." },
+  { fig: "warrior", sanskrit: "Virabhadrasana II", name: "Warrior II", line: "Strong legs, open chest." },
+  { fig: "cobra", sanskrit: "Bhujangasana", name: "Cobra", line: "A gentle opening for chest and spine." },
+  { fig: "plank", sanskrit: "Phalakasana", name: "Plank", line: "Builds core and arm strength." },
+  { fig: "dog", sanskrit: "Adho Mukha Svanasana", name: "Downward dog", line: "Lengthens the back and legs." },
+];
+
+const FEATURES = [
+  { icon: PersonStanding, title: "Knows the pose you're in", text: "Just practise. AsanaAI recognises what you are doing, so there is nothing to select." },
+  { icon: Gauge, title: "A score you can watch", text: "See how close your alignment is, live, and which joint to adjust first." },
+  { icon: Volume2, title: "Guidance you can hear", text: "Gentle spoken cues in English, हिन्दी or বাংলা, so you never have to look at the screen." },
+  { icon: ShieldCheck, title: "Fits your body", text: "It learns how far your joints naturally move, so feedback is about you, not an ideal." },
+  { icon: WifiOff, title: "Keeps going without internet", text: "After your first visit, basic recognition and tips still work offline." },
+  { icon: Lock, title: "Private by design", text: "Your video stays on your device. Nothing is recorded, and there is no account." },
+];
+
+const STEPS = [
+  { icon: Smartphone, title: "Prop up your phone", text: "Stand about two metres back, in good light, with your whole body in view." },
+  { icon: Camera, title: "Move into a pose", text: "Practise freely, or pick a pose to work on and get checked against it." },
+  { icon: Volume2, title: "Adjust with gentle guidance", text: "Watch your score and hear what to change, one small step at a time." },
+];
+
+const FAQ = [
+  { q: "Do I need an account?", a: "No. Open the app and start. There is nothing to sign up for and nothing to install." },
+  { q: "Which devices does it work on?", a: "Any recent phone, tablet or laptop with a camera, in a current browser such as Chrome or Safari." },
+  { q: "Does it work without internet?", a: "Open the app once online. After that, basic pose recognition and tips keep working offline, and the full coach returns when you reconnect." },
+  { q: "Which languages are supported?", a: "English, हिन्दी and বাংলা, both on screen and spoken aloud (spoken guidance depends on the voices installed on your device)." },
+  { q: "Where does my video go?", a: "It doesn't leave your device. AsanaAI analyses the position of your body, not your picture, and nothing is recorded or stored." },
+  { q: "Can it replace a yoga teacher?", a: "No. AsanaAI gives general guidance and is not medical advice. Listen to your body, and stop if something hurts. If you have an injury or health condition, check with a professional first." },
+];
 
 export default function LandingPage() {
   const [navOpen, setNavOpen] = useState(false);
+  const [open, setOpen] = useState<number | null>(0);
+  const close = () => setNavOpen(false);
 
   return (
-    <div className="landing-wrapper">
+    <div className="lp">
       <Head>
-        <title>AsanaAI — Real-Time AI Yoga Coach</title>
-        <meta name="description" content="Practice yoga smarter with AsanaAI. Real-time posture correction, 13-stage AI pipeline, personalized digital twin calibration, and multilingual voice feedback." />
+        <title>AsanaAI — Yoga guidance that watches your form</title>
+        <meta name="description" content="Open your camera, move into a pose and get gentle, instant feedback on your alignment, spoken in English, Hindi or Bengali. Free, no sign-up, and your video stays on your device." />
+        <meta property="og:title" content="AsanaAI — Yoga guidance that watches your form" />
+        <meta property="og:description" content="Gentle, instant feedback on your yoga alignment, in your language. Free, private, nothing to install." />
+        <meta name="theme-color" content="#f5f2ec" />
       </Head>
 
-      {/* 1. Sticky Navbar */}
-      <nav className="landing-nav">
-        <div className="app-logo">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-primary)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="logo-mark"
-          >
-            <path d="M12 2C12 2 15 7 15 11C15 15 12 22 12 22C12 22 9 15 9 11C9 7 12 2 12 2Z" />
-            <path d="M12 11C15 9 20 9 21 11C22 13 19 16 12 22" />
-            <path d="M12 11C9 9 4 9 3 11C2 13 5 16 12 22" />
-          </svg>
-          <span>AsanaAI</span>
-        </div>
-
-        <ul className={`landing-nav-links ${navOpen ? "open" : ""}`}>
-          <li>
-            <a href="#features" onClick={() => setNavOpen(false)}>Features</a>
-          </li>
-          <li>
-            <a href="#how-it-works" onClick={() => setNavOpen(false)}>How It Works</a>
-          </li>
-          <li>
-            <a href="#tech-stack" onClick={() => setNavOpen(false)}>Tech Stack</a>
-          </li>
-          <li>
-            <Link href="/" className="btn-primary btn-sm" onClick={() => setNavOpen(false)}>
-              Launch App
-            </Link>
-          </li>
-        </ul>
-
-        <button 
-          className="mobile-menu-btn" 
-          onClick={() => setNavOpen(!navOpen)}
-          aria-label="Toggle navigation menu"
-        >
-          {navOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </nav>
-
-      {/* 2. Hero Section */}
-      <header className="landing-section hero-section">
-        <div className="hero-content">
-          <div className="landing-section-label">Intelligent Movement Analysis</div>
-          <h1 className="hero-title">Real-Time AI Yoga Coach</h1>
-          <p className="hero-subtitle">
-            Detect your pose. Get instant biomechanical feedback. Practice yoga smarter with a 13-stage AI pipeline.
-          </p>
-          <div className="hero-actions-row">
-            <Link href="/" className="btn-primary">
-              Launch Dashboard
-            </Link>
-            <a 
-              href="https://github.com/Anamitra-Sarkar/yoga-posture-correction-system" 
-              className="btn-outline"
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              View on GitHub
-            </a>
-          </div>
-        </div>
-
-        {/* Decorative Background Skeleton Overlay */}
-        <div className="hero-skeleton-wrapper" aria-hidden="true">
-          <svg viewBox="0 0 400 400" width="100%" height="100%">
-            {/* Ground line */}
-            <line x1="50" y1="350" x2="350" y2="350" stroke="var(--color-divider)" strokeWidth="2" />
-            
-            {/* Spine & Head */}
-            <line x1="200" y1="200" x2="200" y2="150" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <circle cx="200" cy="120" r="16" fill="none" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            
-            {/* Hips & Legs (Warrior II pose representation) */}
-            <line x1="200" y1="200" x2="160" y2="200" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <line x1="200" y1="200" x2="240" y2="200" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            
-            {/* Back Leg (Right) - Straight */}
-            <line x1="160" y1="200" x2="110" y2="270" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <line x1="110" y1="270" x2="70" y2="350" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <circle cx="70" cy="350" r="6" fill="var(--color-primary)" opacity="0.25" />
-            
-            {/* Front Leg (Left) - Bent at 90 degrees */}
-            <line x1="240" y1="200" x2="300" y2="200" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <line x1="300" y1="200" x2="300" y2="350" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <circle cx="300" cy="350" r="6" fill="var(--color-primary)" opacity="0.25" />
-            
-            {/* Arms - Extended horizontally */}
-            <line x1="200" y1="165" x2="110" y2="165" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <circle cx="110" cy="165" r="5" fill="var(--color-primary)" opacity="0.25" />
-            
-            {/* Front Arm (Right) */}
-            <line x1="200" y1="165" x2="300" y2="165" stroke="var(--color-primary)" strokeWidth="4" opacity="0.25" />
-            <circle cx="300" cy="165" r="5" fill="var(--color-primary)" opacity="0.25" />
-
-            {/* Joints highlights */}
-            <circle cx="200" cy="200" r="7" fill="var(--color-primary)" opacity="0.35" /> {/* Pelvis */}
-            <circle cx="200" y1="165" r="7" fill="var(--color-primary)" opacity="0.35" /> {/* Shoulder Center */}
-            <circle cx="160" cy="200" r="6" fill="var(--color-primary)" opacity="0.35" /> {/* Hip R */}
-            <circle cx="240" cy="200" r="6" fill="var(--color-primary)" opacity="0.35" /> {/* Hip L */}
-            <circle cx="300" cy="200" r="7" fill="var(--color-primary)" opacity="0.35" /> {/* Knee L (target angle 90) */}
-            <circle cx="110" cy="270" r="6" fill="var(--color-primary)" opacity="0.35" /> {/* Knee R */}
-          </svg>
+      <header className="lp-nav">
+        <div className="lp-wrap lp-nav-in">
+          <a href="#top" className="lp-brand" onClick={close}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3c1.6 2.6 2.4 5 2.4 7.2 0 3.2-1.6 6.5-2.4 10.8-.8-4.3-2.4-7.6-2.4-10.8C9.6 8 10.4 5.6 12 3Z" />
+              <path d="M12 13.2c2.4-3.4 6.2-4.4 8.6-3.7-.5 3.1-3.9 6.7-8.6 8.2" />
+              <path d="M12 13.2C9.6 9.8 5.8 8.8 3.4 9.5c.5 3.1 3.9 6.7 8.6 8.2" />
+            </svg>
+            <span>AsanaAI</span>
+          </a>
+          <nav className={`lp-links ${navOpen ? "open" : ""}`} aria-label="Sections">
+            <a href="#how" onClick={close}>How it works</a>
+            <a href="#poses" onClick={close}>Poses</a>
+            <a href="#private" onClick={close}>Privacy</a>
+            <a href="#faq" onClick={close}>FAQ</a>
+            <Link href="/" className="lp-btn sm" onClick={close}>Start practising</Link>
+          </nav>
+          <button className="lp-burger" aria-label={navOpen ? "Close menu" : "Open menu"} aria-expanded={navOpen} onClick={() => setNavOpen(!navOpen)}>
+            {navOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </header>
 
-      {/* 3. Features Grid */}
-      <section id="features" className="landing-section features-section">
-        <div className="landing-section-label">Capability Matrix</div>
-        <h2 className="landing-section-heading">Why AsanaAI</h2>
-        
-        <div className="landing-feature-grid">
-          <div className="landing-feature-card">
-            <Activity className="feature-icon" size={20} />
-            <span className="landing-feature-category">Detection</span>
-            <h3 className="landing-feature-title">Real-Time Pose Detection</h3>
-            <p className="landing-feature-desc">
-              MediaPipe landmark tracking at 30fps with client-side biomechanical angle extraction.
-            </p>
-          </div>
+      <main id="top">
+        {/* Hero */}
+        <section className="lp-hero">
+          <div className="lp-wrap lp-hero-in">
+            <div className="lp-hero-copy">
+              <p className="lp-eyebrow">Yoga guidance, right on your phone</p>
+              <h1>A calm coach that watches your form.</h1>
+              <p className="lp-lede">
+                Open your camera, move into a pose, and get gentle, instant feedback on your alignment, spoken aloud in English, हिन्दी or বাংলা. No sign-up. Nothing to install.
+              </p>
+              <div className="lp-cta">
+                <Link href="/" className="lp-btn">Start practising</Link>
+                <a href="#how" className="lp-btn ghost">See how it works</a>
+              </div>
+              <ul className="lp-trust">
+                <li>Free to use</li>
+                <li>Works in your browser</li>
+                <li>Your video stays on your device</li>
+              </ul>
+            </div>
 
-          <div className="landing-feature-card">
-            <Layers className="feature-icon" size={20} />
-            <span className="landing-feature-category">Pipeline</span>
-            <h3 className="landing-feature-title">13-Stage AI Pipeline</h3>
-            <p className="landing-feature-desc">
-              From landmark ingestion to correction voice output, every frame is processed through a typed pipeline.
-            </p>
-          </div>
-
-          <div className="landing-feature-card">
-            <ShieldCheck className="feature-icon" size={20} />
-            <span className="landing-feature-category">Personalization</span>
-            <h3 className="landing-feature-title">Digital Twin Calibration</h3>
-            <p className="landing-feature-desc">
-              User-specific joint range limits that personalize the posture feedback thresholds to prevent hyperextensions.
-            </p>
-          </div>
-
-          <div className="landing-feature-card">
-            <HelpCircle className="feature-icon" size={20} />
-            <span className="landing-feature-category">Occlusions</span>
-            <h3 className="landing-feature-title">Occlusion Recovery</h3>
-            <p className="landing-feature-desc">
-              When a joint is self-occluded, the system mirrors the symmetric counterpart using anatomical constraints.
-            </p>
-          </div>
-
-          <div className="landing-feature-card">
-            <Volume2 className="feature-icon" size={20} />
-            <span className="landing-feature-category">Audio</span>
-            <h3 className="landing-feature-title">Multilingual Voice Guidance</h3>
-            <p className="landing-feature-desc">
-              Natural, safety-bounded text-to-speech correction cues delivered in English, Hindi, and Bengali.
-            </p>
-          </div>
-
-          <div className="landing-feature-card">
-            <Layers className="feature-icon" size={20} />
-            <span className="landing-feature-category">Poses</span>
-            <h3 className="landing-feature-title">6-Pose Guided Library</h3>
-            <p className="landing-feature-desc">
-              Warrior II, Plank, Tree, Chair, Cobra, and Mountain pose, each with dedicated alignment cues and biomechanical correction rules.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. How It Works */}
-      <section id="how-it-works" className="landing-section how-works-section">
-        <div className="landing-section-label">Workflow Architecture</div>
-        <h2 className="landing-section-heading">From Frame to Feedback</h2>
-        
-        <div className="steps-flow">
-          <div className="step-item">
-            <div className="step-number">01</div>
-            <div className="step-text">
-              <h3 className="step-name">Capture</h3>
-              <p className="step-desc">Webcam frame captured and landmarked in the browser via MediaPipe.</p>
+            <div className="lp-device" aria-hidden="true">
+              <div className="lp-device-screen">
+                <span className="lp-live"><i />LIVE</span>
+                <div className="lp-device-fig"><PoseFigure id="warrior" stroke="#ffffff" joint="#7fd1a8" ground="rgba(255,255,255,0.25)" width={3.2} /></div>
+                <div className="lp-device-caption">Soften your front knee a little more.</div>
+                <div className="lp-device-chip"><b>Virabhadrasana II</b><em>92%</em></div>
+              </div>
+              <div className="lp-device-card">
+                <span className="lp-eyebrow">Posture score</span>
+                <strong>92%</strong>
+                <small>On target · Holding</small>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div className="step-item">
-            <div className="step-number">02</div>
-            <div className="step-text">
-              <h3 className="step-name">Landmark Detection</h3>
-              <p className="step-desc">MediaPipe model parses 33 3D skeleton keypoints in real time.</p>
+        {/* How it works */}
+        <section id="how" className="lp-sec">
+          <div className="lp-wrap">
+            <h2>Three steps. That's all.</h2>
+            <ol className="lp-steps">
+              {STEPS.map((s, i) => (
+                <li key={s.title}>
+                  <span className="lp-step-no">{i + 1}</span>
+                  <s.icon size={22} strokeWidth={1.7} />
+                  <h3>{s.title}</h3>
+                  <p>{s.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* What you get */}
+        <section className="lp-sec lp-alt">
+          <div className="lp-wrap">
+            <h2>Everything a good practice partner does, nothing it doesn't.</h2>
+            <div className="lp-features">
+              {FEATURES.map((f) => (
+                <article key={f.title}>
+                  <span className="lp-ic"><f.icon size={20} strokeWidth={1.8} /></span>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </article>
+              ))}
             </div>
           </div>
+        </section>
 
-          <div className="step-item">
-            <div className="step-number">03</div>
-            <div className="step-text">
-              <h3 className="step-name">Angle Extraction</h3>
-              <p className="step-desc">15 biomechanically relevant joint angles are computed client-side.</p>
+        {/* Poses */}
+        <section id="poses" className="lp-sec">
+          <div className="lp-wrap">
+            <h2>Start with six foundational poses.</h2>
+            <p className="lp-sub">Each one has a short guide in the app: what to line up, and what to feel.</p>
+            <div className="lp-poses">
+              {POSES.map((p) => (
+                <article key={p.sanskrit} className="lp-pose">
+                  <div className="lp-pose-art"><PoseFigure id={p.fig} /></div>
+                  <h3>{p.sanskrit}</h3>
+                  <span>{p.name}</span>
+                  <p>{p.line}</p>
+                </article>
+              ))}
             </div>
           </div>
+        </section>
 
-          <div className="step-item">
-            <div className="step-number">04</div>
-            <div className="step-text">
-              <h3 className="step-name">Pipeline Processing</h3>
-              <p className="step-desc">13-stage backend classifies pose, correctness, and runs Groq LLaMA.</p>
+        {/* Privacy */}
+        <section id="private" className="lp-sec lp-dark">
+          <div className="lp-wrap lp-priv">
+            <div>
+              <p className="lp-eyebrow light">Privacy</p>
+              <h2>Your camera stays yours.</h2>
+              <p className="lp-lede light">
+                AsanaAI works from the position of your body, not your picture. Your video is processed on your own device and is never recorded or stored. There is no account and nothing to hand over.
+              </p>
+            </div>
+            <ul className="lp-priv-list">
+              <li><Lock size={18} /><span>Video never leaves your device</span></li>
+              <li><Ruler size={18} /><span>Only body-position numbers are analysed</span></li>
+              <li><Languages size={18} /><span>No sign-up, no profile, no tracking of you</span></li>
+            </ul>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="lp-sec">
+          <div className="lp-wrap lp-faq-wrap">
+            <h2>Good questions</h2>
+            <div className="lp-faq">
+              {FAQ.map((f, i) => (
+                <div key={f.q} className={`lp-q ${open === i ? "open" : ""}`}>
+                  <button aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>
+                    <span>{f.q}</span>
+                    <ChevronDown size={18} />
+                  </button>
+                  <div className="lp-a"><div><p>{f.a}</p></div></div>
+                </div>
+              ))}
             </div>
           </div>
+        </section>
 
-          <div className="step-item">
-            <div className="step-number">05</div>
-            <div className="step-text">
-              <h3 className="step-name">Feedback</h3>
-              <p className="step-desc">Overlay skeleton rendering and voice guidance delivered in under 500ms.</p>
-            </div>
+        {/* Final call */}
+        <section className="lp-final">
+          <div className="lp-wrap">
+            <h2>Ready when you are.</h2>
+            <p>Prop up your phone, step back, and begin.</p>
+            <Link href="/" className="lp-btn light">Start practising</Link>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* 5. Tech Stack */}
-      <section id="tech-stack" className="landing-section tech-stack-section">
-        <div className="landing-section-label">Architecture</div>
-        <h2 className="landing-section-heading">Built With</h2>
-        
-        <div className="tech-groups-grid">
-          <div className="tech-category">
-            <h3 className="tech-category-label">Frontend</h3>
-            <div className="tech-pills">
-              <span className="tech-pill">Next.js</span>
-              <span className="tech-pill">TypeScript</span>
-              <span className="tech-pill">MediaPipe.js</span>
-              <span className="tech-pill">Lucide Icons</span>
-            </div>
-          </div>
-
-          <div className="tech-category">
-            <h3 className="tech-category-label">Backend</h3>
-            <div className="tech-pills">
-              <span className="tech-pill">FastAPI</span>
-              <span className="tech-pill">Python</span>
-              <span className="tech-pill">Groq API</span>
-              <span className="tech-pill">Uvicorn</span>
-            </div>
-          </div>
-
-          <div className="tech-category">
-            <h3 className="tech-category-label">Machine Learning</h3>
-            <div className="tech-pills">
-              <span className="tech-pill">MediaPipe Pose</span>
-              <span className="tech-pill">3-Head MLP (PyTorch)</span>
-              <span className="tech-pill">ST-GCN temporal classifier</span>
-            </div>
-          </div>
-
-          <div className="tech-category">
-            <h3 className="tech-category-label">Deployment</h3>
-            <div className="tech-pills">
-              <span className="tech-pill">Vercel (Frontend)</span>
-              <span className="tech-pill">HuggingFace Spaces (Backend API)</span>
-              <span className="tech-pill">Docker Containers</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. CTA Banner */}
-      <section className="cta-banner">
-        <h2 className="cta-banner-title">Start practicing smarter today</h2>
-        <p className="cta-banner-sub">
-          No account needed. Works in your browser. Free and open source.
-        </p>
-        <Link href="/" className="btn-cta-white">
-          Launch Dashboard
-        </Link>
-      </section>
-
-      {/* 7. Footer */}
-      <footer className="landing-footer">
-        <div className="footer-left">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-text-muted)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="logo-mark"
-          >
-            <path d="M12 2C12 2 15 7 15 11C15 15 12 22 12 22C12 22 9 15 9 11C9 7 12 2 12 2Z" />
-            <path d="M12 11C15 9 20 9 21 11C22 13 19 16 12 22" />
-            <path d="M12 11C9 9 4 9 3 11C2 13 5 16 12 22" />
-          </svg>
-          <span className="footer-logo-text">AsanaAI</span>
-        </div>
-        <div className="footer-center">
-          &copy; {new Date().getFullYear()} AsanaAI. All rights reserved.
-        </div>
-        <div className="footer-right">
-          <a 
-            href="https://github.com/Anamitra-Sarkar/yoga-posture-correction-system" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="footer-link"
-          >
-            GitHub
-          </a>
+      <footer className="lp-foot">
+        <div className="lp-wrap lp-foot-in">
+          <span className="lp-brand sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3c1.6 2.6 2.4 5 2.4 7.2 0 3.2-1.6 6.5-2.4 10.8-.8-4.3-2.4-7.6-2.4-10.8C9.6 8 10.4 5.6 12 3Z" />
+              <path d="M12 13.2c2.4-3.4 6.2-4.4 8.6-3.7-.5 3.1-3.9 6.7-8.6 8.2" />
+              <path d="M12 13.2C9.6 9.8 5.8 8.8 3.4 9.5c.5 3.1 3.9 6.7 8.6 8.2" />
+            </svg>
+            AsanaAI
+          </span>
+          <p>A final-year project from RCC Institute of Information Technology, Kolkata. General guidance only, not medical advice.</p>
         </div>
       </footer>
-
-      {/* Landing Specific Styles */}
-      <style jsx global>{`
-        .landing-wrapper {
-          min-height: 100vh;
-          background-color: var(--color-bg);
-          color: var(--color-text);
-          font-family: var(--font-body);
-        }
-
-        .landing-nav {
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          background: rgba(245, 244, 240, 0.9);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-bottom: 1px solid var(--color-divider);
-          padding: 0 5%;
-          height: 60px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .landing-nav-links {
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-          list-style: none;
-        }
-
-        .landing-nav-links a {
-          font-size: var(--text-sm);
-          color: var(--color-text-muted);
-          text-decoration: none;
-          font-weight: 500;
-          transition: color var(--transition);
-        }
-
-        .landing-nav-links a:hover {
-          color: var(--color-text);
-        }
-
-        /* On mobile, collapse nav links into hamburger */
-        @media (max-width: 767px) {
-          .landing-nav-links {
-            display: none;
-          }
-          .landing-nav-links.open {
-            display: flex;
-            flex-direction: column;
-            position: absolute;
-            top: 60px;
-            left: 0;
-            right: 0;
-            background: var(--color-surface-2);
-            border-bottom: 1px solid var(--color-divider);
-            padding: var(--space-4);
-            gap: var(--space-4);
-          }
-        }
-
-        .landing-section {
-          padding: clamp(4rem, 8vw, 7rem) 5%;
-          position: relative;
-          max-width: 1200px;
-          margin-inline: auto;
-          width: 100%;
-        }
-
-        .hero-section {
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: var(--space-8);
-          align-items: center;
-          min-height: 100vh;
-          min-height: 100svh;
-          padding-top: calc(60px + var(--space-8));
-        }
-
-        @media (max-width: 900px) {
-          .hero-section {
-            grid-template-columns: 1fr;
-            text-align: center;
-            padding-top: var(--space-12);
-          }
-          .hero-skeleton-wrapper {
-            max-width: 300px;
-            margin-inline: auto;
-          }
-        }
-
-        .hero-content {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          gap: var(--space-4);
-        }
-
-        @media (max-width: 900px) {
-          .hero-content {
-            align-items: center;
-          }
-        }
-
-        .hero-title {
-          font-size: clamp(2.5rem, 5vw, 4.5rem);
-          font-weight: 700;
-          color: var(--color-text);
-          line-height: 1.1;
-          letter-spacing: -0.02em;
-        }
-
-        .hero-subtitle {
-          font-size: clamp(1rem, 1.5vw, 1.25rem);
-          color: var(--color-text-muted);
-          line-height: 1.5;
-          max-width: 45ch;
-        }
-
-        .hero-actions-row {
-          display: flex;
-          align-items: center;
-          gap: var(--space-4);
-          margin-top: var(--space-2);
-        }
-
-        .hero-skeleton-wrapper {
-          opacity: 0.8;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .landing-section-label {
-          font-size: var(--text-xs);
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: var(--color-primary);
-          margin-bottom: var(--space-3);
-        }
-
-        .landing-section-heading {
-          font-size: clamp(1.75rem, 3vw, 2.5rem);
-          font-weight: 700;
-          color: var(--color-text);
-          line-height: 1.2;
-          margin-bottom: var(--space-4);
-        }
-
-        .landing-feature-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: var(--space-4);
-          margin-top: var(--space-8);
-        }
-
-        @media (max-width: 900px) {
-          .landing-feature-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 560px) {
-          .landing-feature-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .landing-feature-card {
-          background: var(--color-surface-2);
-          border: 1px solid var(--color-border);
-          border-radius: var(--radius-lg);
-          padding: var(--space-6);
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-2);
-          box-shadow: var(--shadow-sm);
-          transition: box-shadow var(--transition);
-        }
-
-        .landing-feature-card:hover {
-          box-shadow: var(--shadow-md);
-        }
-
-        .feature-icon {
-          color: var(--color-primary);
-          margin-bottom: var(--space-1);
-        }
-
-        .landing-feature-category {
-          font-size: var(--text-xs);
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: var(--color-primary);
-        }
-
-        .landing-feature-title {
-          font-size: var(--text-base);
-          font-weight: 600;
-          color: var(--color-text);
-        }
-
-        .landing-feature-desc {
-          font-size: var(--text-sm);
-          color: var(--color-text-muted);
-          line-height: 1.6;
-        }
-
-        /* How it works - step flow */
-        .steps-flow {
-          display: flex;
-          align-items: flex-start;
-          gap: 0;
-          margin-top: var(--space-8);
-          position: relative;
-          width: 100%;
-        }
-
-        .step-item {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          padding: 0 var(--space-3);
-          position: relative;
-        }
-
-        .step-item:not(:last-child)::after {
-          content: '';
-          position: absolute;
-          top: 20px;
-          right: calc(-1 * var(--space-3));
-          left: 50%;
-          height: 1px;
-          background: var(--color-divider);
-          transform: translateX(50%);
-          width: calc(100% - var(--space-3));
-        }
-
-        .step-number {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: var(--color-surface-offset);
-          border: 1px solid var(--color-border);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: var(--font-mono);
-          font-size: var(--text-sm);
-          font-weight: 600;
-          color: var(--color-primary);
-          flex-shrink: 0;
-          z-index: 1;
-          position: relative;
-        }
-
-        .step-name {
-          font-size: var(--text-sm);
-          font-weight: 600;
-          color: var(--color-text);
-          margin-top: var(--space-3);
-        }
-
-        .step-desc {
-          font-size: var(--text-xs);
-          color: var(--color-text-muted);
-          margin-top: var(--space-1);
-          line-height: 1.5;
-        }
-
-        @media (max-width: 767px) {
-          .steps-flow {
-            flex-direction: column;
-            gap: 0;
-          }
-          .step-item {
-            flex-direction: row;
-            text-align: left;
-            padding: var(--space-4) 0;
-            gap: var(--space-4);
-            align-items: flex-start;
-          }
-          .step-item:not(:last-child)::after {
-            top: auto;
-            left: 20px;
-            right: auto;
-            bottom: 0;
-            width: 1px;
-            height: calc(100% - 40px);
-            transform: translateY(-50%) translateX(0);
-          }
-          .step-name, .step-desc {
-            margin: 0;
-          }
-          .step-text {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-1);
-          }
-        }
-
-        /* Tech stack pills */
-        .tech-groups-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: var(--space-6) var(--space-10);
-          margin-top: var(--space-6);
-        }
-
-        @media (max-width: 640px) {
-          .tech-groups-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .tech-category {
-          margin-bottom: var(--space-5);
-        }
-
-        .tech-category-label {
-          font-size: var(--text-xs);
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: var(--color-text-muted);
-          margin-bottom: var(--space-3);
-        }
-
-        .tech-pills {
-          display: flex;
-          flex-wrap: wrap;
-          gap: var(--space-2);
-        }
-
-        .tech-pill {
-          background: var(--color-surface);
-          border: 1px solid var(--color-border);
-          border-radius: var(--radius-full);
-          padding: var(--space-1) var(--space-3);
-          font-size: var(--text-xs);
-          font-weight: 500;
-          color: var(--color-text-muted);
-        }
-
-        /* CTA Banner */
-        .cta-banner {
-          background: var(--color-primary);
-          color: white;
-          text-align: center;
-          padding: clamp(3rem, 6vw, 5rem) 5%;
-        }
-
-        .cta-banner-title {
-          font-size: clamp(1.5rem, 2.5vw, 2rem);
-          font-weight: 700;
-          margin-bottom: var(--space-3);
-        }
-
-        .cta-banner-sub {
-          font-size: var(--text-sm);
-          opacity: 0.8;
-          margin-bottom: var(--space-6);
-          max-width: 42ch;
-          margin-inline: auto;
-          line-height: 1.6;
-        }
-
-        .btn-cta-white {
-          background: white;
-          color: var(--color-primary);
-          border: none;
-          border-radius: var(--radius-md);
-          padding: var(--space-3) var(--space-8);
-          font-size: var(--text-sm);
-          font-weight: 600;
-          cursor: pointer;
-          text-decoration: none;
-          display: inline-block;
-          transition: opacity 150ms ease;
-        }
-
-        .btn-cta-white:hover {
-          opacity: 0.9;
-        }
-
-        /* Ghost outline button for landing hero */
-        .btn-outline {
-          background: transparent;
-          border: 1.5px solid var(--color-primary-border);
-          color: var(--color-primary);
-          border-radius: var(--radius-md);
-          padding: var(--space-3) var(--space-6);
-          font-size: var(--text-sm);
-          font-weight: 600;
-          cursor: pointer;
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          gap: var(--space-2);
-          transition: background var(--transition), border-color var(--transition);
-        }
-
-        .btn-outline:hover {
-          background: var(--color-primary-muted);
-          border-color: var(--color-primary);
-        }
-
-        /* Landing Footer */
-        .landing-footer {
-          border-top: 1px solid var(--color-divider);
-          padding: var(--space-6) 5%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-size: var(--text-sm);
-          color: var(--color-text-muted);
-          max-width: 1200px;
-          margin-inline: auto;
-          width: 100%;
-        }
-
-        @media (max-width: 640px) {
-          .landing-footer {
-            flex-direction: column;
-            gap: var(--space-4);
-            text-align: center;
-          }
-        }
-
-        .footer-left {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-        }
-
-        .footer-logo-text {
-          font-weight: 700;
-          color: var(--color-text-muted);
-        }
-
-        .footer-link {
-          color: var(--color-text-muted);
-          text-decoration: none;
-          font-weight: 500;
-          transition: color var(--transition);
-        }
-
-        .footer-link:hover {
-          color: var(--color-text);
-        }
-      `}</style>
     </div>
   );
 }

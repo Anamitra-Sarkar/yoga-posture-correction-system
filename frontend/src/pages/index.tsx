@@ -462,6 +462,7 @@ const TRANSLATIONS: {
     basicMode: "Basic mode · on your device",
     coachOffline: "You're offline. Basic recognition and tips run on your device; the full coach returns when you're back online.",
     poseEngineOffline: "Open the app once with internet so it can download the pose engine.",
+    offlineShort: "Offline",
   },
   hi: {
     tapForGuide: "गाइड देखने के लिए किसी भी आसन पर टैप करें।",
@@ -578,6 +579,7 @@ const TRANSLATIONS: {
     basicMode: "बेसिक मोड · आपके डिवाइस पर",
     coachOffline: "आप ऑफ़लाइन हैं। बेसिक पहचान और सुझाव आपके डिवाइस पर चल रहे हैं; इंटरनेट आने पर पूरा कोच लौट आएगा।",
     poseEngineOffline: "ऐप को एक बार इंटरनेट के साथ खोलें ताकि वह पोज़ इंजन डाउनलोड कर सके।",
+    offlineShort: "ऑफ़लाइन",
   },
   bn: {
     tapForGuide: "গাইড দেখতে যেকোনো আসনে ট্যাপ করুন।",
@@ -694,6 +696,7 @@ const TRANSLATIONS: {
     basicMode: "বেসিক মোড · আপনার ডিভাইসে",
     coachOffline: "আপনি অফলাইনে। বেসিক শনাক্তকরণ ও পরামর্শ আপনার ডিভাইসেই চলছে; ইন্টারনেট ফিরলে পূর্ণ কোচ ফিরে আসবে।",
     poseEngineOffline: "অ্যাপটি একবার ইন্টারনেট সহ খুলুন, যাতে পোজ ইঞ্জিন ডাউনলোড হতে পারে।",
+    offlineShort: "অফলাইন",
   }
 };
 
@@ -2326,6 +2329,11 @@ export default function Dashboard() {
           <div className="ap-spacer" />
 
           <div className="ap-header-actions">
+            {!isOnline && (
+              <span className="ap-offpill" role="status" title={T.offline}>
+                <i />{T.offlineShort}
+              </span>
+            )}
             <div className={`ap-timer hide-s ${cameraActive ? "on" : ""}`} aria-label="Session time">
               <i />
               <SessionTimer running={cameraActive} />
@@ -2845,7 +2853,7 @@ export default function Dashboard() {
                 <div className="ap-sum-stats">
                   <div><b className="num">{Math.floor(summary.durationSec / 60)}:{String(summary.durationSec % 60).padStart(2, "0")}</b><span>{T.summaryTime}</span></div>
                   <div><b className="num">{Math.round(summary.avg * 100)}%</b><span>{T.summaryAvg}</span></div>
-                  <div><b>{summary.best ? getSanskritName(summary.best, lang) : "—"}</b><span>{T.summaryBest}</span></div>
+                  <div className="wide"><b>{summary.best ? getSanskritName(summary.best, lang) : "—"}</b><span>{T.summaryBest}</span></div>
                 </div>
                 <div className="ap-eyebrow" style={{ margin: "18px 0 8px" }}>{T.summaryPoses}</div>
                 <div className="ap-sum-rows">
@@ -2867,7 +2875,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!isOnline && <div className="ap-offline" role="status">{T.offline}</div>}
 
       {showInstallBanner && !cameraActive && (
         <div className="ap-toast" role="dialog" aria-label={T.installTitle}>

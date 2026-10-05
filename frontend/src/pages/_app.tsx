@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { fontUi, fontDisplay, fontMono } from '../lib/fonts';
 import '../styles/globals.css';
 import '../styles/app.css';
+import '../styles/landing.css';
 
 // Native-app-only polish (status bar theming, hardware back-button handling).
 // Dynamically imported and no-op outside the Capacitor Android WebView (the
