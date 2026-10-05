@@ -40,8 +40,8 @@
 
   --cam: #141310;
 
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-ui: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--nf-display), 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui: var(--nf-ui), 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --r-sm: 8px;
   --r-md: 12px;
@@ -414,7 +414,7 @@
   .ap-frame { height: auto; aspect-ratio: 16 / 9; }
 }
 
-.ap-stage { position: absolute; inset: 0; transform-origin: center; will-change: transform; }
+.ap-stage { position: absolute; inset: 0; transform-origin: center; }
 .ap-video, .ap-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .ap-video { object-fit: contain; background: var(--cam); }
 .ap-canvas { pointer-events: none; }
@@ -466,16 +466,15 @@
 .ap-hudbtn {
   width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
   border: 0; border-radius: 50%; background: rgba(20, 19, 16, 0.62); color: #fff; cursor: pointer;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 .ap-hudbtn:hover { background: rgba(20, 19, 16, 0.8); }
 .ap-hudbtn:disabled { opacity: 0.4; }
 
 .ap-posechip {
   display: inline-flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 14px;
-  border-radius: 999px; background: rgba(20, 19, 16, 0.72); color: #fff;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border-radius: 999px; background: rgba(20, 19, 16, 0.78); color: #fff; max-width: 100%;
 }
+.ap-posechip b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ap-posechip b { font-family: var(--font-display); font-weight: 500; font-size: 16px; letter-spacing: -0.005em; }
 .ap-posechip em { font-style: normal; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 8px; border-radius: 999px; }
 .ap-posechip em.ok { background: #2b7a57; }
@@ -681,3 +680,13 @@
   .ap-dock-main { padding: 0 16px; font-size: 14.5px; }
   .ap-dock-btn { font-size: 10.5px; }
 }
+
+/* ── Smoothness ────────────────────────────────────────────────────────────── */
+.ap button, .ap [role='button'], .ap input[type='range'] { touch-action: manipulation; }
+.ap-frame { contain: layout paint style; }
+.ap-card, .ap-coach, .ap-acc { contain: layout paint style; }
+.ap-live-col { scroll-behavior: auto; }
+.ap-btn, .ap-iconbtn, .ap-dock-btn, .ap-dock-main, .ap-pose, .ap-seg button { -webkit-user-select: none; user-select: none; }
+.ap-btn:active, .ap-dock-main:active, .ap-iconbtn:active { transform: scale(0.97); }
+.ap-dock-btn:active { background: var(--paper-2); }
+@media (hover: none) { .ap-btn:hover { background: var(--brand); } .ap-btn.ghost:hover { background: transparent; } .ap-btn.dark:hover { background: var(--ink); } }

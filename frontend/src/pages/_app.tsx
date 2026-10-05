@@ -58,7 +58,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="apple-mobile-web-app-title" content="AsanaAI" />
         <meta name="application-name" content="AsanaAI" />
         <meta name="description" content="AI-powered real-time yoga posture correction. Practice smarter with instant feedback." />
-        <meta name="msapplication-TileColor" content="#01696f" />
+        <meta name="msapplication-TileColor" content="#1f5c4a" />
         <meta name="msapplication-tap-highlight" content="no" />
 
         {/* Font Preconnect Hints */}

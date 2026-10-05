@@ -3,7 +3,6 @@
    Warm Neutral Palette | DM Sans + Lora | Indigo Accent
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Lora:wght@500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Mono:wght@400;500&display=swap');
 
 /* ── CSS Custom Properties ────────────────────────────────── */
 :root {
@@ -13,7 +12,7 @@
   --content-max: 1600px;
 
   /* Light Background Palette */
-  --bg-base:    #f7f6f3;
+  --bg-base:    #f5f2ec;
   --bg-surface: #ffffff;
   --bg-subtle:  #f0eeea;
   --bg-inset:   #e8e5df;
@@ -34,11 +33,11 @@
   --glass-fallback-bg:   rgba(247, 246, 243, 0.96);
 
   /* Accent: Indigo to Teal */
-  --color-primary:       #4f67f4;
-  --color-primary-2:     #06b6d4;
-  --color-primary-muted: rgba(79, 103, 244, 0.09);
-  --color-primary-border:rgba(79, 103, 244, 0.22);
-  --color-primary-glow:  rgba(79, 103, 244, 0.18);
+  --color-primary:       #1f5c4a;
+  --color-primary-2:     #2f7a63;
+  --color-primary-muted: rgba(31, 92, 74, 0.09);
+  --color-primary-border:rgba(31, 92, 74, 0.22);
+  --color-primary-glow:  rgba(31, 92, 74, 0.14);
   --gradient-primary:    linear-gradient(135deg, #4f67f4, #06b6d4);
   --gradient-primary-hover: linear-gradient(135deg, #6278f5, #22c5e0);
 
@@ -69,13 +68,13 @@
   --color-text-faint: #6b6459;
 
   /* Legacy compat vars mapped to new palette */
-  --color-bg:              #f7f6f3;
+  --color-bg:              #f5f2ec;
   --color-surface:         #ffffff;
   --color-surface-2:       #f7f6f3;
   --color-surface-offset:  #f0eeea;
   --color-border:          rgba(0, 0, 0, 0.08);
   --color-divider:         rgba(0, 0, 0, 0.05);
-  --color-primary-hover:   #6278f5;
+  --color-primary-hover:   #17493a;
 
   /* Radius */
   --radius-sm:   6px;
@@ -89,13 +88,13 @@
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
   --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
   --shadow-lg:  0 12px 36px rgba(0,0,0,0.10), 0 4px 10px rgba(0,0,0,0.06);
-  --shadow-glow-primary: 0 0 16px rgba(79, 103, 244, 0.22);
+  --shadow-glow-primary: 0 0 0 transparent;
   --shadow-glow-success: 0 0 16px rgba(5, 150, 105, 0.20);
 
   /* Typography */
-  --font-body: 'DM Sans', 'Helvetica Neue', system-ui, sans-serif;
+  --font-body: var(--nf-ui), 'DM Sans', 'Helvetica Neue', system-ui, sans-serif;
   --font-accent: 'Lora', Georgia, serif;
-  --font-mono: 'DM Mono', 'Fira Code', monospace;
+  --font-mono: var(--nf-mono), 'DM Mono', 'Fira Code', monospace;
 
   /* Type Scale */
   --text-xs:   clamp(0.7rem,   0.65rem + 0.2vw,  0.75rem);

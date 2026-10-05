@@ -683,6 +683,20 @@ const getPoseJoints = (poseId: string) => {
 };
 
 
+/** The session clock owns its own state, so ticking every second never re-renders the dashboard. */
+function SessionTimer({ running }: { running: boolean }) {
+  const [sec, setSec] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    setSec(0);
+    const id = setInterval(() => setSec((v) => v + 1), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+  const m = Math.floor(sec / 60).toString().padStart(2, "0");
+  const r = (sec % 60).toString().padStart(2, "0");
+  return <span className="num">{m}:{r}</span>;
+}
+
 /** Collapsible sidebar section: animated, and shows a one-line summary on the header while collapsed. */
 function Accordion({ title, open, onToggle, status, children }: {
   title: string; open: boolean; onToggle: () => void; status?: string; children: React.ReactNode;
@@ -817,6 +831,11 @@ export default function Dashboard() {
   const engineErrorsRef = useRef(0);
   const lastResultAtRef = useRef(0);
   const stageRef = useRef<HTMLDivElement>(null);
+  // Per-frame data lives in refs: React state is for what the screen shows, not for 30 Hz inputs.
+  const anglesRef = useRef<number[]>(new Array(15).fill(180));
+  const lastAnglePublishRef = useRef(0);
+  const canvasCssRef = useRef({ w: 0, h: 0, dpr: 1 });
+  const videoFrameCbRef = useRef<number | null>(null);
 
   // References
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -944,8 +963,6 @@ export default function Dashboard() {
 
 
   // Session timer hook
-  const [sessionSeconds, setSessionSeconds] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // PWA Install Prompt State
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -1037,27 +1054,6 @@ export default function Dashboard() {
     const { outcome } = await installPrompt.userChoice;
     if (outcome === 'accepted') setShowInstallBanner(false);
     setInstallPrompt(null);
-  };
-
-  useEffect(() => {
-    if (cameraActive) {
-      setSessionSeconds(0);
-      timerRef.current = setInterval(() => {
-        setSessionSeconds(s => s + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [cameraActive]);
-
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60).toString().padStart(2, '0');
-    const sec = (s % 60).toString().padStart(2, '0');
-    return `${m}:${sec}`;
   };
 
   // Detect if device has multiple cameras
@@ -1269,10 +1265,21 @@ export default function Dashboard() {
   }, [predictionTimestamp, speechEnabled, lang]);
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && window.innerWidth < 768) setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && window.speechSynthesis?.paused) {
         window.speechSynthesis.resume();
       }
+      // iOS/Android pause the video when the page is backgrounded; bring the picture back.
+      const v = videoRef.current;
+      if (document.visibilityState === 'visible' && v && v.srcObject && v.paused) v.play().catch(() => {});
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -1378,6 +1385,10 @@ export default function Dashboard() {
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
+      if (videoFrameCbRef.current != null) {
+        (videoRef.current as any)?.cancelVideoFrameCallback?.(videoFrameCbRef.current);
+        videoFrameCbRef.current = null;
+      }
 
       // Phones: a smaller stream is decoded, copied and analysed faster, and MediaPipe resizes to ~256px anyway.
       const coarse = !!window.matchMedia?.("(pointer: coarse)").matches;
@@ -1435,6 +1446,15 @@ export default function Dashboard() {
       // automatically if the device can't keep up.
       // The picture itself is the <video> element, so the user sees themselves
       // even while the engine is still loading or has failed.
+      const scheduleNext = () => {
+        const v: any = videoRef.current;
+        if (!v || !stream.active) return;
+        if (typeof v.requestVideoFrameCallback === "function") {
+          videoFrameCbRef.current = v.requestVideoFrameCallback(() => { tick(); });
+        } else {
+          animationFrameIdRef.current = requestAnimationFrame(tick);
+        }
+      };
       const tick = async () => {
         if (!stream.active || !videoRef.current) return;
         const v = videoRef.current;
@@ -1475,9 +1495,18 @@ export default function Dashboard() {
             await new Promise((r) => setTimeout(r, 300 * Math.min(engineErrorsRef.current, 6)));
           }
         }
-        animationFrameIdRef.current = requestAnimationFrame(tick);
+        scheduleNext();
       };
-      animationFrameIdRef.current = requestAnimationFrame(tick);
+      scheduleNext();
+
+      // The camera can vanish mid-session (unplugged, taken over by another app): say so instead of freezing.
+      stream.getVideoTracks().forEach((t) => {
+        t.onended = () => {
+          if (streamRef.current !== stream) return;
+          stopCamera();
+          setCameraError("The camera was disconnected or is being used by another app. Tap Retry to resume.");
+        };
+      });
 
       // If no result ever arrives, say so (slow network, blocked CDN) rather than leave the user guessing.
       window.setTimeout(() => {
@@ -1506,6 +1535,10 @@ export default function Dashboard() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+    }
+    if (videoFrameCbRef.current != null) {
+      (videoRef.current as any)?.cancelVideoFrameCallback?.(videoFrameCbRef.current);
+      videoFrameCbRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
     if (animationFrameIdRef.current) {
@@ -1581,6 +1614,7 @@ export default function Dashboard() {
       if (w > 0 && h > 0) {
         canvas.width = Math.round(w * dpr);
         canvas.height = Math.round(h * dpr);
+        canvasCssRef.current = { w, h, dpr: canvas.width / w };
       }
     };
     resizeCanvas();
@@ -1605,12 +1639,13 @@ export default function Dashboard() {
     // The <video> element is the picture; this canvas only carries the skeleton overlay. Geometry mirrors
     // the video's object-fit: contain letterbox (native aspect ratio preserved, never stretched) so the
     // skeleton lands exactly on the body. Drawn in CSS pixels, scaled up to the device pixel density.
-    const dpr = canvasElement.width / Math.max(1, canvasElement.clientWidth || canvasElement.width);
+    const geo = canvasCssRef.current;
+    const dpr = geo.w > 0 ? geo.dpr : 1;
+    const cw = geo.w || canvasElement.width;
+    const ch = geo.h || canvasElement.height;
     canvasCtx.save();
     canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    canvasCtx.clearRect(0, 0, canvasElement.clientWidth, canvasElement.clientHeight);
-    const cw = canvasElement.clientWidth || canvasElement.width;
-    const ch = canvasElement.clientHeight || canvasElement.height;
+    canvasCtx.clearRect(0, 0, cw, ch);
     const vid = videoRef.current;
     const srcW = vid?.videoWidth || results.image?.videoWidth || results.image?.width || cw;
     const srcH = vid?.videoHeight || results.image?.videoHeight || results.image?.height || ch;
@@ -1660,10 +1695,16 @@ export default function Dashboard() {
         worldAngles = extractAnglesFromLandmarks(worldPoints, false);
       }
 
-      // Update UI real-time angle display
-      setAllCurrentAngles(angles);
-      setCurrentKneeAngle(Math.round(angles[6])); // Left Knee
-      setCurrentShoulderAngle(Math.round(angles[2])); // Left Shoulder
+      // The overlay reads the ref every frame; the numbers on screen are published at most 4x/second
+      // (re-rendering the whole dashboard 30x/second is what made the app feel laggy).
+      anglesRef.current = angles;
+      const tNow = performance.now();
+      if (tNow - lastAnglePublishRef.current > 250) {
+        lastAnglePublishRef.current = tNow;
+        setAllCurrentAngles(angles);
+        setCurrentKneeAngle(Math.round(angles[6])); // Left Knee
+        setCurrentShoulderAngle(Math.round(angles[2])); // Left Shoulder
+      }
 
       // If currently in calibration mode, buffer joint features
       if (calibrationStateRef.current === "calibrating") {
@@ -1758,7 +1799,7 @@ export default function Dashboard() {
       const idx = FEATURE_NAMES_ORDER.indexOf(joint);
       if (idx === -1) return "neutral";
 
-      const current = allCurrentAngles[idx];
+      const current = anglesRef.current[idx];
       const diff = Math.abs(current - targetObj.target);
 
       if (diff > targetObj.tolerance) {
@@ -1831,19 +1872,17 @@ export default function Dashboard() {
       if (pt1 && pt2) {
         const color = getLineColor(idx1, idx2);
         
-        ctx.save();
         ctx.beginPath();
         ctx.moveTo(toX(pt1.x), toY(pt1.y));
         ctx.lineTo(toX(pt2.x), toY(pt2.y));
-        
-        // Soft drop shadow only, so the line reads on any background without glowing
+        ctx.lineCap = "round";
+        // dark under-stroke keeps the line readable on any background (cheaper than a blurred shadow)
+        ctx.strokeStyle = "rgba(20, 19, 16, 0.42)";
+        ctx.lineWidth = width * 0.8 + 3;
+        ctx.stroke();
         ctx.strokeStyle = color;
         ctx.lineWidth = width * 0.8;
-        ctx.lineCap = "round";
-        ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-        ctx.shadowBlur = 4;
         ctx.stroke();
-        ctx.restore();
       }
     };
 
@@ -2045,7 +2084,7 @@ export default function Dashboard() {
           <div className="ap-header-actions">
             <div className={`ap-timer hide-s ${cameraActive ? "on" : ""}`} aria-label="Session time">
               <i />
-              <span className="num">{formatTime(sessionSeconds)}</span>
+              <SessionTimer running={cameraActive} />
             </div>
 
             <div
