@@ -356,6 +356,32 @@ const webglAvailable = (): boolean => {
     return false;
   }
 };
+// A short, local-only summary of what the browser offers, shown under "Details" when the engine cannot start.
+const graphicsReport = (): string => {
+  const ua = navigator.userAgent || "";
+  const probe = (type: string) => {
+    try {
+      const gl: any = document.createElement("canvas").getContext(type);
+      if (!gl) return { ok: false, gpu: "" };
+      const ext = gl.getExtension("WEBGL_debug_renderer_info");
+      const gpu = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : "";
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      return { ok: true, gpu };
+    } catch { return { ok: false, gpu: "" }; }
+  };
+  const w2 = probe("webgl2"), w1 = probe("webgl");
+  const inApp = /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|WhatsApp|Telegram|; wv\)/i.test(ua);
+  const browser = /SamsungBrowser/i.test(ua) ? "Samsung Internet" : /EdgA|Edg\//.test(ua) ? "Edge" : /OPR|Opera/i.test(ua) ? "Opera" : /Firefox|FxiOS/i.test(ua) ? "Firefox"
+    : /CriOS|Chrome/i.test(ua) ? "Chrome" : /Safari/i.test(ua) ? "Safari" : "unknown";
+  return [
+    `WebGL2: ${w2.ok ? "yes" : "no"} | WebGL: ${w1.ok ? "yes" : "no"}`,
+    (w2.gpu || w1.gpu) ? `GPU: ${w2.gpu || w1.gpu}` : "GPU: not reported",
+    `OffscreenCanvas: ${typeof OffscreenCanvas !== "undefined" ? "yes" : "no"}`,
+    `Browser: ${browser}${inApp ? " (in-app browser: open the page in Chrome or Safari)" : ""}`,
+    `Device: ${(ua.match(/\(([^)]*)\)/) || [])[1] || "unknown"}`,
+    `Screen: ${window.innerWidth}x${window.innerHeight} @${window.devicePixelRatio}x`,
+  ].join("\n");
+};
 
 const TRANSLATIONS: {
   [lang: string]: { [key: string]: string }
@@ -374,6 +400,7 @@ const TRANSLATIONS: {
     poseEngineLoading: "Loading pose engine…",
     poseEngineSlow: "Pose engine is slow to load. Check your connection.",
     graphicsTitle: "Can't start the pose engine",
+    graphicsDetails: "Details",
     graphicsBody: "Your browser couldn't turn on graphics acceleration, which the pose engine needs. Close other tabs and apps, turn off battery saver, make sure hardware acceleration is on, or open this page in Chrome or Safari, then tap Retry.",
     practice: "Practice",
     poseGuide: "Pose guide",
@@ -501,6 +528,7 @@ const TRANSLATIONS: {
     poseEngineLoading: "पोज़ इंजन लोड हो रहा है…",
     poseEngineSlow: "पोज़ इंजन देर से लोड हो रहा है। इंटरनेट जाँचें।",
     graphicsTitle: "पोज़ इंजन शुरू नहीं हो सका",
+    graphicsDetails: "विवरण",
     graphicsBody: "आपका ब्राउज़र ग्राफ़िक्स एक्सेलेरेशन चालू नहीं कर सका, जो पोज़ इंजन के लिए ज़रूरी है। दूसरे टैब और ऐप बंद करें, बैटरी सेवर बंद करें, हार्डवेयर एक्सेलेरेशन चालू रखें, या इस पेज को Chrome या Safari में खोलें, फिर \"फिर कोशिश करें\" दबाएँ।",
     practice: "अभ्यास",
     poseGuide: "आसन गाइड",
@@ -628,6 +656,7 @@ const TRANSLATIONS: {
     poseEngineLoading: "পোজ ইঞ্জিন লোড হচ্ছে…",
     poseEngineSlow: "পোজ ইঞ্জিন লোড হতে দেরি হচ্ছে। ইন্টারনেট দেখুন।",
     graphicsTitle: "পোজ ইঞ্জিন চালু করা যায়নি",
+    graphicsDetails: "বিস্তারিত",
     graphicsBody: "আপনার ব্রাউজার গ্রাফিক্স অ্যাক্সিলারেশন চালু করতে পারেনি, যা পোজ ইঞ্জিনের জন্য দরকার। অন্য ট্যাব ও অ্যাপ বন্ধ করুন, ব্যাটারি সেভার বন্ধ করুন, হার্ডওয়্যার অ্যাক্সিলারেশন চালু রাখুন, অথবা পেজটি Chrome বা Safari-তে খুলুন, তারপর \"আবার চেষ্টা করুন\" চাপুন।",
     practice: "অনুশীলন",
     poseGuide: "আসন গাইড",
@@ -1000,6 +1029,8 @@ export default function Dashboard() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const engineErrorsRef = useRef(0);
   const graphicsFailedRef = useRef(false);
+  const engineWarmRef = useRef(false);
+  const [gfxInfo, setGfxInfo] = useState("");
   const onGraphicsFailureRef = useRef<() => void>(() => {});
   const lastResultAtRef = useRef(0);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -1700,6 +1731,13 @@ export default function Dashboard() {
 
     setIsInitializingCamera(true);
     try {
+      // Bring the pose engine up FIRST, in parallel with the permission prompt: it claims its graphics context while the
+      // phone is idle (before the camera's video decoding competes for graphics memory) and the first frame is not slow.
+      let enginePromise: Promise<unknown> = Promise.resolve();
+      if (poseRef.current && !engineWarmRef.current) {
+        enginePromise = Promise.resolve(poseRef.current.initialize?.()).then(() => { engineWarmRef.current = true; }).catch(() => { /* a WebGL failure is reported by the alert hook */ });
+      }
+
       // Clean up previous streams and request frames
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -1734,6 +1772,8 @@ export default function Dashboard() {
           throw e;
         }
       }
+      await Promise.race([enginePromise, sleepMs(8000)]);   // slow network: show the camera anyway, the engine keeps loading
+      if (graphicsFailedRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }   // no WebGL: the themed panel is already up
       streamRef.current = stream;
 
       const videoElement = videoRef.current;
@@ -1902,12 +1942,14 @@ export default function Dashboard() {
   const releasePose = () => {
     try { Promise.resolve(poseRef.current?.close?.()).catch(() => {}); } catch { /* already gone */ }
     poseRef.current = null;
+    engineWarmRef.current = false;
   };
   const failGraphics = () => {
     if (graphicsFailedRef.current) return;
     graphicsFailedRef.current = true;
     releasePose();
     stopCamera();
+    setGfxInfo(graphicsReport());
     setCameraError(GRAPHICS_ERR);
   };
   onGraphicsFailureRef.current = failGraphics;
@@ -2761,6 +2803,9 @@ export default function Dashboard() {
                         <RefreshCw size={17} className={isInitializingCamera ? "spin" : ""} />
                         <span>{T.retry}</span>
                       </button>
+                      {cameraError === GRAPHICS_ERR && gfxInfo && (
+                        <details className="ap-gfx"><summary>{T.graphicsDetails}</summary><pre>{gfxInfo}</pre></details>
+                      )}
                     </div>
                   )}
 
