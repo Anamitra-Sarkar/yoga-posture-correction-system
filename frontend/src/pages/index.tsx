@@ -1921,7 +1921,9 @@ export default function Dashboard() {
   const pct = Math.round(effectiveCorrectness * 100);
   const scoreActive = !showMismatch && !isTransitioning && !isUnrecognized;
   const scoreTone: "ok" | "mid" | "low" | "none" = !scoreActive ? "none" : effectiveCorrectness >= 0.75 ? "ok" : effectiveCorrectness >= 0.5 ? "mid" : "low";
-  const verdict = showMismatch
+  const verdict = !cameraActive
+    ? T.cameraOff
+    : showMismatch
     ? T.wrongPoseBadge
     : isTransitioning
     ? T.stateTransitioning
@@ -1940,7 +1942,9 @@ export default function Dashboard() {
 
   // What the coaching card says right now, and in which tone.
   const coach: { tone: string; icon: any; label: React.ReactNode; text: string } =
-    activePose === "transition/unknown"
+    !cameraActive
+      ? { tone: "", icon: <CameraIcon size={18} />, label: T.systemStatus, text: T.cameraInactive }
+      : activePose === "transition/unknown"
       ? { tone: "", icon: <Activity size={18} />, label: T.systemStatus, text: T.detectingPose }
       : showMismatch
       ? { tone: "bad", icon: <ShieldAlert size={18} />, label: T.wrongPoseBadge, text: displayCorrectionText }
@@ -2382,10 +2386,12 @@ export default function Dashboard() {
               <div>
                 <div className="ap-card-title">{T.postureScore}</div>
                 <div className="ap-verdict">{verdict}</div>
-                <span className={`ap-state ${isTransitioning ? "moving" : isUnrecognized ? "" : "holding"}`}>
-                  <i />
-                  {isTransitioning ? T.stateTransitioning : isUnrecognized ? T.stateUnrecognized : T.stateHolding}
-                </span>
+                {cameraActive && (
+                  <span className={`ap-state ${isTransitioning ? "moving" : isUnrecognized ? "" : "holding"}`}>
+                    <i />
+                    {isTransitioning ? T.stateTransitioning : isUnrecognized ? T.stateUnrecognized : T.stateHolding}
+                  </span>
+                )}
                 {effectivePersonalCorrectness !== null && effectivePersonalCorrectness !== undefined && !isUnrecognized && (
                   <div className="ap-personal">
                     {T.personalScore}: <b className="num">{Math.round(effectivePersonalCorrectness * 100)}%</b>
