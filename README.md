@@ -43,6 +43,7 @@ camera ─▶ MediaPipe Pose (in the browser) ─▶ 33 landmarks ─▶ 15 join
 * **ST-GCN** (graph convolution over the 33-joint skeleton + temporal convolution) on 60-frame windows.
 * **Pose cascade** (`docs/CASCADE.md`) and **sequence model** (`docs/SEQUENCE_MODEL.md`): rollout flags, rollback and design notes.
 * **On-device coach** (`frontend/src/utils/offlineCoach.ts`): generated from the backend rule engine and verified identical to it on 12,500 generated cases (`python3 backend/tools/offline_parity.py`).
+* **Pose engine** (all on the device, chosen automatically): MediaPipe on the GPU; phones whose GPU driver breaks it (measured: PowerVR BXM-8-256, e.g. MediaTek Dimensity 7020/7025/930) transparently use MediaPipe Tasks on the CPU in a worker, and TensorFlow.js WASM as a last resort. Engine files are cached on the first visit so the app also starts offline. Measurements: `docs/BENCHMARKS.md` section 11.
 * **Not deployed:** CLIFF-based two-stream occlusion fusion exists in `backend/app/services/occlusion.py` only as an optional hook (nothing sends it CLIFF data and no CLIFF model is deployed). The live system is visibility-aware instead: it declines to score a joint it cannot see. An offline experiment comparing CLIFF with the old mirror fallback is written up in `docs/BENCHMARKS.md` section 10 (CLIFF needs the camera image, which the app never uploads).
 
 ## Results (held-out only)

@@ -229,6 +229,14 @@ The on-device coach is a TypeScript port of the Python rule engine. Reading both
 
 ---
 
+## 17. Reproduce on the user's hardware before fixing; the error text can point at the wrong cause
+The phone showed "Failed to create WebGL canvas context". Everything suggested "no WebGL". Plugging the phone in (adb + DevTools protocol) showed WebGL contexts were created fine and the real failure was MediaPipe's shader pipeline aborting inside the PowerVR BXM-8-256 driver; the GPU delegate of the newer API silently returned no poses. The fix that works (CPU delegate in a worker) came from measuring four engines on that phone, not from guessing.
+**Instead:** when a bug only appears on one device class, get the device (`backup/phone_debug/`), log what the browser really did (every context request, every console warning), and test the candidate fixes there.
+
+## 18. Never initialise a stateful engine in parallel with the code that feeds it
+A "start the engine before the camera" change (explicit `initialize()` capped by an 8 s wait) broke the app on slow loads: frames reached the engine while initialisation was still running and detection never recovered. It passed on a fast PC and was reproduced only after delaying the model download by 12 s. The previous build handled the same delay.
+**Instead:** keep the engine's own lazy start (calls are serialised by the frame loop), and test every engine change under a slow-load scenario, not only the fast path.
+
 ## Proven hyperparameters (ST-GCN, from the 2026-07-19 run)
 
 Kept because they worked **on the 15-class non-transition task**. Measured NOT
