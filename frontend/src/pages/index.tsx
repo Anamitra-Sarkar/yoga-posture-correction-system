@@ -20,6 +20,10 @@ import {
   Globe,
   LayoutGrid,
   SwitchCamera,
+  Armchair,
+  BedSingle,
+  Flower2,
+  Pyramid,
   AlertTriangle,
   Loader2,
   PersonStanding,
@@ -43,7 +47,7 @@ import { VisibilityTracker } from "../utils/visibility";
 import { pickVoice, splitForSpeech, utteranceLang, voiceMissing as isVoiceMissing } from "../utils/speechText";
 
 /* eslint-disable */
-type PresetPoseId = "warrior_2" | "cobra_pose" | "mountain_pose" | "tree_pose" | "plank" | "downward_dog";
+type PresetPoseId = "warrior_2" | "cobra_pose" | "mountain_pose" | "tree_pose" | "plank" | "downward_dog" | "triangle" | "chair_pose" | "seated_easy_pose" | "corpse";
 
 const POSE_TARGET_ANGLES: {
   [poseId: string]: {
@@ -122,6 +126,30 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
     { icon: "🦵", cue: "Heels reach toward the floor, knees soft if needed" },
     { icon: "💪", cue: "Arms straight, weight shared between hands and feet" },
   ],
+  triangle: [
+    { icon: "🦵", cue: "Wide stance, both legs straight, back foot turned slightly in" },
+    { icon: "🦴", cue: "Fold sideways from the hip, keeping both sides of the waist long" },
+    { icon: "💪", cue: "Lower hand rests on the shin or a block, top arm reaches up" },
+    { icon: "👁️", cue: "Gaze toward the top hand, chest open to the side" },
+  ],
+  chair_pose: [
+    { icon: "🦵", cue: "Knees bent, thighs working toward parallel with the floor" },
+    { icon: "🦶", cue: "Weight back in the heels, knees over the ankles" },
+    { icon: "🦴", cue: "Spine long, chest lifted, tailbone reaching down" },
+    { icon: "💪", cue: "Arms reach up beside the ears, shoulders relaxed" },
+  ],
+  seated_easy_pose: [
+    { icon: "🦴", cue: "Sit tall on your sit bones, spine long" },
+    { icon: "🦵", cue: "Legs loosely crossed, knees relaxed (sit on a cushion if they rise)" },
+    { icon: "💪", cue: "Shoulders soft, hands resting on the knees" },
+    { icon: "👁️", cue: "Crown of the head lifts, breath slow and even" },
+  ],
+  corpse: [
+    { icon: "🦴", cue: "Lie flat on your back, head and spine in one line" },
+    { icon: "🦵", cue: "Legs relaxed and slightly apart, feet falling open" },
+    { icon: "💪", cue: "Arms a little away from the body, palms facing up" },
+    { icon: "👁️", cue: "Soften the face and jaw, breathe slowly" },
+  ],
 };
 
 const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
@@ -131,6 +159,10 @@ const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
   tree_pose:    { level: "Intermediate", color: "var(--amber)" },
   plank:        { level: "Intermediate", color: "var(--amber)" },
   downward_dog: { level: "Beginner",     color: "var(--ok)" },
+  triangle:     { level: "Intermediate", color: "var(--amber)" },
+  chair_pose:   { level: "Beginner",     color: "var(--ok)" },
+  seated_easy_pose: { level: "Beginner", color: "var(--ok)" },
+  corpse:       { level: "Beginner",     color: "var(--ok)" },
 };
 
 // Poses selectable in the sidebar "Target Pose" grid. Phase B re-validated
@@ -158,6 +190,10 @@ const POSE_ICONS: { [id: string]: any } = {
   tree_pose: TreePine,
   plank: Minus,
   downward_dog: Triangle,
+  triangle: Pyramid,
+  chair_pose: Armchair,
+  seated_easy_pose: Flower2,
+  corpse: BedSingle,
 };
 const POSE_COMMON_NAME: { [id: string]: string } = {
   warrior_2: "Warrior II",
@@ -166,7 +202,15 @@ const POSE_COMMON_NAME: { [id: string]: string } = {
   tree_pose: "Tree",
   plank: "Plank",
   downward_dog: "Downward dog",
+  triangle: "Triangle",
+  chair_pose: "Chair",
+  seated_easy_pose: "Seated easy pose",
+  corpse: "Corpse",
 };
+
+// GUIDED mode lists only the poses that were verified end to end on a real phone (docs/BENCHMARKS.md section 12: at least half of the
+// test photos recognised correctly). Free mode keeps its own, wider list (POSE_LIBRARY) and is not affected.
+const GUIDED_POSES: PresetPoseId[] = ["warrior_2", "tree_pose", "triangle", "chair_pose", "downward_dog", "plank", "seated_easy_pose", "corpse"];
 
 const POSE_LIBRARY: { id: PresetPoseId; icon: string }[] = [
   { id: "warrior_2", icon: "⚔️" },
@@ -888,7 +932,7 @@ export default function Dashboard() {
       const m = window.localStorage.getItem("asana.practiceMode");
       if (m === "free" || m === "guided") setPracticeMode(m);
       const t = window.localStorage.getItem("asana.targetPose");
-      if (t && POSE_LIBRARY.some((p) => p.id === t)) setTargetPose(t as PresetPoseId);
+      if (t && GUIDED_POSES.includes(t as PresetPoseId)) setTargetPose(t as PresetPoseId);   // an old choice that is no longer offered (e.g. cobra) falls back to the default
     } catch { /* storage unavailable (private mode, blocked): the defaults are fine */ }
   }, []);
   useEffect(() => {
@@ -2607,7 +2651,7 @@ export default function Dashboard() {
             </div>
             <p className="ap-hint">{practiceMode === "guided" ? T.modeGuidedHint : `${T.modeFreeHint} ${T.tapForGuide}`}</p>
             <div className="ap-poses">
-              {POSE_LIBRARY.map(({ id }) => {
+              {(practiceMode === "guided" ? GUIDED_POSES : POSE_LIBRARY.map((p) => p.id)).map((id) => {
                 const Icon = POSE_ICONS[id] || Leaf;
                 const guided = practiceMode === "guided";
                 const isOn = guided ? targetPose === id : activePose === id;
