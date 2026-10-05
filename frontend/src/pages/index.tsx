@@ -342,20 +342,9 @@ const getSanskritName = (poseId: string, lang: "en" | "hi" | "bn" = "en") => {
 
 // The pose engine (MediaPipe) needs a WebGL context. When a browser refuses one (graphics acceleration off or blocked,
 // battery saver, too many contexts open, some in-app browsers) MediaPipe shows a raw alert() on EVERY frame.
-// We check first and turn that failure into our own themed message instead.
+// We intercept that alert (see the effect that wraps window.alert) and show our own themed message instead.
+// MediaPipe initialises itself on the first frame: never start or call its initialize() in parallel with frame processing.
 const GRAPHICS_ERR = "__graphics__";
-const sleepMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-const webglAvailable = (): boolean => {
-  try {
-    const c = document.createElement("canvas");
-    const gl: any = c.getContext("webgl2") || c.getContext("webgl");
-    const ok = !!gl && !gl.isContextLost?.();
-    gl?.getExtension?.("WEBGL_lose_context")?.loseContext();   // free the probe's slot right away
-    return ok;
-  } catch {
-    return false;
-  }
-};
 // A short, local-only summary of what the browser offers, shown under "Details" when the engine cannot start.
 const graphicsReport = (): string => {
   const ua = navigator.userAgent || "";
@@ -1029,7 +1018,6 @@ export default function Dashboard() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const engineErrorsRef = useRef(0);
   const graphicsFailedRef = useRef(false);
-  const engineWarmRef = useRef(false);
   const [gfxInfo, setGfxInfo] = useState("");
   const onGraphicsFailureRef = useRef<() => void>(() => {});
   const lastResultAtRef = useRef(0);
@@ -1713,14 +1701,7 @@ export default function Dashboard() {
       return;
     }
 
-    // No WebGL, no pose engine: say so in our own words instead of letting MediaPipe pop a browser alert on every frame.
     graphicsFailedRef.current = false;
-    if (!poseRef.current && !webglAvailable()) {
-      setIsInitializingCamera(true);
-      await sleepMs(700);   // the graphics process is sometimes only restarting
-      setIsInitializingCamera(false);
-      if (!webglAvailable()) { failGraphics(); return; }
-    }
 
     // Start loading the pose engine now; if its script has not arrived yet the frame loop keeps retrying,
     // so the user always SEES the camera and a clear "loading" state instead of a black box.
@@ -1731,13 +1712,6 @@ export default function Dashboard() {
 
     setIsInitializingCamera(true);
     try {
-      // Bring the pose engine up FIRST, in parallel with the permission prompt: it claims its graphics context while the
-      // phone is idle (before the camera's video decoding competes for graphics memory) and the first frame is not slow.
-      let enginePromise: Promise<unknown> = Promise.resolve();
-      if (poseRef.current && !engineWarmRef.current) {
-        enginePromise = Promise.resolve(poseRef.current.initialize?.()).then(() => { engineWarmRef.current = true; }).catch(() => { /* a WebGL failure is reported by the alert hook */ });
-      }
-
       // Clean up previous streams and request frames
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -1772,8 +1746,6 @@ export default function Dashboard() {
           throw e;
         }
       }
-      await Promise.race([enginePromise, sleepMs(8000)]);   // slow network: show the camera anyway, the engine keeps loading
-      if (graphicsFailedRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }   // no WebGL: the themed panel is already up
       streamRef.current = stream;
 
       const videoElement = videoRef.current;
@@ -1942,7 +1914,6 @@ export default function Dashboard() {
   const releasePose = () => {
     try { Promise.resolve(poseRef.current?.close?.()).catch(() => {}); } catch { /* already gone */ }
     poseRef.current = null;
-    engineWarmRef.current = false;
   };
   const failGraphics = () => {
     if (graphicsFailedRef.current) return;
