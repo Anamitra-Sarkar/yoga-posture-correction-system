@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FrameInput, FrameResponse, SequenceResponse, CalibrationProfile, MotionState, CorrectionInput, CorrectionResponse } from "../types/yoga";
-import { offlineFrame, offlineCorrection } from "../utils/offlineCoach";
-import { analyseFrame, analyseSequence, recoverOcclusion, generateCorrection } from "../utils/api";
+import { offlineFrame, offlineCorrection, maskDeviations } from "../utils/offlineCoach";
+import { analyseFrame, analyseSequence, generateCorrection } from "../utils/api";
 import { computeOrientation } from "../utils/geometry";
 import { StickyLabel, Ema, EmaMap } from "../utils/stability";
 import { SequenceBuffer } from "../utils/sequenceBuffer";
@@ -34,7 +34,6 @@ export function useYogaPipeline({
   const [flowConfidence, setFlowConfidence] = useState<number>(0.0);
   const [correctionText, setCorrectionText] = useState<string>("");
   const [correctionIsSafe, setCorrectionIsSafe] = useState<boolean>(true);
-  const [recoveredJoints, setRecoveredJoints] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [predictionTimestamp, setPredictionTimestamp] = useState<number>(0);
   const [lastEfficacy, setLastEfficacy] = useState<EfficacyRecord | null>(null);
@@ -97,19 +96,19 @@ export function useYogaPipeline({
   const markDevice = (reason: "offline" | "waking" | "reconnecting") => { setCoachSource("device"); setCoachReason(reason); };
   const markServer = () => { setCoachSource("server"); setCoachReason(""); };
 
-  const frameAnswer = async (req: FrameInput): Promise<FrameResponse> => {
+  const frameAnswer = async (req: FrameInput, hidden: string[]): Promise<FrameResponse> => {
     const h = health.current;
-    if (isOffline()) { markDevice("offline"); return offlineFrame(req); }
+    if (isOffline()) { markDevice("offline"); return offlineFrame(req, hidden); }
     if (h.mode === "server") {
       try {
         const r = await analyseFrame(req);
         h.fails = 0; h.everOk = true;
         markServer(); // no-op unless we had been showing "basic mode" (e.g. coming back online)
-        return r;
+        return { ...r, deviations: maskDeviations(r.deviations, hidden), calibrated_deviations: maskDeviations(r.calibrated_deviations, hidden) };
       } catch {
         h.fails += 1;
         if (h.fails >= 2) { h.mode = "device"; h.nextProbe = Date.now() + 15000; markDevice(h.everOk ? "reconnecting" : "waking"); }
-        return offlineFrame(req);
+        return offlineFrame(req, hidden);
       }
     }
     // device mode: answer now, look for the server in the background
@@ -120,7 +119,7 @@ export function useYogaPipeline({
         .catch(() => { h.nextProbe = Date.now() + 15000; markDevice(h.everOk ? "reconnecting" : "waking"); })
         .finally(() => { h.probing = false; });
     }
-    return offlineFrame(req);
+    return offlineFrame(req, hidden);
   };
 
   const correctionAnswer = async (input: CorrectionInput): Promise<CorrectionResponse> => {
@@ -132,12 +131,10 @@ export function useYogaPipeline({
     }
   };
 
-  // Only joints that matter for the pose rules; if all are clearly visible there is nothing for occlusion recovery to do.
-  const KEY_JOINTS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
   const LIVE_INTERVAL_MS = 1500; // pose + score refresh; coaching text/speech/sequence keep the slower cycle below
   const lastLiveTime = useRef(0);
 
-  const processFrame = async (rawLandmarks: number[][], currentAngles: number[], worldAngles?: number[]) => {
+  const processFrame = async (rawLandmarks: number[][], currentAngles: number[], worldAngles?: number[], hiddenJoints: string[] = []) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
     if (rawLandmarks.length !== 33) return;
 
@@ -154,17 +151,9 @@ export function useYogaPipeline({
 
     setIsLoading(true);
     try {
-      // 1. Occlusion recovery: server only, and only when a key joint is actually hard to see.
-      let fusedCoords = rawLandmarks;
-      let recovered: string[] = [];
-      if (!isOffline() && health.current.mode === "server" && KEY_JOINTS.some((i) => (rawLandmarks[i]?.[3] ?? 0) < 0.5)) {
-        try {
-          const occRes = await recoverOcclusion({ mp_landmarks: rawLandmarks });
-          fusedCoords = occRes.fused_landmarks;
-          recovered = occRes.occluded_joints_recovered;
-        } catch { /* optional stage: carry on with the raw landmarks */ }
-      }
-      setRecoveredJoints((prev) => (prev.length === 0 && recovered.length === 0 ? prev : recovered));
+      // Hidden joints are NOT guessed at (a left-right mirror is only right for symmetric stances and wrong for tree, warrior,
+      // lunge...). They are reported to the user and left out of scoring and coaching instead.
+      const fusedCoords = rawLandmarks;
 
       // 2. Stage 7: Sequence Flow Analysis (ST-GCN). It needs a full 2.4 s window at the training frame rate.
       // It is a SECOND OPINION shown in the "Sequence Flow" row, never the source of the headline pose or
@@ -209,7 +198,7 @@ export function useYogaPipeline({
       };
       let currentMotionState: MotionState = "unknown";
 
-      const frameRes = await frameAnswer(frameReq);
+      const frameRes = await frameAnswer(frameReq, hiddenJoints);
       const rawDevs = frameRes.calibrated_deviations ?? frameRes.deviations;
       currentPoseId = poseSticky.current.push(frameRes.pose_id);
       currentCorrectness = correctnessEma.current.push(frameRes.correctness_score);
@@ -374,7 +363,6 @@ export function useYogaPipeline({
     setGuided(null);
     setDeviations({});
     angleHistory.current = [];
-    setRecoveredJoints([]);
   };
 
   return {
@@ -392,7 +380,6 @@ export function useYogaPipeline({
     personalCorrectness,
     deviations,
     predictionTimestamp,
-    recoveredJoints,
     isLoading,
     processFrame,
     pushSequenceFrame,

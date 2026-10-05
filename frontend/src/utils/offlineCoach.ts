@@ -22,6 +22,41 @@ export const FEATURE_NAMES = [
 ];
 
 export type Angles = { [name: string]: number };
+
+/** Which MediaPipe landmarks each angle feature is computed from (mirrors utils/geometry.ts extractAnglesFromLandmarks). */
+export const FEATURE_LANDMARKS: { [feature: string]: number[] } = {
+  elbow_l: [11, 13, 15], elbow_r: [12, 14, 16],
+  shoulder_l: [23, 11, 13], shoulder_r: [24, 12, 14],
+  hip_l: [11, 23, 25], hip_r: [12, 24, 26],
+  knee_l: [23, 25, 27], knee_r: [24, 26, 28],
+  ankle_l: [25, 27, 29], ankle_r: [26, 28, 30],
+  trunk_l: [11, 23, 24], trunk_r: [12, 24, 23],
+  neck: [0, 11, 12, 23, 24],
+  hip_abduct_l: [24, 23, 25], hip_abduct_r: [23, 24, 26],
+};
+
+/**
+ * Features whose landmarks the camera cannot actually see. MediaPipe still returns a position for a hidden joint
+ * (a guess), so an angle built on it can look plausible and be wrong. These are neither scored nor coached.
+ * `landmarks` is [33][x, y, z, visibility].
+ */
+export function hiddenFeatures(landmarks: number[][], threshold = 0.5): string[] {
+  if (!landmarks || landmarks.length < 31) return [];
+  const out: string[] = [];
+  for (const f of FEATURE_NAMES) {
+    const ids = FEATURE_LANDMARKS[f];
+    if (ids.some((i) => (landmarks[i]?.[3] ?? 0) < threshold)) out.push(f);
+  }
+  return out;
+}
+
+/** A server answer with the hidden joints removed from its per-joint deviations (so nothing is coached on a guess). */
+export function maskDeviations<T extends { [k: string]: number } | null | undefined>(devs: T, hidden: string[]): T {
+  if (!devs || hidden.length === 0) return devs;
+  const out: { [k: string]: number } = { ...devs };
+  hidden.forEach((h) => { if (h in out) out[h] = 0.0; });
+  return out as T;
+}
 type Orientation = { torso_incline?: number | null; leg_torso_ratio?: number | null } | null | undefined;
 
 const UNKNOWN = "transition/unknown";
@@ -129,10 +164,11 @@ function classify2dOnly(a: Angles): string {
 
 // ── scoring (score_pose) ─────────────────────────────────────────────────────────────────────────────────────────
 
-export function scorePose(poseId: string, a: Angles): { correctness: number; deviations: Angles } {
+export function scorePose(poseId: string, a: Angles, hidden: string[] = []): { correctness: number; deviations: Angles } {
   const deviations: Angles = {};
   FEATURE_NAMES.forEach((n) => { deviations[n] = 0.0; });
-  const bands = POSE_BANDS[poseId] || [];
+  // Joints the camera cannot see are skipped (no band check, no deviation): the score covers only what is visible.
+  const bands = (POSE_BANDS[poseId] || []).filter(([name]) => hidden.indexOf(name) < 0);
   if (bands.length === 0) {
     return { correctness: poseId !== UNKNOWN ? 0.5 : 0.0, deviations };
   }
@@ -189,10 +225,10 @@ export function guidedReport(target: string, detected: string, a: Angles) {
 }
 
 /** The whole /analyse_frame answer, computed on the device. */
-export function offlineFrame(req: FrameInput): FrameResponse {
+export function offlineFrame(req: FrameInput, hidden: string[] = []): FrameResponse {
   const a = anglesToDict(req.angles);
   const pose = classifyPose(a, req.orientation);
-  const { correctness, deviations } = scorePose(pose, a);
+  const { correctness, deviations } = scorePose(pose, a, hidden);
   let personal: number | null = null;
   let calibrated: Angles | null = null;
   if (req.calibration && Object.keys(req.calibration).length > 0) {

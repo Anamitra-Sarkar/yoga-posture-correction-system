@@ -822,3 +822,4 @@
 /* hairline edge so the camera card is defined against any page colour */
 .ap-cam-wrap { box-shadow: 0 0 0 1px var(--line), var(--shadow-2); }
 @media (max-width: 767px) { .ap-cam-wrap { box-shadow: 0 1px 0 var(--line), var(--shadow-2); } }
+.ap-joint-val.hidden { color: var(--ink-3); font-weight: 500; }

@@ -109,9 +109,55 @@ for (const c of D.corr) {
 const poses = {}; D.cases.forEach(c => poses[c.pose] = (poses[c.pose] || 0) + 1);
 console.log(JSON.stringify({ frame_cases: D.cases.length, frame_mismatches: bad.length, correction_cases: D.corr.length, correction_mismatches: cb.length, poses_covered: Object.keys(poses).length, pose_counts: poses, first_frame_mismatches: bad.slice(0, 5), first_correction_mismatches: cb.slice(0, 5) }));
 ''')
+
+# ── visibility-aware scoring: the landmark->feature table must match what the Python angle code really depends on ──────────
+import numpy as np
+from app.utils.geometry import extract_angles_from_landmarks  # noqa: E402
+base = np.random.default_rng(3).uniform(0.2, 0.8, size=(33, 3))
+ref = extract_angles_from_landmarks(base.copy(), True)
+dep = {n: [] for n in FEATURE_NAMES}
+for i in range(33):
+    pert = base.copy(); pert[i, 0] += 0.07; pert[i, 1] -= 0.05
+    a2 = extract_angles_from_landmarks(pert, True)
+    for k, n in enumerate(FEATURE_NAMES):
+        if abs(a2[k] - ref[k]) > 1e-9: dep[n].append(i)
+subprocess.run([os.path.join(fe, "node_modules/.bin/tsc"), os.path.join(fe, "src/utils/visibility.ts"), "--outDir", work, "--target", "es2019",
+                "--module", "commonjs", "--skipLibCheck", "--moduleResolution", "node"], check=True)
+json.dump({"dep": dep}, open(os.path.join(work, "dep.json"), "w"))
+open(os.path.join(work, "vis_check.js"), "w").write(r"""
+const { FEATURE_LANDMARKS, hiddenFeatures, maskDeviations, scorePose, FEATURE_NAMES } = require("./utils/offlineCoach.js");
+const { VisibilityTracker } = require("./utils/visibility.js");
+const D = require("./dep.json").dep; const errs = [];
+const eq = (a, b) => JSON.stringify([...a].sort((x, y) => x - y)) === JSON.stringify([...b].sort((x, y) => x - y));
+for (const f of FEATURE_NAMES) if (!eq(FEATURE_LANDMARKS[f], D[f])) errs.push(`landmark table ${f}: ts=${FEATURE_LANDMARKS[f]} python=${D[f]}`);
+const lm = () => Array.from({ length: 33 }, () => [0.5, 0.5, 0, 1]);
+let l = lm(); l[27][3] = 0.1;
+const h = hiddenFeatures(l);
+if (!(h.includes("knee_l") && h.includes("ankle_l") && !h.includes("knee_r") && !h.includes("elbow_l"))) errs.push("hiddenFeatures wrong: " + h);
+if (hiddenFeatures(lm()).length !== 0) errs.push("nothing hidden expected");
+// hysteresis: hides after a few bad frames, does not flicker back on one good frame, returns after a few good ones
+const t = new VisibilityTracker(); let out = [];
+for (let i = 0; i < 8; i++) { const x = lm(); x[27][3] = 0.05; out = t.update(x); }
+if (!out.includes("ankle_l")) errs.push("tracker should hide ankle_l after sustained low visibility");
+out = t.update(lm()); if (!out.includes("ankle_l")) errs.push("tracker should not flip back on a single good frame");
+for (let i = 0; i < 6; i++) out = t.update(lm()); if (out.length !== 0) errs.push("tracker should recover after sustained good visibility: " + out);
+const t2 = new VisibilityTracker(); let o2 = []; for (let i = 0; i < 40; i++) { const x = lm(); x[27][3] = i % 2 ? 0.55 : 0.45; o2 = t2.update(x); } if (o2.length !== 0) errs.push("a joint hovering around the threshold must not flap to hidden");
+// masked scoring: the hidden joint is skipped (no deviation) and the score covers only what is visible
+const a = {}; FEATURE_NAMES.forEach((n) => a[n] = 170); a.knee_l = 60; // a very wrong left knee
+const full = scorePose("mountain_pose", a), masked = scorePose("mountain_pose", a, ["knee_l"]);
+if (!(full.deviations.knee_l > 0 && masked.deviations.knee_l === 0 && masked.correctness > full.correctness)) errs.push("masked scoring should ignore the hidden knee");
+if (scorePose("mountain_pose", a, FEATURE_NAMES).correctness !== 0.5) errs.push("everything hidden -> neutral score");
+const m = maskDeviations({ knee_l: 30, knee_r: 20 }, ["knee_l"]); if (!(m.knee_l === 0 && m.knee_r === 20)) errs.push("maskDeviations");
+if (maskDeviations(null, ["knee_l"]) !== null) errs.push("maskDeviations null");
+console.log(JSON.stringify({ visibility_errors: errs }));
+""")
+vr = subprocess.run(["node", os.path.join(work, "vis_check.js")], capture_output=True, text=True, cwd=work)
+print(vr.stdout.strip() or vr.stderr.strip())
+vis_ok = vr.returncode == 0 and json.loads(vr.stdout)["visibility_errors"] == []
+
 res = subprocess.run(["node", os.path.join(work, "check.js")], capture_output=True, text=True, cwd=work)
 print(res.stdout.strip() or res.stderr.strip())
 out = json.loads(res.stdout)
-ok = out["frame_mismatches"] == 0 and out["correction_mismatches"] == 0
+ok = out["frame_mismatches"] == 0 and out["correction_mismatches"] == 0 and vis_ok
 print("PARITY:", "OK" if ok else "FAILED")
 sys.exit(0 if ok else 1)

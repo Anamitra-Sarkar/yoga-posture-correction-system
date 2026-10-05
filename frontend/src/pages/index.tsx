@@ -43,6 +43,7 @@ import {
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
 import { extractAnglesFromLandmarks } from "../utils/geometry";
+import { VisibilityTracker } from "../utils/visibility";
 import { pickVoice, splitForSpeech, utteranceLang, voiceMissing as isVoiceMissing } from "../utils/speechText";
 
 /* eslint-disable */
@@ -429,7 +430,7 @@ const TRANSLATIONS: {
     occlusionFusing: "Hidden joints",
     active: "Estimating",
     inactive: "Inactive",
-    fusingOccluded: "Some joints are hidden, so I'm estimating:",
+    fusingOccluded: "I can't see these, so I'm not checking them:",
     mirroredCoordinates: "",
     systemStatus: "Status",
     detectingPose: "Looking for your pose. Step back until your whole body is in view.",
@@ -467,6 +468,8 @@ const TRANSLATIONS: {
     themeAuto: "Auto",
     themeLight: "Light",
     themeDark: "Dark",
+    notChecking: "Not checking:",
+    hiddenWord: "Hidden",
   },
   hi: {
     tapForGuide: "गाइड देखने के लिए किसी भी आसन पर टैप करें।",
@@ -550,7 +553,7 @@ const TRANSLATIONS: {
     occlusionFusing: "छिपे जोड़",
     active: "अनुमान",
     inactive: "निष्क्रिय",
-    fusingOccluded: "कुछ जोड़ छिपे हैं, इसलिए अनुमान लगा रहा हूँ:",
+    fusingOccluded: "ये मुझे दिख नहीं रहे, इसलिए इनकी जाँच नहीं कर रहा:",
     mirroredCoordinates: "",
     systemStatus: "सिस्टम की स्थिति",
     detectingPose: "मुद्रा खोजी जा रही है... अपने शरीर को कैमरे के साथ संरेखित करें।",
@@ -588,6 +591,8 @@ const TRANSLATIONS: {
     themeAuto: "ऑटो",
     themeLight: "लाइट",
     themeDark: "डार्क",
+    notChecking: "जाँच नहीं:",
+    hiddenWord: "छिपा",
   },
   bn: {
     tapForGuide: "গাইড দেখতে যেকোনো আসনে ট্যাপ করুন।",
@@ -671,7 +676,7 @@ const TRANSLATIONS: {
     occlusionFusing: "লুকানো জোড়",
     active: "আন্দাজ",
     inactive: "নিষ্ক্রিয়",
-    fusingOccluded: "কিছু জোড় লুকানো, তাই আন্দাজ করছি:",
+    fusingOccluded: "এগুলো দেখা যাচ্ছে না, তাই পরীক্ষা করছি না:",
     mirroredCoordinates: "",
     systemStatus: "সিস্টেমের অবস্থা",
     detectingPose: "আসন শনাক্ত করা হচ্ছে... ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন।",
@@ -709,7 +714,15 @@ const TRANSLATIONS: {
     themeAuto: "অটো",
     themeLight: "লাইট",
     themeDark: "ডার্ক",
+    notChecking: "পরীক্ষা হচ্ছে না:",
+    hiddenWord: "লুকানো",
   }
+};
+
+const PART_LABELS: { [lang: string]: { [feature: string]: string } } = {
+  en: { elbow_l: "left elbow", elbow_r: "right elbow", shoulder_l: "left shoulder", shoulder_r: "right shoulder", hip_l: "left hip", hip_r: "right hip", knee_l: "left knee", knee_r: "right knee", ankle_l: "left ankle", ankle_r: "right ankle", trunk_l: "torso", trunk_r: "torso", neck: "neck", hip_abduct_l: "left hip", hip_abduct_r: "right hip" },
+  hi: { elbow_l: "बायाँ कोहनी", elbow_r: "दायाँ कोहनी", shoulder_l: "बायाँ कंधा", shoulder_r: "दायाँ कंधा", hip_l: "बायाँ कूल्हा", hip_r: "दायाँ कूल्हा", knee_l: "बायाँ घुटना", knee_r: "दायाँ घुटना", ankle_l: "बायाँ टखना", ankle_r: "दायाँ टखना", trunk_l: "धड़", trunk_r: "धड़", neck: "गर्दन", hip_abduct_l: "बायाँ कूल्हा", hip_abduct_r: "दायाँ कूल्हा" },
+  bn: { elbow_l: "বাম কনুই", elbow_r: "ডান কনুই", shoulder_l: "বাম কাঁধ", shoulder_r: "ডান কাঁধ", hip_l: "বাম কোমর", hip_r: "ডান কোমর", knee_l: "বাম হাঁটু", knee_r: "ডান হাঁটু", ankle_l: "বাম গোড়ালি", ankle_r: "ডান গোড়ালি", trunk_l: "ধড়", trunk_r: "ধড়", neck: "ঘাড়", hip_abduct_l: "বাম কোমর", hip_abduct_r: "ডান কোমর" },
 };
 
 const JOINT_TRANSLATIONS: {
@@ -974,6 +987,11 @@ export default function Dashboard() {
   const lastBodySeenRef = useRef(0);
   const framingCandRef = useRef<{ v: "ok" | "partial"; since: number }>({ v: "ok", since: 0 });
   const lastSendRef = useRef(0);
+  // Joints the camera cannot actually see (stable, with hysteresis). They are not scored or coached, and are named to the user.
+  const visRef = useRef(new VisibilityTracker());
+  const hiddenRef = useRef<string[]>([]);
+  const hiddenKeyRef = useRef("");
+  const [hiddenParts, setHiddenParts] = useState<string[]>([]);
   // Session recap, kept on the device
   const statsRef = useRef<{ poses: { [id: string]: { sec: number; sum: number } }; total: number; startedAt: number }>({ poses: {}, total: 0, startedAt: 0 });
   const liveRef = useRef({ pose: "", score: 0, active: false });
@@ -1383,7 +1401,6 @@ export default function Dashboard() {
     personalCorrectness,
     deviations,
     predictionTimestamp,
-    recoveredJoints,
     isLoading,
     processFrame,
     pushSequenceFrame,
@@ -1402,7 +1419,10 @@ export default function Dashboard() {
     if (framingRef.current === v) return;
     framingRef.current = v;
     setFraming(v);
-    if (v === "none") resetPipeline(); // nobody there: clear the stale pose, score and tips
+    if (v === "none") {
+      resetPipeline(); // nobody there: clear the stale pose, score and tips
+      visRef.current.reset(); hiddenRef.current = []; hiddenKeyRef.current = ""; setHiddenParts([]);
+    }
   };
   const noteBody = (lm: any[]) => {
     const now = performance.now();
@@ -1939,6 +1959,15 @@ export default function Dashboard() {
       // 2b. ST-GCN input: every camera result, at the camera's own rate (the API loop below is throttled to ~0.5-2 fps)
       pushSequenceFrame(rawLandmarks);
 
+      // 2c. Which joints can the camera really see? (hidden ones are not scored or coached)
+      const hiddenNow = visRef.current.update(rawLandmarks);
+      hiddenRef.current = hiddenNow;
+      const hiddenKey = hiddenNow.join(",");
+      if (hiddenKey !== hiddenKeyRef.current) {
+        hiddenKeyRef.current = hiddenKey;
+        setHiddenParts(hiddenNow);
+      }
+
       // 3. Compute client-side angles for feature list (15 biomechanical features)
       const points = results.poseLandmarks.map((pt: any) => ({
         x: pt.x,
@@ -2006,7 +2035,7 @@ export default function Dashboard() {
         abortControllerRef.current = new AbortController();
       }
 
-      processFrame(rawLandmarks, angles, worldAngles).finally(() => {
+      processFrame(rawLandmarks, angles, worldAngles, hiddenRef.current).finally(() => {
         isProcessingRef.current = false;
       });
     } else {
@@ -2139,7 +2168,8 @@ export default function Dashboard() {
       const pt2 = landmarks[idx2];
       if (pt1 && pt2) {
         const color = getLineColor(idx1, idx2);
-        
+        ctx.globalAlpha = visRef.current.isHidden(idx1) || visRef.current.isHidden(idx2) ? 0.25 : 1;
+
         ctx.beginPath();
         ctx.moveTo(toX(pt1.x), toY(pt1.y));
         ctx.lineTo(toX(pt2.x), toY(pt2.y));
@@ -2151,6 +2181,7 @@ export default function Dashboard() {
         ctx.strokeStyle = color;
         ctx.lineWidth = width * 0.8;
         ctx.stroke();
+        ctx.globalAlpha = 1;
       }
     };
 
@@ -2263,6 +2294,8 @@ export default function Dashboard() {
     : effectiveCorrectness >= 0.75
     ? T.onTarget.replace("✓ ", "")
     : T.needsAdjustment;
+  const hiddenLabels = Array.from(new Set(hiddenParts.map((f) => PART_LABELS[lang][f]).filter(Boolean)));
+  const hiddenShort = hiddenLabels.slice(0, 2).join(", ") + (hiddenLabels.length > 2 ? "…" : "");
   const poseName = bodyMissing || activePose === "transition/unknown" ? "" : getSanskritName(activePose, lang);
   liveRef.current = { pose: scoreActive ? activePose : "", score: effectiveCorrectness, active: scoreActive };
   const retryEngine = () => {
@@ -2662,9 +2695,11 @@ export default function Dashboard() {
                             <ScanLine size={14} />{T.basicMode}
                           </span>
                         )}
-                        {framing === "partial" && !bodyMissing && (
+                        {framing === "partial" && !bodyMissing ? (
                           <span className="ap-engine" role="status"><PersonStanding size={14} />{T.stepBack}</span>
-                        )}
+                        ) : hiddenLabels.length > 0 && !bodyMissing ? (
+                          <span className="ap-engine" role="status"><ScanLine size={14} />{T.notChecking} {hiddenShort}</span>
+                        ) : null}
                         {engineState === "loading" && (
                           <span className="ap-engine" role="status"><Loader2 size={14} className="spin" />{T.poseEngineLoading}</span>
                         )}
@@ -2811,15 +2846,15 @@ export default function Dashboard() {
                 </div>
                 <div className="ap-row">
                   <span>{T.occlusionFusing}</span>
-                  <strong className={recoveredJoints.length > 0 ? "warn" : "ok"}>
-                    {recoveredJoints.length > 0 ? `${T.active} (${recoveredJoints.length})` : T.allVisible}
+                  <strong className={hiddenLabels.length > 0 ? "warn" : "ok"}>
+                    {hiddenLabels.length > 0 ? hiddenShort : T.allVisible}
                   </strong>
                 </div>
               </div>
-              {recoveredJoints.length > 0 && (
+              {cameraActive && hiddenLabels.length > 0 && (
                 <div className="ap-occl">
                   <ShieldAlert size={15} style={{ flex: "none", marginTop: 2 }} />
-                  <span><strong>{T.fusingOccluded}</strong> {recoveredJoints.map((j) => JOINT_TRANSLATIONS[lang][j] || j).join(", ")}</span>
+                  <span><strong>{T.fusingOccluded}</strong> {hiddenLabels.join(", ")}</span>
                 </div>
               )}
             </div>
@@ -2840,6 +2875,17 @@ export default function Dashboard() {
                       : joint === "knee_l" ? currentKneeAngle : joint === "shoulder_l" ? currentShoulderAngle : 180;
                   const diff = currentAngle - target;
                   const off = Math.abs(diff) > tolerance;
+                  if (hiddenParts.indexOf(joint) >= 0) {
+                    return (
+                      <div className="ap-joint" key={joint}>
+                        <div className="ap-joint-top">
+                          <span className="ap-joint-name">{JOINT_TRANSLATIONS[lang][joint] || label}</span>
+                          <span className="ap-joint-val hidden">{T.hiddenWord}</span>
+                        </div>
+                        <div className="ap-joint-sub">{T.fusingOccluded.replace(/:$/, "")}</div>
+                      </div>
+                    );
+                  }
                   return (
                     <div className="ap-joint" key={joint}>
                       <div className="ap-joint-top">
