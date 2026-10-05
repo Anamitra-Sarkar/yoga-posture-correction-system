@@ -86,7 +86,10 @@ const loadScript = (src: string): Promise<void> => {
 
 
 export class CpuPose {
-  private worker: Worker | null = null;  // MediaPipe Tasks PoseLandmarker (CPU), in a worker
+  private workers: Worker[] = [];      // MediaPipe Tasks PoseLandmarker (CPU): one instance per worker; frames go to whichever is idle
+  private busy: boolean[] = [];
+  private wake: (() => void) | null = null;
+  private deliveredId = 0;
   private pending = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
   private seq = 0;
   private source: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement | null = null;
@@ -101,7 +104,7 @@ export class CpuPose {
   private closed = false;
 
   /** True when inference runs in a worker: the interface is not blocked, so frames can be analysed back to back. */
-  get offMainThread(): boolean { return !!this.worker; }
+  get offMainThread(): boolean { return this.workers.length > 0; }
 
   setOptions(_options?: unknown) { /* the compatibility engines use one lite model */ }
   onResults(callback: (results: any) => void) { this.callback = callback; }
@@ -125,16 +128,15 @@ export class CpuPose {
     try { window.localStorage.setItem(TFJS_KEY, "1"); } catch { /* ignore */ }
   }
 
-  private async loadTasks() {
-    const worker = new Worker("/engine/pose-worker.js");
-    this.worker = worker;
-    await new Promise<void>((resolve, reject) => {
-      const timer = window.setTimeout(() => reject(new Error("pose worker timed out")), 60000);
+  private startWorker(): Promise<Worker> {
+    return new Promise<Worker>((resolve, reject) => {
+      const worker = new Worker("/engine/pose-worker.js");
+      const timer = window.setTimeout(() => { worker.terminate(); reject(new Error("pose worker timed out")); }, 60000);
       worker.onerror = (ev) => { window.clearTimeout(timer); reject(new Error(ev.message || "pose worker failed")); };
       worker.onmessage = (ev) => {
         const d = ev.data;
-        if (d.type === "ready") { window.clearTimeout(timer); resolve(); return; }
-        if (d.type === "error" && d.id === undefined) { window.clearTimeout(timer); reject(new Error(d.message)); return; }
+        if (d.type === "ready") { window.clearTimeout(timer); resolve(worker); return; }
+        if (d.type === "error" && d.id === undefined) { window.clearTimeout(timer); worker.terminate(); reject(new Error(d.message)); return; }
         const waiter = this.pending.get(d.id);                 // frame answers
         if (!waiter) return;
         this.pending.delete(d.id);
@@ -144,31 +146,56 @@ export class CpuPose {
     });
   }
 
+  private async loadTasks() {
+    // One instance needs ~90 ms per frame on a mid-range phone CPU (8-11 frames/s). Phones with spare cores run two instances side by side
+    // and alternate frames between them (measured on a Dimensity 7025: 7 -> 19 results/s). The first must start; the second is optional.
+    const wanted = (navigator.hardwareConcurrency || 4) >= 6 ? 2 : 1;
+    const results = await Promise.allSettled(Array.from({ length: wanted }, () => this.startWorker()));
+    const ready = results.filter((r): r is PromiseFulfilledResult<Worker> => r.status === "fulfilled").map((r) => r.value);
+    if (!ready.length) throw (results[0] as PromiseRejectedResult).reason;
+    this.workers = ready;
+    this.busy = ready.map(() => false);
+  }
+
   private async pump() {
     this.pumping = true;
     try {
       // runs while the app keeps handing frames over; ends by itself shortly after the camera stops
-      while (!this.closed && this.worker && this.source && performance.now() - this.lastSendAt < 1500) {
-        const el = this.source as HTMLVideoElement;
-        const w0 = el.videoWidth || (this.source as HTMLCanvasElement).width || 0, h0 = el.videoHeight || (this.source as HTMLCanvasElement).height || 0;
+      while (!this.closed && this.workers.length && this.source && performance.now() - this.lastSendAt < 1500) {
+        const slot = this.busy.indexOf(false);
+        if (slot < 0) { await new Promise<void>((r) => { this.wake = r; window.setTimeout(r, 50); }); continue; }   // every instance is busy
+        const source = this.source;
+        const el = source as HTMLVideoElement;
+        const w0 = el.videoWidth || (source as HTMLCanvasElement).width || 0, h0 = el.videoHeight || (source as HTMLCanvasElement).height || 0;
         const fresh = typeof el.currentTime === "number" && el.currentTime !== this.lastFrameTime;
         if (!w0 || !h0 || (typeof el.currentTime === "number" && !fresh) || (el.readyState !== undefined && el.readyState < 2)) { await new Promise((r) => setTimeout(r, 8)); continue; }
         this.lastFrameTime = el.currentTime;
+        const worker = this.workers[slot];
+        this.busy[slot] = true;
         try {
           const scale = Math.min(1, 640 / Math.max(w0, h0));   // the model works on a ~256 px crop: no need to ship a full-size frame
-          const bitmap = await createImageBitmap(this.source as ImageBitmapSource, { resizeWidth: Math.round(w0 * scale), resizeHeight: Math.round(h0 * scale), resizeQuality: "low" });
+          const bitmap = await createImageBitmap(source as ImageBitmapSource, { resizeWidth: Math.round(w0 * scale), resizeHeight: Math.round(h0 * scale), resizeQuality: "low" });
           const id = ++this.seq;
-          const answer = await new Promise<any>((resolve, reject) => {
+          const answer = new Promise<any>((resolve, reject) => {
             const timer = window.setTimeout(() => { this.pending.delete(id); reject(new Error("pose worker did not answer")); }, 10000);
             this.pending.set(id, { resolve: (r) => { window.clearTimeout(timer); resolve(r); }, reject: (e) => { window.clearTimeout(timer); reject(e); } });
-            this.worker!.postMessage({ type: "frame", id, ts: performance.now(), bitmap }, [bitmap]);
           });
-          if (this.closed) return;
-          if (!answer.landmarks) this.callback?.({ image: this.source });   // nobody in view: same as MediaPipe
-          else this.callback?.({ poseLandmarks: answer.landmarks, poseWorldLandmarks: answer.world || undefined, image: this.source });
+          worker.postMessage({ type: "frame", id, ts: performance.now(), bitmap }, [bitmap]);
+          // not awaited: the next frame can go to the other instance while this one is still working
+          answer.then((a) => {
+            this.busy[slot] = false; this.wake?.();
+            if (this.closed || id < this.deliveredId) return;        // a newer frame was already delivered: drop the late one
+            this.deliveredId = id;
+            if (!a.landmarks) this.callback?.({ image: source });    // nobody in view: same as MediaPipe
+            else this.callback?.({ poseLandmarks: a.landmarks, poseWorldLandmarks: a.world || undefined, image: source });
+          }).catch((e) => {
+            this.busy[slot] = false; this.wake?.();
+            if (!this.closed) this.lastError = e as Error;           // surfaces on the app's next send(), where the error handling lives
+          });
         } catch (e) {
+          this.busy[slot] = false;
           if (this.closed) return;
-          this.lastError = e as Error;      // surfaces on the app's next send(), where the error handling lives
+          this.lastError = e as Error;
           await new Promise((r) => setTimeout(r, 250));
         }
       }
@@ -178,11 +205,13 @@ export class CpuPose {
   }
 
   private stopWorker() {
-    const w = this.worker;
-    this.worker = null;
-    if (w) { try { w.postMessage({ type: "close" }); } catch { /* ignore */ } w.terminate(); }
-    this.pending.forEach((p) => p.reject(new Error("engine closed")));
+    const ws = this.workers;
+    this.workers = [];
+    this.busy = [];
+    for (const w of ws) { try { w.postMessage({ type: "close" }); } catch { /* ignore */ } w.terminate(); }
+    this.pending.forEach((pw) => pw.reject(new Error("engine closed")));
     this.pending.clear();
+    this.wake?.();
   }
 
   private async loadTfjs() {
@@ -205,7 +234,7 @@ export class CpuPose {
   async send({ image }: { image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement }) {
     await this.initialize();
     if (this.closed) return;
-    if (this.worker) {
+    if (this.workers.length) {
       // Worker engine: hand the camera element over and return at once. The pump below keeps the worker busy back to back (no waiting for the
       // next video callback between frames); results reach the app through the callback, like MediaPipe's own API.
       if (this.lastError) { const e = this.lastError; this.lastError = null; throw e; }

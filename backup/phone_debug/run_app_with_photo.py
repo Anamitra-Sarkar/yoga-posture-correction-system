@@ -5,6 +5,9 @@ import asyncio, json, sys, time, urllib.request, websockets
 URL = sys.argv[1]; PHOTO = sys.argv[2]; SECS = int(sys.argv[3]) if len(sys.argv) > 3 else 30
 HOOK = r"""
 (() => {
+  window.__spoken = []; const sp = SpeechSynthesis.prototype.speak;
+  SpeechSynthesis.prototype.speak = function (u) { const rec = { text: String(u.text).slice(0, 70), lang: u.lang, voice: u.voice ? u.voice.name : null, vol: u.volume }; window.__spoken.push(rec); u.addEventListener('start', () => rec.started = true); u.addEventListener('end', () => rec.ended = true); u.addEventListener('error', (e) => rec.error = e.error); return sp.call(this, u); };
+  try { if (new URLSearchParams(location.search).get('voice') === 'on') localStorage.setItem('asana.voice', 'on'); } catch (e) {}
   window.__strokes = 0; window.__arcs = 0; window.__clr = 0; window.__bodies = 0;
   const st = CanvasRenderingContext2D.prototype.stroke, ar = CanvasRenderingContext2D.prototype.arc, cr = CanvasRenderingContext2D.prototype.clearRect;
   const mine = (c) => c && c.className === 'ap-canvas';
@@ -46,10 +49,11 @@ async def main():
                 if len(sys.argv) > 4 and not switched and time.time() - t0 > 10:
                     switched = True
                     print("switch language ->", sys.argv[4], await ev("(async () => { const open = [...document.querySelectorAll('button')].find(b => /^(EN|HI|BN)\\b/.test(b.textContent.trim()) && b.offsetParent); if (!open) return 'no language button'; open.click(); await new Promise(r => setTimeout(r, 300)); const names = {en: 'English', hi: 'हिन्दी', bn: 'বাংলা'}; const item = [...document.querySelectorAll('[role=option]')].find(b => b.textContent.trim() === names['" + sys.argv[4] + "']); if (!item) return 'no item'; item.click(); return 'clicked ' + item.textContent.trim(); })()"))
-                print(f"t+{int(time.time()-t0)}s", await ev("JSON.stringify({results: window.__clr, strokes: window.__strokes, joints: window.__arcs, serverCalls: window.__bodies, err: !!document.querySelector('.ap-idle.err'), mode: localStorage.getItem('asana.engine') ? 'cpu' : 'gpu', hud: [...document.querySelectorAll('.ap-hud span, .ap-hud button')].map(x => x.textContent.trim()).filter(Boolean).slice(0, 4)})"))
+                print(f"t+{int(time.time()-t0)}s", await ev("JSON.stringify({results: window.__clr, strokes: window.__strokes, joints: window.__arcs, serverCalls: window.__bodies, spoken: window.__spoken.length, err: !!document.querySelector('.ap-idle.err'), mode: localStorage.getItem('asana.engine') ? 'cpu' : 'gpu', hud: [...document.querySelectorAll('.ap-hud span, .ap-hud button')].map(x => x.textContent.trim()).filter(Boolean).slice(0, 4)})"))
             if len(sys.argv) > 5:
                 shot = await send("Page.captureScreenshot", {"format": "png"})
                 import base64; open(sys.argv[5], "wb").write(base64.b64decode(shot["data"])); print("screenshot saved:", sys.argv[5])
+            print("spoken cues:", await ev("JSON.stringify(window.__spoken)"))
             print("console:", logs[-6:])
             await ev("[...document.querySelectorAll('button')].find(b => /^\\s*stop/i.test(b.textContent))?.click()")
         await bws.send(json.dumps({"id": 3, "method": "Target.closeTarget", "params": {"targetId": tid}})); await bws.recv()
