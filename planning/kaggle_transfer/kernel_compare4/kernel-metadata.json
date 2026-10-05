@@ -1,0 +1,13 @@
+{
+  "id": "anamitrasarkar007/asanaai-conf-compare4",
+  "title": "asanaai-conf-compare4",
+  "code_file": "runner_compare4.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["anamitrasarkar007/asanaai-conf-creds"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

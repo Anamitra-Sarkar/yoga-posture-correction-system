@@ -23,3 +23,9 @@ The scratchpad gets wiped; anything worth keeping lives here.
 
 Older checkpoints live in `planning/` (`CHECKPOINT_2026-09-03_FINAL.md`,
 `SESSION_HANDOFF_2026-09-03.md`, `SESSION_HANDOFF_2026-08-27.md`).
+
+* `RESUME_HERE_2026-10-05.md` — **READ FIRST (newest).** Night-of-2026-10-05 pack-up: what is running, first 5 minutes tomorrow, what is live, findings, open decisions, cleanup, location map.
+* `BENCHMARKS_2026-10-05.md` / `LIVE_TEST_CLIPS_2026-10-05.md` — copies of docs/BENCHMARKS.md and docs/LIVE_TEST_CLIPS.md.
+* `SESSION_HANDOFF_2026-10-04_CONFERENCE.md` — depth on the conference pivot (read second). Conference pivot: retrain the
+  user's ORIGINAL MLP/ST-GCN code on the original CSV + new videos, on Modal. Blocker, verified
+  facts, run state and ordered next steps. Modal scripts are in `../modal/`.

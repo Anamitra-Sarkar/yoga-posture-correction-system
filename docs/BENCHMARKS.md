@@ -1,0 +1,154 @@
+# AsanaAI benchmarks (for the report) -- compiled 2026-10-05
+
+**Rule used everywhere:** a number counts only if it was measured on data the model never trained on. The trainers' own "Train/Val accuracy"
+(90-98%) is a random split in which near-identical neighbouring frames, mirrored copies and repeated photos sit on both sides; it is NOT a result and is
+listed only so it is never mistaken for one. **Pass bar** for a pose: recall >= 0.70 AND precision >= 0.70 with n >= 10 test photos (n >= 5 on the tiny frozen-103 set;
+n >= 20 windows for the ST-GCN). **False alarm** = a photo of a pose that is NOT one of the app's poses that the model names as one of them (**lower is better**).
+
+## 1. Data
+| Item | Size / detail |
+|---|---|
+| Training videos | 24 (12 original + 12 new), 1,206,391 frames, MediaPipe landmarks; 15 joint angles with z zeroed (what the app feeds the model) |
+| Labels | cue-verified: instructor named the pose (Whisper-large-v3 transcripts, en + hi) AND the app's rule engine agrees AND the pose is held steady. ~80k positive frames, ~421k transition, ~705k excluded as ambiguous |
+| Old CSV | 654,488 rows, labels derived from rules on angles; built with RAW-z (3D) angles while the app serves ZERO-z (2D): median 14 deg mismatch (a train/serve gap) |
+| Photo benchmark "Commons-422" | 422 freely licensed Wikimedia photos; **frozen test split = 103** (hash split, fixed since 2026-09-19) |
+| Public photos | 6,616 from two public HF datasets: 2,634 labelled with our poses + 3,982 of poses outside our vocabulary (used as negatives); 4,931 train / **1,685 held-out test** (1,037 are "other poses") |
+| Harvest | Commons/Openverse photos, cleaned (duplicates of the benchmark removed; label must agree with the rule engine or a model that never saw Commons): ~450 kept |
+
+## 2. 3-head ResMLP -- pose head, old vs new (clean tests only)
+Frozen 103 Commons photos (none of these models trained on them; the new model scored out-of-fold):
+| Model | Overall | Macro recall (poses with >=5 photos) |
+|---|---|---|
+| 19 Jul original 3-head (the ~2-month-old model) | 23.3% | 17.5% |
+| 3 Sep retrain | 13.6% | 11.1% |
+| 18 Sep photo-domain v1 | 45.6% | 48.9% |
+| 21 Sep v4 (was live) | **60.2%** | **64.8%** |
+| **New (today), out-of-fold** | 49.5% | 58.0% |
+
+Held-out public photos (1,685; 1,037 other-pose photos). v4 may have seen similar public images, which can only flatter it:
+| Model | Poses passing | False alarms |
+|---|---|---|
+| 19 Jul original | 0 | 75.0% |
+| 3 Sep retrain | 0 | 64.5% |
+| 21 Sep v4 | 1 (warrior 2) | 81.5% |
+| **New (today)** | **3** (warrior 2 .94/.92, downward dog .88/.84, tree .97/.92) | **22.6%** |
+
+Commons-422, models that never saw any photo: original 19 Jul 26.8% overall (1 pose passes: seated easy); 3 Sep 17.3% (0); new model out-of-fold **44.8% (2: seated easy .70/.98, triangle .71/1.00)**.
+Do NOT quote the 86-90% that the 18/21 Sep models score on all 422 Commons photos: they were trained on most of them.
+
+Ablations that mattered (held-out public photos): adding real photos of OTHER poses as negatives cut false alarms from 52.5% to 21.4% and raised poses passing from 3 to 5;
+mirror augmentation gave +4.5 points on Commons out-of-fold (39.1% -> 43.6%).
+
+## 3. Correctness and deviation heads (no labelled good/bad-form data exists, so this is a property test)
+648 held-out in-vocabulary photos x 5 trials: one joint broken by 45 degrees. Chance for "points at the broken joint" is 6.7%.
+| Model | Score on good form | Score drops when form is broken | Deviation head's #1 joint = broken joint |
+|---|---|---|---|
+| 19 Jul original | 0.28 | 65% | 8.1% |
+| 3 Sep retrain | 0.67 | 74.9% | 18.2% |
+| 21 Sep v4 | 0.79 | 59.2% | 6.7% (chance) |
+| **New (today)** | **0.81** | **85.0%** | 12.4% |
+Conclusion: the correctness head reacts to bad form; the per-joint deviation head is weak in every model, so joint-level feedback uses each pose's angle bands.
+
+## 4. Production decision path (the real `hybrid_classify`, then the real endpoint with the real models)
+Finding: the rule engine wins every MLP/rules disagreement, so swapping in a better MLP changed nothing (identical to rules-only).
+Held-out public photos, 1,685:
+| Policy | Overall | False alarms | Poses passing |
+|---|---|---|---|
+| Production before (v4 + rules) | 36.9% | 78.3% | 0 |
+| New model + rules | 36.9% | 78.3% | 0 |
+| Rules only | 36.9% | 78.3% | 0 |
+| v4 alone | 42.9% | 81.5% | 1 |
+| Average of both MLPs | 65.2% | 47.7% | 5 |
+| Veto lifted when rules agree | 65.9% | 42.3% | 5 |
+| **Cascade: v4 names, new model vetoes "not mine"** | **78.9%** | **20.8%** | **7** (chair, corpse, downward dog, tree, triangle, upward dog, warrior 2) |
+Policy chosen on a validation half only: validation 79.3% / 20.1% / 3 poses; **untouched half 78.6% / 21.6% / 4 poses** (corpse, downward dog, tree, warrior 2).
+Wild Commons frozen-103: before 37.9% (2-way) / 40.8% (3-way vote); **cascade 55.3%** (gate scored out-of-fold). v4 alone scores 60.2% there: the cascade gives up ~5 photos of naming accuracy for ~60 points fewer false alarms.
+(The endpoint run showing 60.2% for the cascade on frozen-103 is invalid: the deployed gate was trained on those photos.)
+Through the real `/analyse_frame` endpoint with real models: switch OFF reproduces production exactly (36.9% / 78.3% / 0); switch ON 78.9% / 20.8% / 7; endpoint agreed with the offline policy on 100% of requests.
+**Live Space replay** (cascade on, same 1,685 photos): 78.1% / 21.8% / 7 poses; 16 of 1,685 requests were rejected by Hugging Face's 429 rate limiter under an 8-thread stress test (real use is ~1 request per 10 s).
+Engineering: 14 new unit/endpoint tests, full backend suite 65 passed / 2 skipped; server compute p50 7-9 ms, p95 8-11 ms per request, 324 MB peak memory with all three models loaded.
+
+## 5. ST-GCN (sequence model; real ST-GCN: graph convolution over the 33-joint skeleton + temporal convolution)
+Held-out-VIDEO evaluation (3 folds by video, windows of 60 frames; the model never saw those people or rooms):
+| Version | Overall | Poses passing |
+|---|---|---|
+| v1, 22 videos, no augmentation | 68.4% | 2: child pose (.81/.88), corpse (.75/.73); seated easy near (.67/.91) |
+| **Final target-pose ST-GCN (8 poses + transition/unknown, mirror + photo-hold augmentation), 3 held-out-VIDEO folds** | **82.2%** (flattered: 60% of the 8,002 windows are transition/unknown; macro recall over the 9 classes **78.0%**, over the 8 poses 76.9%) | **3**: child pose (.74/.91), corpse (1.00/.85), downward dog (.83/.77) |
+Per pose, held-out videos (windows are 60 frames, stride 12, so overlapping: the effective sample is the number of held-out holds/videos, which is small; pass bar = recall AND precision >= 0.70, >= 20 windows):
+| Pose | Windows | Recall | Precision | Verdict | Main confusion |
+|---|---|---|---|---|---|
+| child pose | 1045 | 0.74 | 0.91 | PASS | transition 235, plank 40 |
+| corpse | 230 | 1.00 | 0.85 | PASS | - |
+| downward dog | 682 | 0.83 | 0.77 | PASS | transition 107 |
+| seated easy | 510 | 0.68 | 0.81 | near miss (recall) | transition 162 |
+| tree | 87 | 0.87 | 0.67 | near miss (precision) | transition 6, seated easy 4 |
+| triangle | 528 | 0.64 | 0.95 | near miss (recall) | transition 179 |
+| warrior 2 | 89 | 0.62 | 0.26 | fail (158 transition windows are called warrior 2) | transition 34 |
+| plank | 30 | 0.77 | 0.18 | fail (tiny n) | transition 7 |
+| transition/unknown | 4801 | 0.87 | 0.85 | - | downward dog 167, warrior 2 158 |
+Reading: the ST-GCN is conservative -- misses go to "transition/unknown" (it says "not sure", not another pose). Three poses clear the bar; three more are within ~0.07 of it. It does NOT reach 6 passing poses on held-out video. The MLP cascade reaches 7 on held-out photos (section 4), so the conference claim of "6+ poses" is supported by the MLP cascade; for the ST-GCN say "3 pass, 3 near-miss".
+**Operating point (is the ST-GCN just too conservative?)** -- the model sends most misses to "transition/unknown"; one offset on that class's logit trades recall for precision. Done without leakage: the offset is chosen on two folds and applied only to the third (cross-fitted), kernel `asanaai-conf-stgcn-op`, `evals_stgcn/stgcn_operating_point_crossfit_v2.json`. Two objectives were tried and BOTH are reported:
+| Setting | Overall | Poses passing |
+|---|---|---|
+| Default (argmax) | 82.2% | **3** (child pose, corpse, downward dog) |
+| Cross-fitted offset, objective = macro F1 (offsets +0.25 / -0.5 / +0.25) | 81.7% | **3** (same) |
+| Cross-fitted offset, objective = number of poses passing (offsets -0.25 / -1.25 / -1.5) | 81.9% | **4** (child pose .78/.89, downward dog .85/.72, triangle .75/.92, seated easy .86/.81; corpse drops to precision .67) |
+| Ceiling: best single offset picked ON the scored windows (-0.5 to -1.0; OPTIMISTIC, not a result) | ~82% | 5 (adds seated easy, triangle) |
+No offset anywhere in the sweep (-4 to +4) reaches 6. Honest statement for the report: **the ST-GCN reliably handles 3 poses on unseen videos, 4 with a less conservative cross-fitted threshold; tree, warrior 2 and plank have too few held-out windows (87 / 89 / 30) and low precision to claim.** The 6+ pose claim rests on the MLP cascade (section 4).
+Models: HF private `Arko007/asanaai-conference-runs/runs/cueT2_stgcn_{f0,f1,f2,all}/`; eval `evals_stgcn/stgcn_target_heldout_video.json`. Trainer-reported val accuracy (98.4-98.7%) is a leaky random split -- never quote it.
+Original 2-month-old training run, for reference only (random split, NOT generalisation): MLP 91.52% validation; ST-GCN 82.6% validation at epoch 55.
+
+## 6. Original model on real photos (the starting point)
+Commons-422, app recipe: 29.4% overall, 1 pose passing (seated easy .81/.81); with the CSV's own raw-z recipe 21.3%, 0 passing.
+
+## 7. Limitations to state in the report
+* Photo benchmarks are a proxy for live use. Section 8 is a replay of in-training-set videos (plumbing check); a clean live number from unseen people is still to be recorded.
+* Small samples: the frozen set has 103 photos (an 11-point gap is ~11 photos); some poses have n < 10.
+* Pose set: 7-8 poses clear the bar on held-out photos; on the hardest wild set only 1-2 do. Mountain and cobra are weak on real photos (recall 12-30%).
+* The correctness score is validated only by the perturbation test, not by human coaches; the deviation head is not reliable.
+* v4's training photos may overlap the public held-out sets (flattering v4, not the new model).
+
+## 8. Live replay (real MediaPipe on real video -> the DEPLOYED Space; run 2026-10-05)
+Harness: `planning/live_check/replay_live.py` via Kaggle kernel `asanaai-conf-replay` (Kaggle cannot reach a webcam, so recorded video stands in for one).
+Each clip is decoded, run through MediaPipe, and the web app's calls are replayed in order (a frame call every ~0.25 s; a 60-frame sequence call every 3 s) against `https://arko007-yoga-pose.hf.space` with the cascade ON.
+Raw results: private HF `Arko007/asanaai-conference-runs/evals_compare/live_replay_v2.json`.
+
+| Clip (video @ start +length) | Held pose | Frame-level accuracy while held (this is what the UI shows) | What it called instead |
+|---|---|---|---|
+| 149Iac5fmoE @433 +14 s | mountain | **1.00** (84 calls) | - |
+| 149Iac5fmoE @769 +25 s | corpse | **0.99** (143) | mountain x1 |
+| v7AYKMP6rOE @925 +20 s | mountain | **0.81** (120) | seated_staff x22 |
+| EvMTrP8eRvM @44 +17 s | seated easy | **0.06** (102) FAILS | upward_dog x96 |
+| 4K2xTVRDJgA @566 +17 s | seated easy | **0.99** (107) | - |
+| O2EY79Ys_qg @545 +49 s | child pose | **1.00** (307) | - |
+| JHjV-wFTwSw @1304 +19 s | tree | **1.00** (114) | - |
+| JHjV-wFTwSw @1829 +13 s | lunge | **0.99** (78) | unknown x1 |
+
+7 of 8 clips >= 0.81. Call-weighted 88.4% (child pose's 307 calls dominate); mean over clips 85.5%. Zero failed API calls, 0 "unknown" while holding except 1 lunge frame.
+Seated easy is NOT reliable live: one clip 0.99, the other 0.06 (named upward_dog throughout; viewing angle/body shape not yet investigated).
+Moving stretches (no held pose, 3 clips): the system reports "transitioning" for 74% / 92% / 79% of frames and names a pose on 26% / 4% / 48% (no ground truth for moving frames; the 48% clip includes 12 corpse calls as the person lowers to the floor).
+
+**Correctness probe (live endpoint, real MediaPipe angles from the same 8 clips; run 2026-10-05, `evals_compare/live_replay_v3.json`):**
+Score the deployed `/analyse_frame` gives frames it correctly named while the instructor holds the pose, then the SAME frame with one joint broken by 45 degrees (a property test: no labelled bad-form data exists).
+| Clip | Pose | Score while held | Left KNEE broken 45 deg | Left ELBOW broken 45 deg |
+|---|---|---|---|---|
+| 149Iac5fmoE @433 | mountain | 0.91 | 0.01 (dropped on 100% of frames) | 0.90 |
+| 149Iac5fmoE @769 | corpse | 0.99 | 0.28 (100%) | 1.00 (no drop) |
+| v7AYKMP6rOE @925 | mountain | 0.90 | 0.00 (100%) | 0.84 |
+| EvMTrP8eRvM @44 | seated easy | 0.85 | 0.28 (100%, n=2 only) | 0.84 (no drop) |
+| 4K2xTVRDJgA @566 | seated easy | 1.00 | 0.65 (100%) | 0.97 |
+| O2EY79Ys_qg @545 | child | 0.97 | 0.02 (100%) | 0.86 |
+| JHjV-wFTwSw @1304 | tree | 0.99 | 0.15 (100%) | 0.95 |
+| JHjV-wFTwSw @1829 | lunge | 0.95 | 0.57 (100%) | 0.96 (drops on 27% only) |
+Mean over the 8 clips: held 0.94 -> knee broken 0.25 -> elbow broken 0.92.
+Reading: the correctness score is high for instructor-form holds and collapses when a LEG joint is broken (every probe on every clip), but it is nearly blind to a broken ARM joint (mean 0.94 -> 0.92). Arm errors are only caught, if at all, by the per-joint angle-band layer. State this in the report; do not claim whole-body form checking.
+Same caveat as above: these frames are in the gate's training data (it is a regression check of the deployed path, not a generalisation number).
+
+**Sequence model (`stgcn_transitions_v1`, the ST-GCN currently deployed):** its raw top answer on the held clips is mostly wrong (sequence accuracy 0.00 on 5 of 8 clips; frequent wrong answer: chair_pose) BUT it was NEVER confident:
+`requires_static_fallback` was True on 100% of its calls on all 11 clips (mean confidence 0.15-0.41), so `useYogaPipeline.ts` (lines 118-121) always takes the per-frame cascade path and the user never sees the sequence model's pose. Net effect today: the sequence model contributes nothing live.
+Hazard to remember: if that model ever became confident while wrong, the hook adopts its pose AND uses its confidence as the correctness score (lines 160-166). The new target-pose ST-GCN (training) is meant to replace it; do not change the `hf_loader.py` pointer without approval.
+
+**Caveat (read before quoting any number above):** all 8 clips come from the 12 new YouTube videos, and those videos are in the data the gate (`mlp_3head_gate_v1` = `cueH_mlp_all`) was trained on. The pose NAME comes from the older v4 MLP (trained on photos before these videos existed), so naming is out-of-sample, but the veto and correctness score are in-sample. This is a plumbing/regression check of the deployed system, NOT a generalisation number. The generalisation number still has to come from recorded people/rooms not in any training set (the harness above runs any clip list).
+
+Reproduce: code and data `huggingface.co/datasets/Arko007/Yoga-1M` (public, no transcripts: copyrighted speech); checkpoints and eval JSONs `Arko007/asanaai-conference-runs` (private, `evals_compare/`);
+pipeline `modal/`, `planning/kaggle_transfer/`; backend `backend/app/services/cascade.py`, `docs/CASCADE.md`.
