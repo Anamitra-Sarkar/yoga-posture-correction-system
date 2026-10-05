@@ -340,6 +340,23 @@ const getSanskritName = (poseId: string, lang: "en" | "hi" | "bn" = "en") => {
   return cleanId.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
+// The pose engine (MediaPipe) needs a WebGL context. When a browser refuses one (graphics acceleration off or blocked,
+// battery saver, too many contexts open, some in-app browsers) MediaPipe shows a raw alert() on EVERY frame.
+// We check first and turn that failure into our own themed message instead.
+const GRAPHICS_ERR = "__graphics__";
+const sleepMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const webglAvailable = (): boolean => {
+  try {
+    const c = document.createElement("canvas");
+    const gl: any = c.getContext("webgl2") || c.getContext("webgl");
+    const ok = !!gl && !gl.isContextLost?.();
+    gl?.getExtension?.("WEBGL_lose_context")?.loseContext();   // free the probe's slot right away
+    return ok;
+  } catch {
+    return false;
+  }
+};
+
 const TRANSLATIONS: {
   [lang: string]: { [key: string]: string }
 } = {
@@ -356,6 +373,8 @@ const TRANSLATIONS: {
     retry: "Retry",
     poseEngineLoading: "Loading pose engine…",
     poseEngineSlow: "Pose engine is slow to load. Check your connection.",
+    graphicsTitle: "Can't start the pose engine",
+    graphicsBody: "Your browser couldn't turn on graphics acceleration, which the pose engine needs. Close other tabs and apps, turn off battery saver, make sure hardware acceleration is on, or open this page in Chrome or Safari, then tap Retry.",
     practice: "Practice",
     poseGuide: "Pose guide",
     sessionOverview: "Session",
@@ -481,6 +500,8 @@ const TRANSLATIONS: {
     retry: "फिर कोशिश करें",
     poseEngineLoading: "पोज़ इंजन लोड हो रहा है…",
     poseEngineSlow: "पोज़ इंजन देर से लोड हो रहा है। इंटरनेट जाँचें।",
+    graphicsTitle: "पोज़ इंजन शुरू नहीं हो सका",
+    graphicsBody: "आपका ब्राउज़र ग्राफ़िक्स एक्सेलेरेशन चालू नहीं कर सका, जो पोज़ इंजन के लिए ज़रूरी है। दूसरे टैब और ऐप बंद करें, बैटरी सेवर बंद करें, हार्डवेयर एक्सेलेरेशन चालू रखें, या इस पेज को Chrome या Safari में खोलें, फिर \"फिर कोशिश करें\" दबाएँ।",
     practice: "अभ्यास",
     poseGuide: "आसन गाइड",
     sessionOverview: "सत्र",
@@ -606,6 +627,8 @@ const TRANSLATIONS: {
     retry: "আবার চেষ্টা করুন",
     poseEngineLoading: "পোজ ইঞ্জিন লোড হচ্ছে…",
     poseEngineSlow: "পোজ ইঞ্জিন লোড হতে দেরি হচ্ছে। ইন্টারনেট দেখুন।",
+    graphicsTitle: "পোজ ইঞ্জিন চালু করা যায়নি",
+    graphicsBody: "আপনার ব্রাউজার গ্রাফিক্স অ্যাক্সিলারেশন চালু করতে পারেনি, যা পোজ ইঞ্জিনের জন্য দরকার। অন্য ট্যাব ও অ্যাপ বন্ধ করুন, ব্যাটারি সেভার বন্ধ করুন, হার্ডওয়্যার অ্যাক্সিলারেশন চালু রাখুন, অথবা পেজটি Chrome বা Safari-তে খুলুন, তারপর \"আবার চেষ্টা করুন\" চাপুন।",
     practice: "অনুশীলন",
     poseGuide: "আসন গাইড",
     sessionOverview: "সেশন",
@@ -976,6 +999,8 @@ export default function Dashboard() {
   const [engineState, setEngineState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const engineErrorsRef = useRef(0);
+  const graphicsFailedRef = useRef(false);
+  const onGraphicsFailureRef = useRef<() => void>(() => {});
   const lastResultAtRef = useRef(0);
   const stageRef = useRef<HTMLDivElement>(null);
   // Per-frame data lives in refs: React state is for what the screen shows, not for 30 Hz inputs.
@@ -1217,6 +1242,17 @@ export default function Dashboard() {
     if (outcome === 'accepted') setShowInstallBanner(false);
     setInstallPrompt(null);
   };
+
+  // MediaPipe reports a missing WebGL context with window.alert(). Route exactly that message to our themed panel;
+  // every other alert is left alone.
+  useEffect(() => {
+    const original = window.alert;
+    window.alert = function (msg?: any) {
+      if (/webgl/i.test(String(msg ?? ""))) { onGraphicsFailureRef.current(); return; }
+      return original.call(window, msg);
+    };
+    return () => { window.alert = original; };
+  }, []);
 
   // Count the cameras. Browsers hide the list until camera permission is granted (a phone reports ONE unnamed camera before
   // that), so this runs again right after the camera starts and whenever one is plugged in or removed.
@@ -1587,6 +1623,7 @@ export default function Dashboard() {
   // whole session and the camera view stayed black).
   const initMediaPipe = (): boolean => {
     if (poseRef.current) return true;
+    if (graphicsFailedRef.current) return false;
     const PoseClass = typeof window !== "undefined" ? (window as any).Pose : undefined;
     if (!PoseClass) return false;
     try {
@@ -1643,6 +1680,15 @@ export default function Dashboard() {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setCameraError(describeCameraError(null));
       return;
+    }
+
+    // No WebGL, no pose engine: say so in our own words instead of letting MediaPipe pop a browser alert on every frame.
+    graphicsFailedRef.current = false;
+    if (!poseRef.current && !webglAvailable()) {
+      setIsInitializingCamera(true);
+      await sleepMs(700);   // the graphics process is sometimes only restarting
+      setIsInitializingCamera(false);
+      if (!webglAvailable()) { failGraphics(); return; }
     }
 
     // Start loading the pose engine now; if its script has not arrived yet the frame loop keeps retrying,
@@ -1851,6 +1897,20 @@ export default function Dashboard() {
     setCalibratedProfile(null);
     resetPipeline();
   };
+
+  // Release the engine (and its WebGL context), stop the camera and show the themed message with a Retry.
+  const releasePose = () => {
+    try { Promise.resolve(poseRef.current?.close?.()).catch(() => {}); } catch { /* already gone */ }
+    poseRef.current = null;
+  };
+  const failGraphics = () => {
+    if (graphicsFailedRef.current) return;
+    graphicsFailedRef.current = true;
+    releasePose();
+    stopCamera();
+    setCameraError(GRAPHICS_ERR);
+  };
+  onGraphicsFailureRef.current = failGraphics;
 
   // The user pressed Stop: show a short recap if they actually practised something.
   const endSession = () => {
@@ -2328,7 +2388,8 @@ export default function Dashboard() {
   const poseName = bodyMissing || activePose === "transition/unknown" ? "" : getSanskritName(activePose, lang);
   liveRef.current = { pose: scoreActive ? activePose : "", score: effectiveCorrectness, active: scoreActive };
   const retryEngine = () => {
-    poseRef.current = null;
+    releasePose();
+    graphicsFailedRef.current = false;
     engineErrorsRef.current = 0;
     setEngineState("loading");
     initMediaPipe();
@@ -2694,8 +2755,8 @@ export default function Dashboard() {
                   {cameraError && (
                     <div className="ap-idle err" role="alert">
                       <div className="ap-idle-mark"><AlertTriangle size={26} strokeWidth={1.6} /></div>
-                      <h2>Camera unavailable</h2>
-                      <p>{cameraError}</p>
+                      <h2>{cameraError === GRAPHICS_ERR ? T.graphicsTitle : "Camera unavailable"}</h2>
+                      <p>{cameraError === GRAPHICS_ERR ? T.graphicsBody : cameraError}</p>
                       <button className="ap-btn" onClick={() => startCamera()} disabled={isInitializingCamera}>
                         <RefreshCw size={17} className={isInitializingCamera ? "spin" : ""} />
                         <span>{T.retry}</span>
