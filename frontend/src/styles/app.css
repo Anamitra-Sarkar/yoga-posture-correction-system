@@ -830,3 +830,8 @@
 .ap-gfx { max-width: 380px; width: 100%; font-size: 12.5px; color: #b9b5a8; }
 .ap-gfx summary { cursor: pointer; text-align: center; opacity: 0.85; padding: 6px; }
 .ap-gfx pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; font: 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; -webkit-user-select: text; user-select: text; }
+
+/* Compatibility-mode chip (tap = try the fast engine again) and the "ready offline" note */
+button.ap-engine.compat { cursor: pointer; border: 0; font: inherit; color: inherit; }
+.ap-idle .ap-offline-note { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12.5px; color: #9ccdb8; }
+.ap-idle .ap-offline-note i { width: 7px; height: 7px; border-radius: 50%; background: #5fb58f; flex: none; }

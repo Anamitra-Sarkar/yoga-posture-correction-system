@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import Script from "next/script";
+import { CpuPose, cpuEngineSupported, readEngineMode, saveEngineMode, warmEngineCache, type EngineMode } from "../utils/cpuPose";
 import { 
   Volume2, 
   VolumeX, 
@@ -390,6 +391,9 @@ const TRANSLATIONS: {
     poseEngineSlow: "Pose engine is slow to load. Check your connection.",
     graphicsTitle: "Can't start the pose engine",
     graphicsDetails: "Details",
+    compatMode: "Compatibility mode (slower)",
+    compatTip: "Your phone cannot use graphics acceleration in this browser, so pose tracking runs on the processor. Tap to try the faster mode again.",
+    offlineReady: "Ready to work offline",
     graphicsBody: "Your browser couldn't turn on graphics acceleration, which the pose engine needs. Close other tabs and apps, turn off battery saver, make sure hardware acceleration is on, or open this page in Chrome or Safari, then tap Retry.",
     practice: "Practice",
     poseGuide: "Pose guide",
@@ -518,6 +522,9 @@ const TRANSLATIONS: {
     poseEngineSlow: "पोज़ इंजन देर से लोड हो रहा है। इंटरनेट जाँचें।",
     graphicsTitle: "पोज़ इंजन शुरू नहीं हो सका",
     graphicsDetails: "विवरण",
+    compatMode: "संगतता मोड (धीमा)",
+    compatTip: "इस ब्राउज़र में आपका फ़ोन ग्राफ़िक्स एक्सेलेरेशन इस्तेमाल नहीं कर सकता, इसलिए पोज़ ट्रैकिंग प्रोसेसर पर चल रही है। तेज़ मोड फिर आज़माने के लिए दबाएँ।",
+    offlineReady: "ऑफ़लाइन चलने के लिए तैयार",
     graphicsBody: "आपका ब्राउज़र ग्राफ़िक्स एक्सेलेरेशन चालू नहीं कर सका, जो पोज़ इंजन के लिए ज़रूरी है। दूसरे टैब और ऐप बंद करें, बैटरी सेवर बंद करें, हार्डवेयर एक्सेलेरेशन चालू रखें, या इस पेज को Chrome या Safari में खोलें, फिर \"फिर कोशिश करें\" दबाएँ।",
     practice: "अभ्यास",
     poseGuide: "आसन गाइड",
@@ -646,6 +653,9 @@ const TRANSLATIONS: {
     poseEngineSlow: "পোজ ইঞ্জিন লোড হতে দেরি হচ্ছে। ইন্টারনেট দেখুন।",
     graphicsTitle: "পোজ ইঞ্জিন চালু করা যায়নি",
     graphicsDetails: "বিস্তারিত",
+    compatMode: "সামঞ্জস্য মোড (ধীর)",
+    compatTip: "এই ব্রাউজারে আপনার ফোন গ্রাফিক্স অ্যাক্সিলারেশন ব্যবহার করতে পারছে না, তাই পোজ ট্র্যাকিং প্রসেসরে চলছে। দ্রুত মোড আবার চেষ্টা করতে চাপুন।",
+    offlineReady: "অফলাইনে চলার জন্য প্রস্তুত",
     graphicsBody: "আপনার ব্রাউজার গ্রাফিক্স অ্যাক্সিলারেশন চালু করতে পারেনি, যা পোজ ইঞ্জিনের জন্য দরকার। অন্য ট্যাব ও অ্যাপ বন্ধ করুন, ব্যাটারি সেভার বন্ধ করুন, হার্ডওয়্যার অ্যাক্সিলারেশন চালু রাখুন, অথবা পেজটি Chrome বা Safari-তে খুলুন, তারপর \"আবার চেষ্টা করুন\" চাপুন।",
     practice: "অনুশীলন",
     poseGuide: "আসন গাইড",
@@ -1018,6 +1028,9 @@ export default function Dashboard() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const engineErrorsRef = useRef(0);
   const graphicsFailedRef = useRef(false);
+  const engineModeRef = useRef<EngineMode>("gpu"); // "gpu" = MediaPipe (WebGL); "cpu" = compatibility engine for phones without usable WebGL
+  const [engineMode, setEngineMode] = useState<EngineMode>("gpu");
+  const [offlineReady, setOfflineReady] = useState(false);
   const [gfxInfo, setGfxInfo] = useState("");
   const onGraphicsFailureRef = useRef<() => void>(() => {});
   const lastResultAtRef = useRef(0);
@@ -1261,6 +1274,28 @@ export default function Dashboard() {
     if (outcome === 'accepted') setShowInstallBanner(false);
     setInstallPrompt(null);
   };
+
+  // First visit: remember which engine this phone needs, and (when idle, online and not on a metered/slow link) put the engine's
+  // files in the browser cache so the app keeps working later with no internet at all. Already-cached files are not downloaded again.
+  // This never touches WebGL and never delays the camera: it pauses the moment the camera starts.
+  useEffect(() => {
+    const remembered = readEngineMode();
+    engineModeRef.current = remembered;
+    setEngineMode(remembered);
+    let cancelled = false;
+    const run = async () => {
+      const conn: any = (navigator as any).connection;
+      if (cancelled || !navigator.onLine || conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType || "")) return;
+      const coarse = !!window.matchMedia?.("(pointer: coarse)").matches;
+      const ok = await warmEngineCache(engineModeRef.current, coarse, () => cancelled || !!streamRef.current);
+      if (ok && !cancelled) setOfflineReady(true);
+    };
+    const idle: (cb: () => void) => any = (window as any).requestIdleCallback
+      ? (cb) => (window as any).requestIdleCallback(cb, { timeout: 8000 })
+      : (cb) => window.setTimeout(cb, 4000);
+    idle(() => { run().catch(() => {}); });
+    return () => { cancelled = true; };
+  }, []);
 
   // MediaPipe reports a missing WebGL context with window.alert(). Route exactly that message to our themed panel;
   // every other alert is left alone.
@@ -1640,9 +1675,28 @@ export default function Dashboard() {
   // global directly, so calling it from the frame loop picks the engine up the moment its script arrives
   // (previously, pressing Start before the script finished loading left the engine uninitialised for the
   // whole session and the camera view stayed black).
+  // Both engines report here.
+  const handleEngineResults = (results: any) => {
+    lastResultAtRef.current = performance.now();
+    engineErrorsRef.current = 0;
+    setEngineState((s) => (s === "ready" ? s : "ready"));
+    onPoseResultsRef.current?.(results);
+  };
+
   const initMediaPipe = (): boolean => {
     if (poseRef.current) return true;
     if (graphicsFailedRef.current) return false;
+    if (engineModeRef.current === "cpu") {
+      try {
+        const cpu = new CpuPose();
+        cpu.onResults(handleEngineResults);
+        poseRef.current = cpu;
+        return true;
+      } catch (e) {
+        console.error("Compatibility engine init failed:", e);
+        return false;
+      }
+    }
     const PoseClass = typeof window !== "undefined" ? (window as any).Pose : undefined;
     if (!PoseClass) return false;
     try {
@@ -1665,12 +1719,7 @@ export default function Dashboard() {
         // regardless of which camera is active.
         selfieMode: false
       });
-      pose.onResults((results: any) => {
-        lastResultAtRef.current = performance.now();
-        engineErrorsRef.current = 0;
-        setEngineState((s) => (s === "ready" ? s : "ready"));
-        onPoseResultsRef.current?.(results);
-      });
+      pose.onResults(handleEngineResults);
       poseRef.current = pose;
       return true;
     } catch (e) {
@@ -1799,6 +1848,7 @@ export default function Dashboard() {
         }
       };
       const tick = async () => {
+        let engineInFlight: any = null;
         if (!stream.active || !videoRef.current) return;
         const v = videoRef.current;
         const minGap = coarse ? 45 : 0; // phones: at most ~22 analyses/s, plenty for yoga and far kinder to the battery
@@ -1806,6 +1856,7 @@ export default function Dashboard() {
           lastSendRef.current = performance.now();
           try {
             const t0 = performance.now();
+            engineInFlight = poseRef.current;
             await poseRef.current.send({ image: v });
             const elapsed = performance.now() - t0;
 
@@ -1834,6 +1885,7 @@ export default function Dashboard() {
             }
           } catch (e) {
             // A throw here used to kill the loop silently (black screen forever). Back off and keep trying.
+            if (engineInFlight && engineInFlight !== poseRef.current) { scheduleNext(); return; }   // that engine was just replaced: its failure is not news
             engineErrorsRef.current += 1;
             console.error("Pose engine error:", e);
             if (engineErrorsRef.current >= 3) setEngineState("error");
@@ -1915,7 +1967,34 @@ export default function Dashboard() {
     try { Promise.resolve(poseRef.current?.close?.()).catch(() => {}); } catch { /* already gone */ }
     poseRef.current = null;
   };
+  // WebGL is not usable on this phone: keep the camera running and swap the pose engine for the CPU one. The choice is remembered.
+  const switchToCompatibility = () => {
+    if (engineModeRef.current === "cpu") return;
+    engineModeRef.current = "cpu";
+    saveEngineMode("cpu");
+    setEngineMode("cpu");
+    releasePose();                       // drops the broken GPU engine and its context
+    graphicsFailedRef.current = false;
+    lastResultAtRef.current = 0;
+    engineErrorsRef.current = 0;
+    setEngineState("loading");
+    initMediaPipe();                     // creates the compatibility engine; the frame loop picks it up
+  };
+  // Tap on the "Compatibility mode" chip: forget the choice and try the fast engine again (it falls back by itself if it fails again).
+  const tryFastEngine = () => {
+    saveEngineMode("gpu");
+    engineModeRef.current = "gpu";
+    setEngineMode("gpu");
+    releasePose();
+    graphicsFailedRef.current = false;
+    engineErrorsRef.current = 0;
+    lastResultAtRef.current = 0;
+    setEngineState("loading");
+    initMediaPipe();
+  };
   const failGraphics = () => {
+    // MediaPipe's WebGL alert: a phone that ran the fast engine switches engines; alerts still arriving from the engine we just released are ignored.
+    if (cpuEngineSupported()) { if (engineModeRef.current === "gpu") switchToCompatibility(); return; }
     if (graphicsFailedRef.current) return;
     graphicsFailedRef.current = true;
     releasePose();
@@ -2762,6 +2841,7 @@ export default function Dashboard() {
                         <span><PersonStanding size={14} />{T.tipFrame}</span>
                       </div>
                       <p className="ap-privacy"><Lock size={13} />{T.privacyNote}</p>
+                      {offlineReady && <p className="ap-offline-note"><i />{T.offlineReady}</p>}
                     </div>
                   )}
 
@@ -2799,6 +2879,11 @@ export default function Dashboard() {
                           <span className="ap-engine basic" role="status" title={coachReason === "offline" ? T.coachOffline : coachReason === "waking" ? T.coachWaking : T.coachDown}>
                             <ScanLine size={14} />{T.basicMode}
                           </span>
+                        )}
+                        {engineMode === "cpu" && (
+                          <button className="ap-engine basic compat" onClick={tryFastEngine} title={T.compatTip} aria-label={T.compatTip}>
+                            <ScanLine size={14} />{T.compatMode}
+                          </button>
                         )}
                         {framing === "partial" && !bodyMissing ? (
                           <span className="ap-engine" role="status"><PersonStanding size={14} />{T.stepBack}</span>

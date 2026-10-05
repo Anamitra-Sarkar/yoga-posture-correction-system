@@ -22,6 +22,24 @@ const withPWA = require('next-pwa')({
         cacheableResponse: { statuses: [0, 200] }
       }
     },
+    // Pose engines (MediaPipe and the CPU compatibility engine): cache-first in ONE cache that the page also fills during the first
+    // visit (utils/cpuPose.ts warmEngineCache), so the app can start with no internet later. No expiry plugin: bump the name to refresh.
+    {
+      urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/(?:@mediapipe\/pose|@tensorflow|@tensorflow-models)\//i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'asana-engine-v1',
+        cacheableResponse: { statuses: [0, 200] }
+      }
+    },
+    {
+      urlPattern: /^https:\/\/(?:tfhub\.dev\/mediapipe\/tfjs-model|storage\.googleapis\.com\/kagglesdsdata)\//i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'asana-engine-v1',
+        cacheableResponse: { statuses: [0, 200] }
+      }
+    },
     {
       urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
       handler: 'CacheFirst',
