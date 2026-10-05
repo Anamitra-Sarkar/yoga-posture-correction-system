@@ -47,19 +47,46 @@ function useNativeAppPolish() {
 
 // A new service worker took over: the page is still running the OLD code until it reloads. Pages other than the app reload at
 // once; the app is told (it reloads when idle, or offers a refresh button, so a live session is never interrupted).
+// Phones keep tabs and installed apps open for days, so the page also checks, when it becomes visible again, comes back online, and every
+// 10 minutes, whether the server now has a newer build, and asks the service worker to look for an update.
 function useUpdateWatcher() {
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
     const hadController = !!navigator.serviceWorker.controller;
     let fired = false;
-    const onChange = () => {
-      if (!hadController || fired) return; // first install is not an update
+    const announce = () => {
+      if (fired) return;
       fired = true;
       if (window.location.pathname === '/') window.dispatchEvent(new Event('asana-update-ready'));
       else window.location.reload();
     };
+    const onChange = () => { if (hadController) announce(); }; // first install is not an update
     navigator.serviceWorker.addEventListener('controllerchange', onChange);
-    return () => navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+
+    const currentBuild: string | undefined = (window as any).__NEXT_DATA__?.buildId;
+    const check = async () => {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        reg?.update().catch(() => {});
+        if (!navigator.onLine || !currentBuild || fired) return;
+        const res = await fetch(window.location.pathname, { cache: 'no-store', headers: { Accept: 'text/html' } });
+        const found = (await res.text()).match(/"buildId":"([^"]+)"/)?.[1];
+        if (!found || found === currentBuild) return;
+        if (window.sessionStorage.getItem('asana.updTried') === found) return;   // already reloaded for this build: never loop
+        window.sessionStorage.setItem('asana.updTried', found);
+        announce();
+      } catch { /* offline or storage blocked: try again later */ }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', check);
+    const timer = window.setInterval(check, 10 * 60 * 1000);
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', check);
+      window.clearInterval(timer);
+    };
   }, []);
 }
 

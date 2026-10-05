@@ -14,6 +14,9 @@ HOOK = r"""
   addEventListener('webglcontextlost', e => window.__ev.push('contextlost'), true);
   window.__clr = 0; const cr = CanvasRenderingContext2D.prototype.clearRect;
   CanvasRenderingContext2D.prototype.clearRect = function (...a) { if (this.canvas && this.canvas.className === 'ap-canvas') window.__clr++; return cr.apply(this, a); };
+  window.__strokes = 0; window.__arcs = 0; const st = CanvasRenderingContext2D.prototype.stroke, ar = CanvasRenderingContext2D.prototype.arc;
+  CanvasRenderingContext2D.prototype.stroke = function (...a) { if (this.canvas && this.canvas.className === 'ap-canvas') window.__strokes++; return st.apply(this, a); };
+  CanvasRenderingContext2D.prototype.arc = function (...a) { if (this.canvas && this.canvas.className === 'ap-canvas') window.__arcs++; return ar.apply(this, a); };
   window.__alerts = []; const al = window.alert; window.__rawAlert = al;
   window.addEventListener('error', e => window.__ev.push('error: ' + String(e.message).slice(0, 200)));
   window.addEventListener('unhandledrejection', e => window.__ev.push('rejection: ' + String(e.reason && e.reason.message || e.reason).slice(0, 200)));
@@ -46,7 +49,7 @@ async def main():
             t0 = time.time()
             while time.time() - t0 < SECS:
                 await asyncio.sleep(5)
-                st = await ev("JSON.stringify({ctx: window.__ctx.length, err: !!document.querySelector('.ap-idle.err'), errTitle: (document.querySelector('.ap-idle.err h2')||{}).textContent||'', compat: !!document.querySelector('.compat'), hud: [...document.querySelectorAll('.ap-hud span, .ap-hud button')].map(x=>x.textContent.trim()).filter(Boolean).slice(0,4), results: window.__clr, mode: localStorage.getItem('asana.engine') ? 'cpu' : 'gpu'})")
+                st = await ev("JSON.stringify({ctx: window.__ctx.length, err: !!document.querySelector('.ap-idle.err'), errTitle: (document.querySelector('.ap-idle.err h2')||{}).textContent||'', compat: !!document.querySelector('.compat'), hud: [...document.querySelectorAll('.ap-hud span, .ap-hud button')].map(x=>x.textContent.trim()).filter(Boolean).slice(0,4), results: window.__clr, strokes: window.__strokes, joints: window.__arcs, mode: localStorage.getItem('asana.engine') ? 'cpu' : 'gpu'})")
                 print(f"t+{int(time.time()-t0)}s {st}")
             print("WebGL context requests:", await ev("JSON.stringify(window.__ctx)"))
             print("events:", await ev("JSON.stringify(window.__ev)"))
