@@ -1,6 +1,8 @@
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { useEffect } from 'react';
+// Importing the font module here is what makes Next emit the @font-face CSS (the <html> classes are set in _document).
+import '../lib/fonts';
 import '../styles/globals.css';
 import '../styles/app.css';
 
