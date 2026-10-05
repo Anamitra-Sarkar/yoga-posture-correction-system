@@ -2367,7 +2367,7 @@ export default function Dashboard() {
 
       <div className={`ap ${sidebarOpen ? "side-open" : ""} ${cameraActive ? "cam-on" : ""}`}>
         {/* ─────────── Header ─────────── */}
-        <header className="ap-header">
+        <header className={`ap-header ${isOnline ? "" : "is-offline"}`}>
           <button
             className="ap-iconbtn"
             onClick={() => setSidebarOpen(!sidebarOpen)}
