@@ -5,6 +5,8 @@
 // returns no poses. The CPU delegate of MediaPipe Tasks works there (~80 ms/frame, the same models), so that is the first fallback.
 // If the browser has no WebGL at all, the second fallback is BlazePose on TensorFlow.js' WebAssembly backend (needs no GL, a bit less accurate).
 //
+// The Tasks engine runs in a Web Worker (public/engine/pose-worker.js): its own globals (the page's legacy MediaPipe engine owns a global
+// `Module` that a second MediaPipe wasm module would collide with) and no blocking of the interface.
 // Everything runs on the device. Results are mapped to the shape of MediaPipe's legacy `Pose` results (normalised image landmarks +
 // metric world landmarks), and the class exposes the part of that API the app uses, so nothing downstream changes. It is only created
 // when the fast engine failed on this device.
@@ -69,10 +71,11 @@ const loadScript = (src: string): Promise<void> => {
   return p;
 };
 
-type Landmark = { x: number; y: number; z: number; visibility: number };
 
 export class CpuPose {
-  private tasks: any = null;            // MediaPipe Tasks PoseLandmarker (CPU)
+  private worker: Worker | null = null;  // MediaPipe Tasks PoseLandmarker (CPU), in a worker
+  private pending = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
+  private seq = 0;
   private detector: any = null;         // TF.js BlazePose (WASM)
   private loading: Promise<void> | null = null;
   private callback: ((results: any) => void) | null = null;
@@ -94,26 +97,37 @@ export class CpuPose {
       return;
     } catch (e) {
       console.warn("MediaPipe Tasks (CPU) unavailable, using TensorFlow.js WASM:", e);
-      try { this.tasks?.close?.(); } catch { /* ignore */ }
-      this.tasks = null;
+      this.stopWorker();
     }
     await this.loadTfjs();
     try { window.localStorage.setItem(TFJS_KEY, "1"); } catch { /* ignore */ }
   }
 
   private async loadTasks() {
-    const mod: any = await import(/* webpackIgnore: true */ `${TASKS}/vision_bundle.mjs`);
-    const fileset = await mod.FilesetResolver.forVisionTasks(`${TASKS}/wasm`);
-    const landmarker = await mod.PoseLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: TASKS_MODEL, delegate: "CPU" },
-      runningMode: "VIDEO",
-      numPoses: 1,
+    const worker = new Worker("/engine/pose-worker.js");
+    this.worker = worker;
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => reject(new Error("pose worker timed out")), 60000);
+      worker.onerror = (ev) => { window.clearTimeout(timer); reject(new Error(ev.message || "pose worker failed")); };
+      worker.onmessage = (ev) => {
+        const d = ev.data;
+        if (d.type === "ready") { window.clearTimeout(timer); resolve(); return; }
+        if (d.type === "error" && d.id === undefined) { window.clearTimeout(timer); reject(new Error(d.message)); return; }
+        const waiter = this.pending.get(d.id);                 // frame answers
+        if (!waiter) return;
+        this.pending.delete(d.id);
+        if (d.type === "error") waiter.reject(new Error(d.message)); else waiter.resolve(d);
+      };
+      worker.postMessage({ type: "init", tasks: TASKS, model: TASKS_MODEL });
     });
-    // It still needs a WebGL context to hand frames over; without one the first detection throws. Find out now, not mid-session.
-    const probe = document.createElement("canvas");
-    probe.width = probe.height = 64;
-    landmarker.detectForVideo(probe, performance.now());
-    this.tasks = landmarker;
+  }
+
+  private stopWorker() {
+    const w = this.worker;
+    this.worker = null;
+    if (w) { try { w.postMessage({ type: "close" }); } catch { /* ignore */ } w.terminate(); }
+    this.pending.forEach((p) => p.reject(new Error("engine closed")));
+    this.pending.clear();
   }
 
   private async loadTfjs() {
@@ -136,13 +150,21 @@ export class CpuPose {
   async send({ image }: { image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement }) {
     await this.initialize();
     if (this.closed) return;
-    if (this.tasks) {
-      const res = this.tasks.detectForVideo(image, performance.now());
-      const lm = res?.landmarks?.[0];
-      if (!lm || lm.length < 33) { this.callback?.({ image }); return; }   // nobody in view: same as MediaPipe
-      const wl = res.worldLandmarks?.[0];
-      const toLm = (k: any): Landmark => ({ x: k.x, y: k.y, z: k.z ?? 0, visibility: k.visibility ?? 0 });
-      this.callback?.({ poseLandmarks: lm.map(toLm), poseWorldLandmarks: wl && wl.length >= 33 ? wl.map(toLm) : undefined, image });
+    if (this.worker) {
+      const el = image as HTMLVideoElement;
+      const w0 = el.videoWidth || (image as HTMLCanvasElement).width || 0, h0 = el.videoHeight || (image as HTMLCanvasElement).height || 0;
+      if (!w0 || !h0) return;
+      const scale = Math.min(1, 640 / Math.max(w0, h0));   // the model works on a ~256 px crop: no need to ship a full-size frame
+      const bitmap = await createImageBitmap(image as ImageBitmapSource, { resizeWidth: Math.round(w0 * scale), resizeHeight: Math.round(h0 * scale), resizeQuality: "low" });
+      const id = ++this.seq;
+      const answer = await new Promise<any>((resolve, reject) => {
+        const timer = window.setTimeout(() => { this.pending.delete(id); reject(new Error("pose worker did not answer")); }, 10000);
+        this.pending.set(id, { resolve: (r) => { window.clearTimeout(timer); resolve(r); }, reject: (e) => { window.clearTimeout(timer); reject(e); } });
+        this.worker!.postMessage({ type: "frame", id, ts: performance.now(), bitmap }, [bitmap]);
+      });
+      if (this.closed) return;
+      if (!answer.landmarks) { this.callback?.({ image }); return; }   // nobody in view: same as MediaPipe
+      this.callback?.({ poseLandmarks: answer.landmarks, poseWorldLandmarks: answer.world || undefined, image });
       return;
     }
     if (!this.detector) return;
@@ -161,9 +183,8 @@ export class CpuPose {
 
   close() {
     this.closed = true;
-    try { this.tasks?.close?.(); } catch { /* ignore */ }
+    this.stopWorker();
     try { this.detector?.dispose?.(); } catch { /* ignore */ }
-    this.tasks = null;
     this.detector = null;
   }
 }
