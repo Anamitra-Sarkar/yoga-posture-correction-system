@@ -60,7 +60,7 @@ function PoseFigure({ id, stroke = "var(--ink)", joint = "var(--brand)", ground 
         <circle cx={f.head[0]} cy={f.head[1]} r="8" />
         {f.lines.map((l, i) => <polyline key={i} points={l.map((p) => p.join(",")).join(" ")} />)}
       </g>
-      {[...dots.values()].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3.4" fill={joint} />)}
+      {Array.from(dots.values()).map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3.4" fill={joint} />)}
       {f.accent && <circle cx={f.accent[0]} cy={f.accent[1]} r="5.2" fill="#f2b84b" stroke="rgba(20,19,16,0.4)" strokeWidth="1.5" />}
     </svg>
   );
