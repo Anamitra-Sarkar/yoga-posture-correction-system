@@ -1,26 +1,31 @@
-// Compatibility pose engine: BlazePose on TensorFlow.js with the WebAssembly backend (no WebGL, no GPU).
+// Compatibility pose engine for phones whose GPU driver cannot run MediaPipe's WebGL pipeline.
 //
-// Why it exists: the normal engine (MediaPipe) needs a WebGL context. Some phones cannot give a browser one: e.g. phones with the
-// IMG BXM-8-256 GPU (MediaTek Dimensity 7020/7025/930 ...) have driver problems that make Chrome refuse or lose WebGL contexts.
-// On those phones this engine runs on the CPU instead: slower (a few frames per second) but it works, and it runs entirely on the device.
+// Measured on a POCO M7 Pro 5G (Dimensity 7025 Ultra, PowerVR BXM-8-256, Chrome 154): WebGL contexts are created fine, but the old
+// MediaPipe engine aborts inside the driver ("GlScalerCalculator ... frame_unifs_[i] != -1") and MediaPipe Tasks' GPU delegate silently
+// returns no poses. The CPU delegate of MediaPipe Tasks works there (~80 ms/frame, the same models), so that is the first fallback.
+// If the browser has no WebGL at all, the second fallback is BlazePose on TensorFlow.js' WebAssembly backend (needs no GL, a bit less accurate).
 //
-// It exposes the small part of MediaPipe's legacy `Pose` API that the app uses (setOptions / onResults / initialize / send / close) and
-// returns results in the same shape (normalised image landmarks + metric world landmarks), so nothing downstream changes.
-// It is only ever created when the fast engine is unavailable; devices where WebGL works never load any of this code's assets.
+// Everything runs on the device. Results are mapped to the shape of MediaPipe's legacy `Pose` results (normalised image landmarks +
+// metric world landmarks), and the class exposes the part of that API the app uses, so nothing downstream changes. It is only created
+// when the fast engine failed on this device.
 
 const CDN = "https://cdn.jsdelivr.net/npm/";
+// -- MediaPipe Tasks (CPU delegate)
+const TASKS = `${CDN}@mediapipe/tasks-vision@0.10.21`;
+const TASKS_MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+// -- TensorFlow.js WASM (last resort, no WebGL needed)
 const TF = "4.22.0";
 const PD = "2.1.3";
 const WASM_BASE = `${CDN}@tensorflow/tfjs-backend-wasm@${TF}/dist/`;
-const SCRIPTS = [
+const TF_SCRIPTS = [
   `${CDN}@tensorflow/tfjs-core@${TF}/dist/tf-core.min.js`,
   `${CDN}@tensorflow/tfjs-converter@${TF}/dist/tf-converter.min.js`,
   `${CDN}@tensorflow/tfjs-backend-wasm@${TF}/dist/tf-backend-wasm.min.js`,
   `${CDN}@tensorflow-models/pose-detection@${PD}/dist/pose-detection.min.js`,
 ];
 const MODEL_ROOT = "https://tfhub.dev/mediapipe/tfjs-model/blazepose_3d/";
-const DETECTOR = `${MODEL_ROOT}detector/1`;
-const LANDMARK_LITE = `${MODEL_ROOT}landmark/lite/2`;
+const TF_DETECTOR = `${MODEL_ROOT}detector/1`;
+const TF_LANDMARK_LITE = `${MODEL_ROOT}landmark/lite/2`;
 
 // ---- which engine this device uses (remembered, so a phone that needed the compatibility engine goes straight to it) ----
 const MODE_KEY = "asana.engine";
@@ -37,10 +42,14 @@ export const readEngineMode = (): EngineMode => {
 export const saveEngineMode = (mode: EngineMode) => {
   try {
     if (mode === "cpu") window.localStorage.setItem(MODE_KEY, JSON.stringify({ mode, at: Date.now() }));
-    else window.localStorage.removeItem(MODE_KEY);
+    else { window.localStorage.removeItem(MODE_KEY); window.localStorage.removeItem(TFJS_KEY); }
   } catch { /* private mode: the choice just is not remembered */ }
 };
 export const cpuEngineSupported = (): boolean => typeof WebAssembly !== "undefined";
+
+// remembers that this device needed the no-WebGL engine, so its files are also kept ready for offline use
+const TFJS_KEY = "asana.engine.tfjs";
+const usedTfjs = (): boolean => { try { return window.localStorage.getItem(TFJS_KEY) === "1"; } catch { return false; } };
 
 // ---- script loading (each file once) ----
 const scriptPromises = new Map<string, Promise<void>>();
@@ -60,13 +69,16 @@ const loadScript = (src: string): Promise<void> => {
   return p;
 };
 
+type Landmark = { x: number; y: number; z: number; visibility: number };
+
 export class CpuPose {
-  private detector: any = null;
+  private tasks: any = null;            // MediaPipe Tasks PoseLandmarker (CPU)
+  private detector: any = null;         // TF.js BlazePose (WASM)
   private loading: Promise<void> | null = null;
   private callback: ((results: any) => void) | null = null;
   private closed = false;
 
-  setOptions(_options?: unknown) { /* the compatibility engine has a single (lite) model */ }
+  setOptions(_options?: unknown) { /* the compatibility engines use one lite model */ }
   onResults(callback: (results: any) => void) { this.callback = callback; }
 
   initialize(): Promise<void> {
@@ -77,10 +89,37 @@ export class CpuPose {
   }
 
   private async load() {
+    try {
+      await this.loadTasks();
+      return;
+    } catch (e) {
+      console.warn("MediaPipe Tasks (CPU) unavailable, using TensorFlow.js WASM:", e);
+      try { this.tasks?.close?.(); } catch { /* ignore */ }
+      this.tasks = null;
+    }
+    await this.loadTfjs();
+    try { window.localStorage.setItem(TFJS_KEY, "1"); } catch { /* ignore */ }
+  }
+
+  private async loadTasks() {
+    const mod: any = await import(/* webpackIgnore: true */ `${TASKS}/vision_bundle.mjs`);
+    const fileset = await mod.FilesetResolver.forVisionTasks(`${TASKS}/wasm`);
+    const landmarker = await mod.PoseLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: TASKS_MODEL, delegate: "CPU" },
+      runningMode: "VIDEO",
+      numPoses: 1,
+    });
+    // It still needs a WebGL context to hand frames over; without one the first detection throws. Find out now, not mid-session.
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = 64;
+    landmarker.detectForVideo(probe, performance.now());
+    this.tasks = landmarker;
+  }
+
+  private async loadTfjs() {
     const w = window as any;
     if (!w.tf || !w.poseDetection) {
-      // tf-core must be first; the rest depend on it
-      for (const src of SCRIPTS) await loadScript(src);
+      for (const src of TF_SCRIPTS) await loadScript(src);   // tf-core must come first
     }
     w.tf.wasm.setWasmPaths(WASM_BASE);
     await w.tf.setBackend("wasm");
@@ -89,20 +128,30 @@ export class CpuPose {
       runtime: "tfjs",
       modelType: "lite",
       enableSmoothing: true,
-      detectorModelUrl: DETECTOR,
-      landmarkModelUrl: LANDMARK_LITE,
+      detectorModelUrl: TF_DETECTOR,
+      landmarkModelUrl: TF_LANDMARK_LITE,
     });
   }
 
   async send({ image }: { image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement }) {
     await this.initialize();
-    if (this.closed || !this.detector) return;
+    if (this.closed) return;
+    if (this.tasks) {
+      const res = this.tasks.detectForVideo(image, performance.now());
+      const lm = res?.landmarks?.[0];
+      if (!lm || lm.length < 33) { this.callback?.({ image }); return; }   // nobody in view: same as MediaPipe
+      const wl = res.worldLandmarks?.[0];
+      const toLm = (k: any): Landmark => ({ x: k.x, y: k.y, z: k.z ?? 0, visibility: k.visibility ?? 0 });
+      this.callback?.({ poseLandmarks: lm.map(toLm), poseWorldLandmarks: wl && wl.length >= 33 ? wl.map(toLm) : undefined, image });
+      return;
+    }
+    if (!this.detector) return;
     const poses = await this.detector.estimatePoses(image, { flipHorizontal: false });
     if (this.closed) return;
     const w = (image as HTMLVideoElement).videoWidth || (image as HTMLImageElement).naturalWidth || (image as HTMLCanvasElement).width || 1;
     const h = (image as HTMLVideoElement).videoHeight || (image as HTMLImageElement).naturalHeight || (image as HTMLCanvasElement).height || 1;
     const pose = poses && poses[0];
-    if (!pose || !pose.keypoints || pose.keypoints.length < 33) { this.callback?.({ image }); return; }   // nobody in view: same as MediaPipe
+    if (!pose || !pose.keypoints || pose.keypoints.length < 33) { this.callback?.({ image }); return; }
     const poseLandmarks = pose.keypoints.map((k: any) => ({ x: k.x / w, y: k.y / h, z: (k.z ?? 0) / w, visibility: k.score ?? 0 }));
     const poseWorldLandmarks = pose.keypoints3D && pose.keypoints3D.length >= 33
       ? pose.keypoints3D.map((k: any) => ({ x: k.x, y: k.y, z: k.z, visibility: k.score ?? 0 }))
@@ -112,7 +161,9 @@ export class CpuPose {
 
   close() {
     this.closed = true;
+    try { this.tasks?.close?.(); } catch { /* ignore */ }
     try { this.detector?.dispose?.(); } catch { /* ignore */ }
+    this.tasks = null;
     this.detector = null;
   }
 }
@@ -134,8 +185,7 @@ const putInCache = async (cache: Cache, url: string): Promise<Response | null> =
 };
 
 const modelFiles = async (cache: Cache, root: string): Promise<string[]> => {
-  const manifestUrl = `${root}/model.json?tfjs-format=file`;
-  const res = await putInCache(cache, manifestUrl);
+  const res = await putInCache(cache, `${root}/model.json?tfjs-format=file`);
   if (!res) return [];
   try {
     const json = await res.clone().json();
@@ -156,8 +206,11 @@ export async function warmEngineCache(kind: EngineMode, coarsePointer: boolean, 
       ...(coarsePointer ? [] : [`${MP}pose_landmark_full.tflite`]),
     ];
   } else {
-    urls = [...SCRIPTS, `${WASM_BASE}tfjs-backend-wasm-simd.wasm`, `${WASM_BASE}tfjs-backend-wasm.wasm`];
-    urls.push(...(await modelFiles(cache, DETECTOR)), ...(await modelFiles(cache, LANDMARK_LITE)));
+    urls = [`${TASKS}/vision_bundle.mjs`, `${TASKS}/wasm/vision_wasm_internal.js`, `${TASKS}/wasm/vision_wasm_internal.wasm`, TASKS_MODEL];
+    if (usedTfjs()) {
+      urls.push(...TF_SCRIPTS, `${WASM_BASE}tfjs-backend-wasm-simd.wasm`, `${WASM_BASE}tfjs-backend-wasm.wasm`);
+      urls.push(...(await modelFiles(cache, TF_DETECTOR)), ...(await modelFiles(cache, TF_LANDMARK_LITE)));
+    }
   }
   let ok = true;
   for (const u of urls) {          // one at a time: this runs in the background and must never compete with the camera

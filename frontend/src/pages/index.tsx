@@ -1297,6 +1297,14 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  // Compatibility engine is running: make sure ITS files are cached too (they were fetched by the engine itself; this only fills gaps).
+  useEffect(() => {
+    if (engineMode !== "cpu" || engineState !== "ready") return;
+    let cancelled = false;
+    warmEngineCache("cpu", false, () => cancelled).then((ok) => { if (ok && !cancelled) setOfflineReady(true); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [engineMode, engineState]);
+
   // MediaPipe reports a missing WebGL context with window.alert(). Route exactly that message to our themed panel;
   // every other alert is left alone.
   useEffect(() => {
@@ -1851,7 +1859,7 @@ export default function Dashboard() {
         let engineInFlight: any = null;
         if (!stream.active || !videoRef.current) return;
         const v = videoRef.current;
-        const minGap = coarse ? 45 : 0; // phones: at most ~22 analyses/s, plenty for yoga and far kinder to the battery
+        const minGap = engineModeRef.current === "cpu" ? 100 : coarse ? 45 : 0; // phones: at most ~22 analyses/s (compatibility engine ~10/s, it runs on the CPU)
         if (v.readyState >= 2 && v.videoWidth > 0 && (poseRef.current || initMediaPipe()) && performance.now() - lastSendRef.current >= minGap) {
           lastSendRef.current = performance.now();
           try {
@@ -1886,6 +1894,9 @@ export default function Dashboard() {
           } catch (e) {
             // A throw here used to kill the loop silently (black screen forever). Back off and keep trying.
             if (engineInFlight && engineInFlight !== poseRef.current) { scheduleNext(); return; }   // that engine was just replaced: its failure is not news
+            // The fast engine can die inside the phone's graphics driver (seen on PowerVR BXM-8-256: "Aborted(native code called abort())").
+            // It never recovers from that, so move to the compatibility engine at once instead of retrying a dead one.
+            if (engineModeRef.current === "gpu" && cpuEngineSupported() && /abort|webgl|gl_|internal/i.test(String((e as any)?.message ?? e))) { switchToCompatibility(); scheduleNext(); return; }
             engineErrorsRef.current += 1;
             console.error("Pose engine error:", e);
             if (engineErrorsRef.current >= 3) setEngineState("error");
@@ -1974,6 +1985,7 @@ export default function Dashboard() {
     saveEngineMode("cpu");
     setEngineMode("cpu");
     releasePose();                       // drops the broken GPU engine and its context
+    setOfflineReady(false);              // re-confirmed below once the compatibility engine's own files are cached
     graphicsFailedRef.current = false;
     lastResultAtRef.current = 0;
     engineErrorsRef.current = 0;
