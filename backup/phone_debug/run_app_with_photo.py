@@ -1,7 +1,8 @@
 """Run the deployed app on the phone with a PHOTO of a person as the 'camera' (stubbed getUserMedia), to verify the whole pipeline
 (engine -> landmarks -> skeleton drawn -> pose recognised) on that hardware regardless of who stands in front of the phone.
 Usage: python3 run_app_with_photo.py <app url> <photo path on the app origin, e.g. /pose-images/warrior_2.jpg> [seconds]"""
-import asyncio, json, sys, time, urllib.request, websockets
+import asyncio, json, os, sys, time, urllib.request, websockets
+PORT = os.environ.get("DEVTOOLS_PORT", "9222")
 URL = sys.argv[1]; PHOTO = sys.argv[2]; SECS = int(sys.argv[3]) if len(sys.argv) > 3 else 30
 HOOK = r"""
 (() => {
@@ -25,10 +26,10 @@ HOOK = r"""
 })();
 """.replace("__PHOTO__", PHOTO)
 async def main():
-    ver = json.loads(urllib.request.urlopen("http://localhost:9222/json/version", timeout=10).read())
+    ver = json.loads(urllib.request.urlopen("http://localhost:" + PORT + "/json/version", timeout=10).read())
     async with websockets.connect(ver["webSocketDebuggerUrl"], max_size=50_000_000) as bws:
         await bws.send(json.dumps({"id": 1, "method": "Target.createTarget", "params": {"url": "about:blank"}})); tid = json.loads(await bws.recv())["result"]["targetId"]
-        async with websockets.connect(f"ws://localhost:9222/devtools/page/{tid}", max_size=50_000_000) as ws:
+        async with websockets.connect(f"ws://localhost:{PORT}/devtools/page/{tid}", max_size=50_000_000) as ws:
             n = [10]; logs = []
             async def send(m, p=None):
                 n[0] += 1; i = n[0]; await ws.send(json.dumps({"id": i, "method": m, "params": p or {}}))
