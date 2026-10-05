@@ -93,6 +93,7 @@ export class CpuPose {
   private lastSendAt = 0;
   private lastFrameTime = -1;
   private pumping = false;
+  private scratch: HTMLCanvasElement | null = null;
   private lastError: Error | null = null;
   private detector: any = null;         // TF.js BlazePose (WASM)
   private loading: Promise<void> | null = null;
@@ -214,13 +215,19 @@ export class CpuPose {
       return;
     }
     if (!this.detector) return;
-    const poses = await this.detector.estimatePoses(image, { flipHorizontal: false });
-    if (this.closed) return;
+    // TF.js is given a still copy of the frame (downscaled): handing it the <video> element directly returned no pose for a camera stream.
     const w = (image as HTMLVideoElement).videoWidth || (image as HTMLImageElement).naturalWidth || (image as HTMLCanvasElement).width || 1;
     const h = (image as HTMLVideoElement).videoHeight || (image as HTMLImageElement).naturalHeight || (image as HTMLCanvasElement).height || 1;
+    const scale = Math.min(1, 640 / Math.max(w, h));
+    const cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+    const frame = this.scratch || (this.scratch = document.createElement("canvas"));
+    if (frame.width !== cw || frame.height !== ch) { frame.width = cw; frame.height = ch; }
+    frame.getContext("2d")!.drawImage(image as CanvasImageSource, 0, 0, cw, ch);
+    const poses = await this.detector.estimatePoses(frame, { flipHorizontal: false });
+    if (this.closed) return;
     const pose = poses && poses[0];
     if (!pose || !pose.keypoints || pose.keypoints.length < 33) { this.callback?.({ image }); return; }
-    const poseLandmarks = pose.keypoints.map((k: any) => ({ x: k.x / w, y: k.y / h, z: (k.z ?? 0) / w, visibility: k.score ?? 0 }));
+    const poseLandmarks = pose.keypoints.map((k: any) => ({ x: k.x / cw, y: k.y / ch, z: (k.z ?? 0) / cw, visibility: k.score ?? 0 }));
     const poseWorldLandmarks = pose.keypoints3D && pose.keypoints3D.length >= 33
       ? pose.keypoints3D.map((k: any) => ({ x: k.x, y: k.y, z: k.z, visibility: k.score ?? 0 }))
       : undefined;
