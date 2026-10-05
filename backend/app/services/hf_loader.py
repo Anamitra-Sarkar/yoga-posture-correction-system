@@ -74,8 +74,13 @@ def initialize_models():
         # /api/analyse_sequence behave identically under either label vocabulary
         # (parse_sequence_label in routers/pose.py) shipped and was tested BEFORE
         # this swap, so this line is the only behavioural change.
-        stgcn_path = hf_hub_download(repo_id=settings.HF_REPO, filename="stgcn_transitions_v1.pth", token=settings.HF_TOKEN)
-        stgcn_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="stgcn_transitions_v1_encoder.npy", token=settings.HF_TOKEN)
+        #
+        # The filenames now come from settings (env STGCN_MODEL_FILE / STGCN_ENCODER_FILE) and default to
+        # the checkpoint described above, so this is still the live behaviour unless a variable is set.
+        # parse_sequence_label also accepts the plain-pose-name vocabulary of stgcn_target_v1.pth.
+        stgcn_path = hf_hub_download(repo_id=settings.HF_REPO, filename=settings.STGCN_MODEL_FILE, token=settings.HF_TOKEN)
+        stgcn_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename=settings.STGCN_ENCODER_FILE, token=settings.HF_TOKEN)
+        print(f"ST-GCN checkpoint: {settings.STGCN_MODEL_FILE}", flush=True)
         
         # Load encoders
         mlp_classes = list(np.load(mlp_enc_path, allow_pickle=True))

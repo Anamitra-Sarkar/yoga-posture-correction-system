@@ -19,6 +19,12 @@ class Settings:
     GATE_MODEL_FILE: str = os.environ.get("GATE_MODEL_FILE", "mlp_3head_gate_v1.pth")
     GATE_ENCODER_FILE: str = os.environ.get("GATE_ENCODER_FILE", "mlp_3head_gate_v1_encoder.npy")
 
+    # Sequence (ST-GCN) checkpoint. Defaults to the one that has been live since 2026-09-20 so deploying
+    # this code changes nothing by itself; set STGCN_MODEL_FILE / STGCN_ENCODER_FILE as Space variables
+    # (e.g. stgcn_target_v1.pth / stgcn_target_v1_encoder.npy) to switch, delete them to roll back.
+    STGCN_MODEL_FILE: str = os.environ.get("STGCN_MODEL_FILE", "stgcn_transitions_v1.pth")
+    STGCN_ENCODER_FILE: str = os.environ.get("STGCN_ENCODER_FILE", "stgcn_transitions_v1_encoder.npy")
+
     # Device mapping (CPU optimization for low-resource environments like 4GB RAM)
     DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
