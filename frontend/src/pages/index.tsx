@@ -2600,7 +2600,7 @@ export default function Dashboard() {
             <div className="ap-cam">
               <div ref={fullscreenContainerRef} className={`ap-cam-wrap ${isFullscreen ? "yoga-fullscreen" : ""}`}>
                 <div
-                  className={`ap-frame ${cameraActive && poseName ? "has-chip" : ""}`}
+                  className={`ap-frame ${cameraActive && calibrationState !== "calibrating" ? "has-chip" : ""}`}
                   onTouchStart={cameraActive ? handleTouchStart : undefined}
                   onTouchMove={cameraActive ? handleTouchMove : undefined}
                   onTouchEnd={cameraActive ? handleTouchEnd : undefined}
