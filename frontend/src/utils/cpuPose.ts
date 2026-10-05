@@ -89,6 +89,11 @@ export class CpuPose {
   private worker: Worker | null = null;  // MediaPipe Tasks PoseLandmarker (CPU), in a worker
   private pending = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
   private seq = 0;
+  private source: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement | null = null;
+  private lastSendAt = 0;
+  private lastFrameTime = -1;
+  private pumping = false;
+  private lastError: Error | null = null;
   private detector: any = null;         // TF.js BlazePose (WASM)
   private loading: Promise<void> | null = null;
   private callback: ((results: any) => void) | null = null;
@@ -138,6 +143,39 @@ export class CpuPose {
     });
   }
 
+  private async pump() {
+    this.pumping = true;
+    try {
+      // runs while the app keeps handing frames over; ends by itself shortly after the camera stops
+      while (!this.closed && this.worker && this.source && performance.now() - this.lastSendAt < 1500) {
+        const el = this.source as HTMLVideoElement;
+        const w0 = el.videoWidth || (this.source as HTMLCanvasElement).width || 0, h0 = el.videoHeight || (this.source as HTMLCanvasElement).height || 0;
+        const fresh = typeof el.currentTime === "number" && el.currentTime !== this.lastFrameTime;
+        if (!w0 || !h0 || (typeof el.currentTime === "number" && !fresh) || (el.readyState !== undefined && el.readyState < 2)) { await new Promise((r) => setTimeout(r, 8)); continue; }
+        this.lastFrameTime = el.currentTime;
+        try {
+          const scale = Math.min(1, 640 / Math.max(w0, h0));   // the model works on a ~256 px crop: no need to ship a full-size frame
+          const bitmap = await createImageBitmap(this.source as ImageBitmapSource, { resizeWidth: Math.round(w0 * scale), resizeHeight: Math.round(h0 * scale), resizeQuality: "low" });
+          const id = ++this.seq;
+          const answer = await new Promise<any>((resolve, reject) => {
+            const timer = window.setTimeout(() => { this.pending.delete(id); reject(new Error("pose worker did not answer")); }, 10000);
+            this.pending.set(id, { resolve: (r) => { window.clearTimeout(timer); resolve(r); }, reject: (e) => { window.clearTimeout(timer); reject(e); } });
+            this.worker!.postMessage({ type: "frame", id, ts: performance.now(), bitmap }, [bitmap]);
+          });
+          if (this.closed) return;
+          if (!answer.landmarks) this.callback?.({ image: this.source });   // nobody in view: same as MediaPipe
+          else this.callback?.({ poseLandmarks: answer.landmarks, poseWorldLandmarks: answer.world || undefined, image: this.source });
+        } catch (e) {
+          if (this.closed) return;
+          this.lastError = e as Error;      // surfaces on the app's next send(), where the error handling lives
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      }
+    } finally {
+      this.pumping = false;
+    }
+  }
+
   private stopWorker() {
     const w = this.worker;
     this.worker = null;
@@ -167,20 +205,12 @@ export class CpuPose {
     await this.initialize();
     if (this.closed) return;
     if (this.worker) {
-      const el = image as HTMLVideoElement;
-      const w0 = el.videoWidth || (image as HTMLCanvasElement).width || 0, h0 = el.videoHeight || (image as HTMLCanvasElement).height || 0;
-      if (!w0 || !h0) return;
-      const scale = Math.min(1, 640 / Math.max(w0, h0));   // the model works on a ~256 px crop: no need to ship a full-size frame
-      const bitmap = await createImageBitmap(image as ImageBitmapSource, { resizeWidth: Math.round(w0 * scale), resizeHeight: Math.round(h0 * scale), resizeQuality: "low" });
-      const id = ++this.seq;
-      const answer = await new Promise<any>((resolve, reject) => {
-        const timer = window.setTimeout(() => { this.pending.delete(id); reject(new Error("pose worker did not answer")); }, 10000);
-        this.pending.set(id, { resolve: (r) => { window.clearTimeout(timer); resolve(r); }, reject: (e) => { window.clearTimeout(timer); reject(e); } });
-        this.worker!.postMessage({ type: "frame", id, ts: performance.now(), bitmap }, [bitmap]);
-      });
-      if (this.closed) return;
-      if (!answer.landmarks) { this.callback?.({ image }); return; }   // nobody in view: same as MediaPipe
-      this.callback?.({ poseLandmarks: answer.landmarks, poseWorldLandmarks: answer.world || undefined, image });
+      // Worker engine: hand the camera element over and return at once. The pump below keeps the worker busy back to back (no waiting for the
+      // next video callback between frames); results reach the app through the callback, like MediaPipe's own API.
+      if (this.lastError) { const e = this.lastError; this.lastError = null; throw e; }
+      this.source = image;
+      this.lastSendAt = performance.now();
+      if (!this.pumping) void this.pump();
       return;
     }
     if (!this.detector) return;
