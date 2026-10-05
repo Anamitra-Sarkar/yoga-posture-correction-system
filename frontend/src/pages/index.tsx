@@ -463,6 +463,10 @@ const TRANSLATIONS: {
     coachOffline: "You're offline. Basic recognition and tips run on your device; the full coach returns when you're back online.",
     poseEngineOffline: "Open the app once with internet so it can download the pose engine.",
     offlineShort: "Offline",
+    appearance: "Appearance",
+    themeAuto: "Auto",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
   hi: {
     tapForGuide: "गाइड देखने के लिए किसी भी आसन पर टैप करें।",
@@ -580,6 +584,10 @@ const TRANSLATIONS: {
     coachOffline: "आप ऑफ़लाइन हैं। बेसिक पहचान और सुझाव आपके डिवाइस पर चल रहे हैं; इंटरनेट आने पर पूरा कोच लौट आएगा।",
     poseEngineOffline: "ऐप को एक बार इंटरनेट के साथ खोलें ताकि वह पोज़ इंजन डाउनलोड कर सके।",
     offlineShort: "ऑफ़लाइन",
+    appearance: "दिखावट",
+    themeAuto: "ऑटो",
+    themeLight: "लाइट",
+    themeDark: "डार्क",
   },
   bn: {
     tapForGuide: "গাইড দেখতে যেকোনো আসনে ট্যাপ করুন।",
@@ -697,6 +705,10 @@ const TRANSLATIONS: {
     coachOffline: "আপনি অফলাইনে। বেসিক শনাক্তকরণ ও পরামর্শ আপনার ডিভাইসেই চলছে; ইন্টারনেট ফিরলে পূর্ণ কোচ ফিরে আসবে।",
     poseEngineOffline: "অ্যাপটি একবার ইন্টারনেট সহ খুলুন, যাতে পোজ ইঞ্জিন ডাউনলোড হতে পারে।",
     offlineShort: "অফলাইন",
+    appearance: "চেহারা",
+    themeAuto: "অটো",
+    themeLight: "লাইট",
+    themeDark: "ডার্ক",
   }
 };
 
@@ -882,6 +894,21 @@ export default function Dashboard() {
     try { window.localStorage.setItem("asana.lang", lang); } catch { /* ignore */ }
     if (typeof document !== "undefined") document.documentElement.lang = lang;
   }, [lang]);
+  // Appearance: follow the system unless the user picked Light/Dark (the choice is applied before first paint in _document).
+  const [theme, setTheme] = useState<"auto" | "light" | "dark">("auto");
+  useEffect(() => {
+    try {
+      const t = window.localStorage.getItem("asana.theme");
+      if (t === "light" || t === "dark") setTheme(t);
+    } catch { /* ignore */ }
+  }, []);
+  const chooseTheme = (t: "auto" | "light" | "dark") => {
+    setTheme(t);
+    try {
+      if (t === "auto") { window.localStorage.removeItem("asana.theme"); document.documentElement.removeAttribute("data-theme"); }
+      else { window.localStorage.setItem("asana.theme", t); document.documentElement.setAttribute("data-theme", t); }
+    } catch { /* ignore */ }
+  };
   const [langDropOpen, setLangDropOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
@@ -2296,7 +2323,6 @@ export default function Dashboard() {
     <>
       <Head>
         <title>AsanaAI — Smart Yoga Coach</title>
-        <meta name="theme-color" content="#f5f2ec" />
       </Head>
 
       {/* Pose engine (MediaPipe). Loaded early; the camera view never depends on it to show the picture. */}
@@ -2551,6 +2577,17 @@ export default function Dashboard() {
               {voiceMissingForLang && <p className="ap-note warn" role="status">{T.voiceMissing}</p>}
             </>
           </Accordion>
+          <section className="ap-sec">
+            <div className="ap-sec-head"><span className="ap-eyebrow">{T.appearance}</span></div>
+            <div className="ap-seg three" role="group" aria-label={T.appearance}>
+              {(["auto", "light", "dark"] as const).map((k) => (
+                <button key={k} type="button" aria-pressed={theme === k} onClick={() => chooseTheme(k)}>
+                  {k === "auto" ? T.themeAuto : k === "light" ? T.themeLight : T.themeDark}
+                </button>
+              ))}
+            </div>
+          </section>
+
           <button className="ap-btn ghost hide-d" onClick={() => { resetPipeline(); setSidebarOpen(false); }}>
             <RotateCw size={16} />
             <span>{T.newSession}</span>

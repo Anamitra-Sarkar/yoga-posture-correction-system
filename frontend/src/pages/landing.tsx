@@ -36,7 +36,7 @@ const FIGURES: { [id: string]: Figure } = {
     accent: [28, 96],
   },
   cobra: {
-    head: [36, 68], ground: 124,
+    head: [38, 71], ground: 124,
     lines: [[[44, 84], [70, 112]], [[70, 112], [96, 118], [116, 122]], [[44, 84], [46, 104], [48, 122]]],
   },
   plank: {
@@ -44,7 +44,7 @@ const FIGURES: { [id: string]: Figure } = {
     lines: [[[34, 66], [70, 76], [92, 82], [112, 88]], [[34, 66], [34, 88], [34, 110]]],
   },
   dog: {
-    head: [38, 88], ground: 114,
+    head: [48, 102], ground: 114,
     lines: [[[104, 112], [88, 82], [70, 50]], [[70, 50], [42, 76], [20, 112]]],
   },
 };
@@ -111,7 +111,6 @@ export default function LandingPage() {
         <meta name="description" content="Open your camera, move into a pose and get gentle, instant feedback on your alignment, spoken in English, Hindi or Bengali. Free, no sign-up, and your video stays on your device." />
         <meta property="og:title" content="AsanaAI — Yoga guidance that watches your form" />
         <meta property="og:description" content="Gentle, instant feedback on your yoga alignment, in your language. Free, private, nothing to install." />
-        <meta name="theme-color" content="#f5f2ec" />
       </Head>
 
       <header className="lp-nav">
@@ -162,7 +161,7 @@ export default function LandingPage() {
               <div className="lp-device-screen">
                 <span className="lp-live"><i />LIVE</span>
                 <div className="lp-device-fig"><PoseFigure id="warrior" stroke="#ffffff" joint="#7fd1a8" ground="rgba(255,255,255,0.25)" width={3.2} /></div>
-                <div className="lp-device-caption">Soften your front knee a little more.</div>
+                <div className="lp-device-caption">Soften your front knee.</div>
                 <div className="lp-device-chip"><b>Virabhadrasana II</b><em>92%</em></div>
               </div>
               <div className="lp-device-card">

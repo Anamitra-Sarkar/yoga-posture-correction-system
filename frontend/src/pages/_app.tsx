@@ -20,8 +20,8 @@ function useNativeAppPolish() {
 
       const { StatusBar, Style } = await import('@capacitor/status-bar');
       try {
-        await StatusBar.setBackgroundColor({ color: '#0f0c29' });
-        await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: '#f5f2ec' });
+        await StatusBar.setStyle({ style: Style.Light });
       } catch {
         // Non-fatal on devices/OEM skins that restrict status bar theming.
       }
@@ -53,7 +53,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#f5f2ec" />
+        <meta name="theme-color" content="#14130f" media="(prefers-color-scheme: dark)" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
