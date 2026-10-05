@@ -1,6 +1,16 @@
 # AsanaAI — RESUME HERE (written 2026-10-05 night; UPDATED 2026-10-06 morning)
 
-## UPDATE 2026-10-05 late (newest; read this block first)
+## UPDATE 2026-10-05 night — UI REDESIGN IS LIVE ON PRODUCTION (read this block first)
+* Production https://yoga-posture-correction-system.vercel.app now serves the new "calm studio" UI (main @ 6429f54). New files: `frontend/src/styles/app.css` (all dashboard styling, `ap-*` classes), `frontend/src/lib/fonts.ts`, `pages/_document.tsx`; `pages/index.tsx` render rewritten (logic unchanged).
+* **Black camera on phones — root cause + fix:** `.camera-video-element` was a 1px, opacity-0 `<video>` (phones don't decode frames for it) and the canvas was only painted after the pose engine's first result, so any slow/failed engine = black box with no message. Now: the `<video>` is the visible picture, the canvas only draws the skeleton, the engine init is idempotent and retried from the frame loop, `pose.send` errors back off instead of killing the loop, failures show a message + Retry (no `alert()`), track `ended` and backgrounding are handled. Start no longer waits on the unused camera_utils script.
+* **Layout contract:** camera pinned and never scrolls; everything else scrolls in its OWN region (fixes content sliding under the camera). ≥1320px two columns; 768-1319 camera on top; <768 bottom dock + pose drawer. Header holds down to 280px.
+* **Smoothness:** the dashboard used to re-render ~30x/s (angles in React state every frame) and 1x/s (session timer). Now angles go to a ref (UI publishes 4 Hz), `SessionTimer` owns its state, pose inference runs per decoded video frame (`requestVideoFrameCallback`), canvas geometry cached, no blur over live video, self-hosted fonts via next/font.
+* Free mode: tap any pose to preview its guide ("Follow my pose" returns to auto). Sidebar sections are an animated accordion with a one-line summary when collapsed.
+* **Gotchas learned:** (1) Vercel gives every push its own preview URL; `gh ... commits/main/status` returns the PREVIEW status of the same SHA, so check the production deployment with `list_deployments target=production` before declaring a deploy done. (2) next/font in the pages router only emits @font-face if the font module is used in the client tree: apply the variable classes on a wrapper in `_app`, not only in `_document`. (3) The PWA service worker can show a returning visitor the old build for one load. (4) Mobile layouts can be tested in this Chrome by rendering the site in same-origin iframes of phone width (the window cannot be resized).
+* NOT verified on a real phone (needs the user): live MediaPipe on a real camera, the Sequence Flow row, audible Hindi/Bengali speech, iOS fullscreen fallback.
+* Not done / ideas: landing page (`/landing`) restyle + copy; optional hero image via Puter (user allowed, not needed so far); dark theme.
+
+## UPDATE 2026-10-05 late (model/backend work)
 **Done and LIVE (all verified):**
 * **Decision: keep the NEW ST-GCN (`stgcn_target_v1`), retire the old ones.** Same held-out windows: new macro recall 0.82 vs old live 0.19 (docs/BENCHMARKS.md §5). Old files stay on HF untouched (rollback = delete the two Space variables below).
 * Live Space `Arko007/yoga_pose`: variables `ENABLE_POSE_CASCADE=1`, `STGCN_MODEL_FILE=stgcn_target_v1.pth`, `STGCN_ENCODER_FILE=stgcn_target_v1_encoder.npy`; `GROQ_API_KEY` rotated (LLM paraphrase works again: Hindi cue now differs from the template). Parity: deployed endpoint == local run of the published file on 60/60 windows.
