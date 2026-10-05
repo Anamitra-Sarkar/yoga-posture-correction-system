@@ -952,6 +952,9 @@ export default function Dashboard() {
   // Camera Facing Mode States
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+  const videoDevicesRef = useRef<MediaDeviceInfo[]>([]);      // every camera the browser lists (re-read after permission)
+  const activeDeviceIdRef = useRef<string | null>(null);      // the camera currently in use
+  const facingKnownRef = useRef(false);                       // does the current camera say which way it faces? (phones/tablets yes, most webcams no)
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
 
@@ -1215,16 +1218,23 @@ export default function Dashboard() {
     setInstallPrompt(null);
   };
 
-  // Detect if device has multiple cameras
-  useEffect(() => {
-    if (typeof window !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-      navigator.mediaDevices.enumerateDevices().then((devices) => {
-        const videoDevices = devices.filter(device => device.kind === "videoinput");
-        setHasMultipleCameras(videoDevices.length > 1);
-      }).catch(err => {
-        console.error("Enumerate devices failed:", err);
-      });
+  // Count the cameras. Browsers hide the list until camera permission is granted (a phone reports ONE unnamed camera before
+  // that), so this runs again right after the camera starts and whenever one is plugged in or removed.
+  const refreshCameras = async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+      videoDevicesRef.current = cams;
+      setHasMultipleCameras(cams.length > 1);
+    } catch (err) {
+      console.error("Enumerate devices failed:", err);
     }
+  };
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.mediaDevices) return;
+    refreshCameras();
+    navigator.mediaDevices.addEventListener?.("devicechange", refreshCameras);
+    return () => navigator.mediaDevices.removeEventListener?.("devicechange", refreshCameras);
   }, []);
 
   // Listen to native fullscreen change event (handles Esc key automatically)
@@ -1628,7 +1638,7 @@ export default function Dashboard() {
   };
 
   // Start Live Webcam Video Loop (Custom Stream Implementation for swap/facingMode support)
-  const startCamera = async (mode = facingMode) => {
+  const startCamera = async (mode = facingMode, deviceId?: string) => {
     setCameraError(null);
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setCameraError(describeCameraError(null));
@@ -1661,7 +1671,7 @@ export default function Dashboard() {
       const wanted: MediaStreamConstraints = {
         audio: false,
         video: {
-          facingMode: { ideal: mode },
+          ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: mode } }),
           width: { ideal: coarse ? 960 : 1280 },
           height: { ideal: coarse ? 720 : 720 },
           frameRate: { ideal: 30, max: 30 }
@@ -1698,7 +1708,16 @@ export default function Dashboard() {
       }
 
       setCameraActive(true);
-      setFacingMode(mode);
+
+      // Learn which camera we really got (and which way it faces) so Flip can pick the right next one.
+      const track = stream.getVideoTracks()[0];
+      const got = track?.getSettings?.() ?? {};
+      const labelFacing = /front|user|facetime|selfie/i.test(track?.label || "") ? "user" : /back|rear|environment/i.test(track?.label || "") ? "environment" : undefined;
+      const facing = (got.facingMode as "user" | "environment" | undefined) || labelFacing;
+      activeDeviceIdRef.current = got.deviceId || deviceId || null;
+      facingKnownRef.current = !!facing;
+      setFacingMode(facing || (deviceId ? "user" : mode));
+      refreshCameras();   // permission is granted now: the real camera list (with names) is available
 
       // Reset performance tracking for the new camera session
       inferenceTimesRef.current = [];
@@ -1844,10 +1863,22 @@ export default function Dashboard() {
     if (durationSec >= 20) setSummary({ total: st.total, durationSec, avg, best, rows });
   };
 
-  // Camera facing mode toggle switcher
-  const toggleCamera = () => {
-    const nextMode = facingMode === "user" ? "environment" : "user";
-    startCamera(nextMode);
+  // Flip: phones/tablets switch front <-> back; laptops and desktops (whose cameras do not report a direction) step to the next camera.
+  const toggleCamera = async () => {
+    const cams = videoDevicesRef.current;
+    const before = activeDeviceIdRef.current;
+    const stepToNext = () => {
+      const i = cams.findIndex((d) => d.deviceId === activeDeviceIdRef.current);
+      const next = cams[(i + 1) % cams.length];
+      if (next?.deviceId) return startCamera("user", next.deviceId);
+    };
+    if (facingKnownRef.current) {
+      await startCamera(facingMode === "user" ? "environment" : "user");
+      // A camera that claims a direction but ignored the request (some laptops): fall back to stepping through the list.
+      if (cams.length > 1 && activeDeviceIdRef.current && activeDeviceIdRef.current === before) await stepToNext();
+    } else if (cams.length > 1) {
+      await stepToNext();
+    }
   };
 
   const enterFullscreen = async () => {
