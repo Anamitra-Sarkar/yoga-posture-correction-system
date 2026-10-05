@@ -2386,10 +2386,10 @@ export default function Dashboard() {
               <div>
                 <div className="ap-card-title">{T.postureScore}</div>
                 <div className="ap-verdict">{verdict}</div>
-                {cameraActive && (
-                  <span className={`ap-state ${isTransitioning ? "moving" : isUnrecognized ? "" : "holding"}`}>
+                {cameraActive && !isUnrecognized && (
+                  <span className={`ap-state ${isTransitioning ? "moving" : "holding"}`}>
                     <i />
-                    {isTransitioning ? T.stateTransitioning : isUnrecognized ? T.stateUnrecognized : T.stateHolding}
+                    {isTransitioning ? T.stateTransitioning : T.stateHolding}
                   </span>
                 )}
                 {effectivePersonalCorrectness !== null && effectivePersonalCorrectness !== undefined && !isUnrecognized && (

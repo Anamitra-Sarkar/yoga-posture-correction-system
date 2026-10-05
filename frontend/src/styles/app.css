@@ -536,10 +536,11 @@
 .ap-ring-num span { display: inline-flex; align-items: baseline; }
 .ap-verdict { font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; margin: 4px 0 10px; }
 .ap-state {
-  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 999px;
-  font-size: 12.5px; font-weight: 600; background: var(--paper-2); color: var(--ink-2); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 7px; min-height: 26px; padding: 4px 11px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; line-height: 1.25; background: var(--paper-2); color: var(--ink-2);
+  max-width: 100%; white-space: normal; overflow-wrap: anywhere;
 }
-.ap-state i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: block; }
+.ap-state i { width: 7px; height: 7px; flex: none; border-radius: 50%; background: currentColor; display: block; }
 .ap-state.holding { background: var(--ok-tint); color: var(--ok); }
 .ap-state.moving { background: var(--amber-tint); color: var(--amber); }
 .ap-personal { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
@@ -655,3 +656,5 @@
   .ap-coach { padding: 14px 16px; }
   .ap-coach-text { font-size: 15.5px; }
 }
+
+.ap-score > div { min-width: 0; }
