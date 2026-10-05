@@ -206,6 +206,8 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
   padding: 20px 16px 28px;
   background: var(--paper);
   border-right: 1px solid var(--line);
@@ -297,14 +299,19 @@
 /* collapsible sidebar cards */
 .ap-acc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
 .ap-acc-head {
-  width: 100%; display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; border: 0; background: transparent; cursor: pointer; color: var(--ink);
+  width: 100%; display: flex; align-items: center; gap: 10px; min-height: 52px;
+  padding: 0 16px; border: 0; background: transparent; cursor: pointer; color: var(--ink); text-align: left;
 }
+.ap-acc-head:hover { background: #fffdf9; }
 .ap-acc-head span { font-size: 14px; font-weight: 600; }
-.ap-acc-head svg { color: var(--ink-3); transition: transform 0.2s; }
-.ap-acc-head[aria-expanded='false'] svg { transform: rotate(-90deg); }
-.ap-acc-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
-.ap-acc-body[hidden] { display: none; }
+.ap-acc-head svg { flex: none; color: var(--ink-3); transition: transform 0.25s; }
+.ap-acc.closed .ap-acc-head svg { transform: rotate(-90deg); }
+.ap-acc-status { margin-left: auto; font-style: normal; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ap-acc-wrap { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.26s ease; }
+.ap-acc.closed .ap-acc-wrap { grid-template-rows: 0fr; }
+.ap-acc-inner { overflow: hidden; min-height: 0; }
+.ap-acc.closed .ap-acc-inner { visibility: hidden; transition: visibility 0s linear 0.26s; }
+.ap-acc-body { padding: 2px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
 
 .ap-ref { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .ap-ref img { width: 100%; max-height: 240px; object-fit: cover; object-position: top; border-radius: var(--r-md); background: var(--paper-2); display: block; }
@@ -313,7 +320,7 @@
 .ap-level i { width: 8px; height: 8px; border-radius: 50%; display: block; }
 .ap-cues { display: flex; flex-direction: column; gap: 8px; }
 .ap-cue { display: flex; gap: 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
-.ap-cue b { font-weight: 600; flex: none; width: 20px; text-align: center; }
+.ap-cue b { flex: none; width: 20px; height: 20px; margin-top: 1px; display: grid; place-items: center; border-radius: 50%; background: var(--brand-tint); color: var(--brand); }
 .ap-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .ap-chip { padding: 4px 10px; border-radius: 999px; background: var(--paper-2); color: var(--ink-2); font-size: 12px; font-weight: 500; }
 
@@ -440,7 +447,7 @@
 
 /* HUD on the picture */
 .ap-hud { position: absolute; z-index: 4; display: flex; align-items: center; gap: 8px; }
-.ap-hud.tl { top: 12px; left: 12px; }
+.ap-hud.tl { top: 12px; left: 12px; flex-wrap: wrap; max-width: calc(100% - 112px); }
 .ap-hud.tr { top: 12px; right: 12px; }
 .ap-hud.bl { left: 12px; bottom: 12px; right: 12px; flex-wrap: wrap; }
 .ap-live {
@@ -450,6 +457,7 @@
 .ap-live i { width: 7px; height: 7px; border-radius: 50%; background: #ff5a47; display: block; animation: ap-pulse 1.6s ease-in-out infinite; }
 @keyframes ap-pulse { 50% { opacity: 0.35; } }
 .ap-engine {
+  max-width: 100%;
   display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 4px 12px;
   border-radius: 999px; background: rgba(20, 19, 16, 0.7); color: #f4f1e8; font-size: 12.5px; font-weight: 500;
 }
@@ -658,3 +666,18 @@
 }
 
 .ap-score > div { min-width: 0; }
+
+/* ── Header resilience: works down to ~280px ───────────────────────────────── */
+.ap-header { min-width: 0; }
+.ap-brand { min-width: 0; flex: 0 1 auto; }
+.ap-brand span { overflow: hidden; text-overflow: ellipsis; }
+.ap-header-actions { flex: none; }
+@media (max-width: 359px) {
+  .ap-header { padding: 0 8px; gap: 6px; }
+  .ap-brand span { display: none; }              /* mark only on very narrow screens */
+  .ap-iconbtn, .ap-menu-trigger { height: 38px; }
+  .ap-iconbtn { width: 38px; }
+  .ap-dock { padding-left: 6px; padding-right: 6px; gap: 2px; }
+  .ap-dock-main { padding: 0 16px; font-size: 14.5px; }
+  .ap-dock-btn { font-size: 10.5px; }
+}

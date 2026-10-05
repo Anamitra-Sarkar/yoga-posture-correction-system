@@ -36,7 +36,8 @@ import {
   ScanLine,
   Leaf,
   Menu as MenuIcon,
-  RotateCw
+  RotateCw,
+  Check
 } from "lucide-react";
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
@@ -681,6 +682,26 @@ const getPoseJoints = (poseId: string) => {
   ];
 };
 
+
+/** Collapsible sidebar section: animated, and shows a one-line summary on the header while collapsed. */
+function Accordion({ title, open, onToggle, status, children }: {
+  title: string; open: boolean; onToggle: () => void; status?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`ap-acc ${open ? "" : "closed"}`}>
+      <button className="ap-acc-head" aria-expanded={open} onClick={onToggle}>
+        <span>{title}</span>
+        {!open && status ? <em className="ap-acc-status">{status}</em> : null}
+        <ChevronDown size={17} />
+      </button>
+      <div className="ap-acc-wrap" aria-hidden={!open}>
+        <div className="ap-acc-inner">
+          <div className="ap-acc-body">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface ScoreRingProps {
   value: number;
@@ -2078,9 +2099,6 @@ export default function Dashboard() {
               <RotateCw size={15} />
               <span>{T.newSession}</span>
             </button>
-            <button className="ap-iconbtn hide-d" onClick={resetPipeline} aria-label={T.newSession} title={T.newSession}>
-              <RotateCw size={17} />
-            </button>
           </div>
         </header>
 
@@ -2134,12 +2152,8 @@ export default function Dashboard() {
             const diff = POSE_DIFFICULTY[guidePose];
             const joints = (POSE_TARGET_ANGLES[guidePose] || []).slice(0, 3);
             return cues ? (
-              <div className="ap-acc">
-                <button className="ap-acc-head" aria-expanded={openGroupPoseGuide} onClick={() => setOpenGroupPoseGuide(!openGroupPoseGuide)}>
-                  <span>{T.poseGuide}</span>
-                  <ChevronDown size={17} />
-                </button>
-                <div className="ap-acc-body" hidden={!openGroupPoseGuide}>
+              <Accordion title={T.poseGuide} open={openGroupPoseGuide} onToggle={() => setOpenGroupPoseGuide(!openGroupPoseGuide)} status={getSanskritName(guidePose, lang)}>
+                <>
                   {POSE_REFERENCE_IMAGES[guidePose] && (
                     <figure className="ap-ref">
                       <img
@@ -2160,7 +2174,7 @@ export default function Dashboard() {
                   <div className="ap-cues">
                     {cues.map((c, i) => (
                       <div key={i} className="ap-cue">
-                        <b>{c.icon}</b>
+                        <b><Check size={15} strokeWidth={2.4} /></b>
                         <span>{c.cue}</span>
                       </div>
                     ))}
@@ -2175,17 +2189,14 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                </div>
-              </div>
+                </>
+              </Accordion>
             ) : null;
           })()}
 
-          <div className="ap-acc">
-            <button className="ap-acc-head" aria-expanded={openGroupTwin} onClick={() => setOpenGroupTwin(!openGroupTwin)}>
-              <span>{T.digitalTwinProfile}</span>
-              <ChevronDown size={17} />
-            </button>
-            <div className="ap-acc-body" hidden={!openGroupTwin}>
+          <Accordion title={T.digitalTwinProfile} open={openGroupTwin} onToggle={() => setOpenGroupTwin(!openGroupTwin)}
+            status={calibratedProfile ? "Calibrated" : calibrationState === "calibrating" ? "Calibrating…" : "Uncalibrated"}>
+            <>
               {calibratedProfile ? (
                 <>
                   <div className="ap-note" style={{ color: "var(--ok)", fontWeight: 600 }}>{T.activeProfile}</div>
@@ -2203,15 +2214,12 @@ export default function Dashboard() {
                   {calibrationState === "calibrating" ? T.calibratingTwin : T.uncalibratedTwin}
                 </p>
               )}
-            </div>
-          </div>
+            </>
+          </Accordion>
 
-          <div className="ap-acc">
-            <button className="ap-acc-head" aria-expanded={openGroupSession} onClick={() => setOpenGroupSession(!openGroupSession)}>
-              <span>{T.sessionOverview}</span>
-              <ChevronDown size={17} />
-            </button>
-            <div className="ap-acc-body" hidden={!openGroupSession}>
+          <Accordion title={T.sessionOverview} open={openGroupSession} onToggle={() => setOpenGroupSession(!openGroupSession)}
+            status={cameraActive ? "Camera on" : "Camera off"}>
+            <>
               <div className="ap-kv">
                 <div className="ap-kv-row"><i className={cameraActive ? "on" : ""} /><span>Camera</span><strong>{cameraActive ? "Active" : "Off"}</strong></div>
                 <div className="ap-kv-row">
@@ -2223,8 +2231,12 @@ export default function Dashboard() {
                 <div className="ap-kv-row"><i className="on" /><span>{T.targetPose}</span><strong>{getSanskritName(guidePose, lang)}</strong></div>
               </div>
               {voiceMissingForLang && <p className="ap-note warn" role="status">{T.voiceMissing}</p>}
-            </div>
-          </div>
+            </>
+          </Accordion>
+          <button className="ap-btn ghost hide-d" onClick={() => { resetPipeline(); setSidebarOpen(false); }}>
+            <RotateCw size={16} />
+            <span>{T.newSession}</span>
+          </button>
         </aside>
 
         {/* ─────────── Main: pinned camera + its own scroll region ─────────── */}
