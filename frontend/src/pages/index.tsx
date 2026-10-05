@@ -129,12 +129,12 @@ const POSE_GUIDE: { [key: string]: { cue: string; icon: string }[] } = {
 };
 
 const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
-  warrior_2:    { level: "Intermediate", color: "var(--color-warning)" },
-  cobra_pose:   { level: "Beginner",     color: "var(--color-success)" },
-  mountain_pose:{ level: "Beginner",     color: "var(--color-success)" },
-  tree_pose:    { level: "Intermediate", color: "var(--color-warning)" },
-  plank:        { level: "Intermediate", color: "var(--color-warning)" },
-  downward_dog: { level: "Beginner",     color: "var(--color-success)" },
+  warrior_2:    { level: "Intermediate", color: "var(--amber)" },
+  cobra_pose:   { level: "Beginner",     color: "var(--ok)" },
+  mountain_pose:{ level: "Beginner",     color: "var(--ok)" },
+  tree_pose:    { level: "Intermediate", color: "var(--amber)" },
+  plank:        { level: "Intermediate", color: "var(--amber)" },
+  downward_dog: { level: "Beginner",     color: "var(--ok)" },
 };
 
 // Poses selectable in the sidebar "Target Pose" grid. Phase B re-validated
@@ -470,6 +470,8 @@ const TRANSLATIONS: {
     themeDark: "Dark",
     notChecking: "Not checking:",
     hiddenWord: "Hidden",
+    updateReady: "A new version is ready.",
+    updateLater: "It will refresh when you finish this session.",
   },
   hi: {
     tapForGuide: "गाइड देखने के लिए किसी भी आसन पर टैप करें।",
@@ -593,6 +595,8 @@ const TRANSLATIONS: {
     themeDark: "डार्क",
     notChecking: "जाँच नहीं:",
     hiddenWord: "छिपा",
+    updateReady: "नया संस्करण तैयार है।",
+    updateLater: "यह सत्र खत्म होने पर अपने आप रीफ़्रेश हो जाएगा।",
   },
   bn: {
     tapForGuide: "গাইড দেখতে যেকোনো আসনে ট্যাপ করুন।",
@@ -716,6 +720,8 @@ const TRANSLATIONS: {
     themeDark: "ডার্ক",
     notChecking: "পরীক্ষা হচ্ছে না:",
     hiddenWord: "লুকানো",
+    updateReady: "নতুন সংস্করণ প্রস্তুত।",
+    updateLater: "এই সেশন শেষ হলে নিজে থেকেই রিফ্রেশ হবে।",
   }
 };
 
@@ -995,6 +1001,7 @@ export default function Dashboard() {
   // Session recap, kept on the device
   const statsRef = useRef<{ poses: { [id: string]: { sec: number; sum: number } }; total: number; startedAt: number }>({ poses: {}, total: 0, startedAt: 0 });
   const liveRef = useRef({ pose: "", score: 0, active: false });
+  const [updateReady, setUpdateReady] = useState(false);
   const [summary, setSummary] = useState<null | { total: number; durationSec: number; avg: number; best: string | null; rows: { pose: string; sec: number; avg: number }[] }>(null);
 
   // References
@@ -1444,6 +1451,20 @@ export default function Dashboard() {
     }, 500);
     return () => clearInterval(id);
   }, [cameraActive]);
+
+  // A new version was installed in the background: reload when nothing is in progress, otherwise offer a refresh button.
+  useEffect(() => {
+    const onUpdate = () => {
+      if (!cameraActive && !summary) window.setTimeout(() => window.location.reload(), 600);
+      else setUpdateReady(true);
+    };
+    window.addEventListener("asana-update-ready", onUpdate);
+    return () => window.removeEventListener("asana-update-ready", onUpdate);
+  }, [cameraActive, summary]);
+  // ...and if it was deferred, refresh as soon as the session ends.
+  useEffect(() => {
+    if (updateReady && !cameraActive && !summary) window.setTimeout(() => window.location.reload(), 600);
+  }, [updateReady, cameraActive, summary]);
 
   // Keep the screen awake while practising: a phone that dims or locks mid-pose ends the session.
   useEffect(() => {
@@ -2958,6 +2979,12 @@ export default function Dashboard() {
         </div>
       )}
 
+
+      {updateReady && cameraActive && (
+        <div className="ap-toast" role="status">
+          <div className="grow"><strong>{T.updateReady}</strong><small>{T.updateLater}</small></div>
+        </div>
+      )}
 
       {showInstallBanner && !cameraActive && (
         <div className="ap-toast" role="dialog" aria-label={T.installTitle}>

@@ -45,8 +45,27 @@ function useNativeAppPolish() {
   }, []);
 }
 
+// A new service worker took over: the page is still running the OLD code until it reloads. Pages other than the app reload at
+// once; the app is told (it reloads when idle, or offers a refresh button, so a live session is never interrupted).
+function useUpdateWatcher() {
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const hadController = !!navigator.serviceWorker.controller;
+    let fired = false;
+    const onChange = () => {
+      if (!hadController || fired) return; // first install is not an update
+      fired = true;
+      if (window.location.pathname === '/') window.dispatchEvent(new Event('asana-update-ready'));
+      else window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onChange);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+  }, []);
+}
+
 export default function App({ Component, pageProps }: AppProps) {
   useNativeAppPolish();
+  useUpdateWatcher();
   return (
     <>
       <Head>
