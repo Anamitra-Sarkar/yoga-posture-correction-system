@@ -347,6 +347,11 @@ const TRANSLATIONS: {
   [lang: string]: { [key: string]: string }
 } = {
   en: {
+    tapForGuide: "Tap any pose to preview its guide.",
+    previewing: "Previewing",
+    followMe: "Follow my pose",
+    followingYou: "Following the pose you're doing",
+    tagGuide: "Guide",
     readyTitle: "Ready when you are",
     readyBody: "Stand about two metres back so your whole body is in view, in good light.",
     startCamera: "Start camera",
@@ -436,6 +441,11 @@ const TRANSLATIONS: {
     diff: "Diff:",
   },
   hi: {
+    tapForGuide: "गाइड देखने के लिए किसी भी आसन पर टैप करें।",
+    previewing: "पूर्वावलोकन",
+    followMe: "मेरे आसन को फ़ॉलो करें",
+    followingYou: "आप जो आसन कर रहे हैं, गाइड वही दिखा रहा है",
+    tagGuide: "गाइड",
     readyTitle: "जब आप तैयार हों",
     readyBody: "लगभग दो मीटर पीछे खड़े हों ताकि पूरा शरीर फ्रेम में दिखे, और रोशनी अच्छी हो।",
     startCamera: "कैमरा शुरू करें",
@@ -525,6 +535,11 @@ const TRANSLATIONS: {
     diff: "अंतर:",
   },
   bn: {
+    tapForGuide: "গাইড দেখতে যেকোনো আসনে ট্যাপ করুন।",
+    previewing: "প্রিভিউ",
+    followMe: "আমার আসন অনুসরণ করুন",
+    followingYou: "আপনি যে আসন করছেন গাইড সেটাই দেখাচ্ছে",
+    tagGuide: "গাইড",
     readyTitle: "আপনি প্রস্তুত হলেই",
     readyBody: "প্রায় দুই মিটার পিছনে দাঁড়ান যাতে পুরো শরীর ফ্রেমে থাকে, আর আলো ভালো হয়।",
     startCamera: "ক্যামেরা চালু করুন",
@@ -1228,15 +1243,21 @@ export default function Dashboard() {
   // unrecognised -- otherwise the whole panel would blank out every time
   // they moved between postures, which is visually jarring.
   const [guidePose, setGuidePose] = useState<string>("mountain_pose");
+  // FREE mode: the user can pin the guide to any pose to browse it; null = follow the pose being detected.
+  const [browsePose, setBrowsePose] = useState<string | null>(null);
   useEffect(() => {
     if (practiceMode === "guided") {
       setGuidePose(targetPose);
       return;
     }
+    if (browsePose && POSE_GUIDE[browsePose]) {
+      setGuidePose(browsePose);
+      return;
+    }
     if (activePose && activePose !== "transition/unknown" && POSE_GUIDE[activePose]) {
       setGuidePose(activePose);
     }
-  }, [activePose, practiceMode, targetPose]);
+  }, [activePose, practiceMode, targetPose, browsePose]);
 
   const isTransitioning = motionState === "transitioning";
   const isUnrecognized = motionState === "unrecognized" || activePose === "transition/unknown";
@@ -2157,28 +2178,34 @@ export default function Dashboard() {
                 {T.modeGuided}
               </button>
             </div>
-            <p className="ap-hint">{practiceMode === "guided" ? T.modeGuidedHint : T.modeFreeHint}</p>
+            <p className="ap-hint">{practiceMode === "guided" ? T.modeGuidedHint : `${T.modeFreeHint} ${T.tapForGuide}`}</p>
             <div className="ap-poses">
               {POSE_LIBRARY.map(({ id }) => {
                 const Icon = POSE_ICONS[id] || Leaf;
-                const isOn = practiceMode === "guided" ? targetPose === id : activePose === id;
-                const pick = practiceMode === "guided";
+                const guided = practiceMode === "guided";
+                const isOn = guided ? targetPose === id : activePose === id;
+                const isPreview = !guided && browsePose === id;
+                const choose = () => {
+                  if (guided) { setTargetPose(id); setSidebarOpen(false); }
+                  else setBrowsePose(browsePose === id ? null : id);
+                };
                 return (
                   <div
                     key={id}
-                    role={pick ? "button" : undefined}
-                    tabIndex={pick ? 0 : undefined}
-                    className={`ap-pose ${isOn ? "active" : ""} ${pick ? "pick" : ""}`}
-                    onClick={pick ? () => { setTargetPose(id); setSidebarOpen(false); } : undefined}
-                    onKeyDown={pick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTargetPose(id); setSidebarOpen(false); } } : undefined}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={guided ? targetPose === id : isPreview}
+                    className={`ap-pose pick ${isOn ? "active" : ""} ${isPreview ? "preview" : ""}`}
+                    onClick={choose}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } }}
                   >
                     <span className="ap-pose-ic"><Icon size={19} strokeWidth={1.8} /></span>
                     <span>
                       <div className="ap-pose-name">{getSanskritName(id, lang)}</div>
                       <div className="ap-pose-sub">{POSE_COMMON_NAME[id]}</div>
                     </span>
-                    {isOn && (
-                      <span className="ap-pose-tag"><i />{practiceMode === "guided" ? T.targetPose : T.tagNow}</span>
+                    {(isOn || isPreview) && (
+                      <span className="ap-pose-tag"><i />{guided ? T.targetPose : isOn ? T.tagNow : T.tagGuide}</span>
                     )}
                   </div>
                 );
@@ -2193,6 +2220,24 @@ export default function Dashboard() {
             return cues ? (
               <Accordion title={T.poseGuide} open={openGroupPoseGuide} onToggle={() => setOpenGroupPoseGuide(!openGroupPoseGuide)} status={getSanskritName(guidePose, lang)}>
                 <>
+                  {practiceMode === "free" && (
+                    <div className="ap-follow">
+                      {browsePose ? (
+                        <>
+                          <span>{T.previewing}: <b>{getSanskritName(browsePose, lang)}</b></span>
+                          <button onClick={() => setBrowsePose(null)}>{T.followMe}</button>
+                        </>
+                      ) : (
+                        <span>{T.followingYou}</span>
+                      )}
+                    </div>
+                  )}
+                  {!POSE_REFERENCE_IMAGES[guidePose] && (
+                    <div className="ap-ref ph" aria-hidden="true">
+                      <PersonStanding size={34} strokeWidth={1.4} />
+                      <span>Reference photo coming soon</span>
+                    </div>
+                  )}
                   {POSE_REFERENCE_IMAGES[guidePose] && (
                     <figure className="ap-ref">
                       <img
