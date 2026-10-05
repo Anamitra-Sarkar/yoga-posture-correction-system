@@ -17,50 +17,39 @@ const getApiUrl = () => {
   return process.env.NEXT_PUBLIC_YOGA_API_URL || "http://localhost:8000/api";
 };
 
-export async function analyseFrame(data: FrameInput): Promise<FrameResponse> {
-  const response = await fetch(`${getApiUrl()}/analyse_frame`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error(`Frame analysis API error: ${response.statusText}`);
+export class ApiError extends Error {
+  kind: "timeout" | "network" | "http";
+  status?: number;
+  constructor(kind: "timeout" | "network" | "http", message: string, status?: number) {
+    super(message);
+    this.kind = kind;
+    this.status = status;
   }
-  return response.json();
 }
 
-export async function analyseSequence(data: SequenceInput): Promise<SequenceResponse> {
-  const response = await fetch(`${getApiUrl()}/analyse_sequence`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error(`Sequence analysis API error: ${response.statusText}`);
+/** POST JSON with a hard timeout: a server that is asleep or unreachable must fail fast, not hang the whole app. */
+async function post<T>(path: string, data: unknown, timeoutMs: number): Promise<T> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${getApiUrl()}/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      signal: ctrl.signal,
+    });
+    if (!response.ok) throw new ApiError("http", `${path} failed: ${response.status} ${response.statusText}`, response.status);
+    return (await response.json()) as T;
+  } catch (e: any) {
+    if (e instanceof ApiError) throw e;
+    if (e?.name === "AbortError") throw new ApiError("timeout", `${path} timed out after ${timeoutMs} ms`);
+    throw new ApiError("network", `${path} could not be reached`);
+  } finally {
+    clearTimeout(timer);
   }
-  return response.json();
 }
 
-export async function generateCorrection(data: CorrectionInput): Promise<CorrectionResponse> {
-  const response = await fetch(`${getApiUrl()}/generate_correction`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error(`Correction API error: ${response.statusText}`);
-  }
-  return response.json();
-}
-
-export async function recoverOcclusion(data: OcclusionInput): Promise<OcclusionResponse> {
-  const response = await fetch(`${getApiUrl()}/occlusion_recovery`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error(`Occlusion recovery API error: ${response.statusText}`);
-  }
-  return response.json();
-}
+export const analyseFrame = (data: FrameInput) => post<FrameResponse>("analyse_frame", data, 9000);
+export const analyseSequence = (data: SequenceInput) => post<SequenceResponse>("analyse_sequence", data, 9000);
+export const generateCorrection = (data: CorrectionInput) => post<CorrectionResponse>("generate_correction", data, 15000);
+export const recoverOcclusion = (data: OcclusionInput) => post<OcclusionResponse>("occlusion_recovery", data, 9000);

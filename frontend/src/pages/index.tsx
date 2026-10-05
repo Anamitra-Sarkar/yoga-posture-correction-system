@@ -37,7 +37,8 @@ import {
   Leaf,
   Menu as MenuIcon,
   RotateCw,
-  Check
+  Check,
+  Lock
 } from "lucide-react";
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
@@ -395,12 +396,12 @@ const TRANSLATIONS: {
     stateHolding: "Holding",
     stateTransitioning: "In Transition",
     stateUnrecognized: "Unrecognised Posture",
-    universalScore: "Universal Form",
-    personalScore: "Your Calibrated Form",
-    digitalTwinProfile: "Digital Twin Profile",
-    activeProfile: "✓ Active Calibration Profile",
-    uncalibratedTwin: "Digital Twin is uncalibrated. Start the camera and hold a few comfortable postures — your personal joint ranges are learned from what you actually do.",
-    calibratingTwin: "Calibrating... recording joint ranges.",
+    universalScore: "General form",
+    personalScore: "For your body",
+    digitalTwinProfile: "Your range of motion",
+    activeProfile: "✓ Range of motion saved",
+    uncalibratedTwin: "When the camera starts, hold a comfortable standing pose for 15 seconds. AsanaAI learns how far your joints naturally move, so feedback fits your body.",
+    calibratingTwin: "Learning your range of motion…",
     apiConfig: "API Configuration",
     backendApiUrl: "Backend API URL",
     apiUrlHelper: "Point to localhost or your Hugging Face Space URL.",
@@ -409,8 +410,8 @@ const TRANSLATIONS: {
     focusMode: "Focus Mode",
     stopVideo: "Stop Video",
     startVideo: "Start Video",
-    calibratingProgress: "Calibrating Digital Twin",
-    stayInView: "Stay in camera view...",
+    calibratingProgress: "Learning your range of motion",
+    stayInView: "Stand comfortably in view and breathe.",
     cameraInactive: "Start the camera and move into any posture. AsanaAI recognises what you are doing.",
     alignBody: "Align your body with the camera...",
     exit: "Exit",
@@ -420,16 +421,16 @@ const TRANSLATIONS: {
     fusing: "Fusing",
     occlusionActive: "Occlusion active",
     allVisible: "All visible",
-    staticMode: "Static Check",
+    staticMode: "Steady",
     flowMode: "Flow mode",
     feedbackHub: "Live feedback",
     correctnessScore: "Correctness Score",
-    sequenceFlow: "Sequence Flow",
-    occlusionFusing: "Occlusion Fusing",
-    active: "Active",
+    sequenceFlow: "Flow check",
+    occlusionFusing: "Hidden joints",
+    active: "Estimating",
     inactive: "Inactive",
-    fusingOccluded: "Fusing Occluded landmarks:",
-    mirroredCoordinates: "(Coordinate mirrored dynamically from twin joint)",
+    fusingOccluded: "Some joints are hidden, so I'm estimating:",
+    mirroredCoordinates: "",
     systemStatus: "Status",
     detectingPose: "Looking for your pose. Step back until your whole body is in view.",
     safetyCorrection: "Coaching cue",
@@ -439,6 +440,28 @@ const TRANSLATIONS: {
     assumePosePrompt: "Assume a target yoga pose to view real-time joint angle alignments and corrections.",
     targetFor: "Target: {target}° for {pose}",
     diff: "Diff:",
+    privacyNote: "Your video stays on your device. Only body-position data is analysed.",
+    skip: "Skip",
+    relearn: "Learn again",
+    rangeSet: "Saved",
+    rangeLearning: "Learning…",
+    rangeNotSet: "Not set",
+    stepIntoView: "Step into view",
+    stepBack: "Step back so your feet are in view",
+    cantSeeYou: "I can't see you yet. Step back until your whole body is in view.",
+    coachWaking: "Waking up your coach… this can take a minute the first time.",
+    coachDown: "Can't reach your coach. Check your connection; I'll keep trying.",
+    summaryTitle: "Session summary",
+    summaryTime: "Time",
+    summaryAvg: "Average score",
+    summaryBest: "Best pose",
+    summaryPoses: "Poses practised",
+    summaryNone: "No poses were recognised this time. Next time, step back until your whole body is in view.",
+    close: "Close",
+    again: "Practise again",
+    basicMode: "Basic mode · on your device",
+    coachOffline: "You're offline. Basic recognition and tips run on your device; the full coach returns when you're back online.",
+    poseEngineOffline: "Open the app once with internet so it can download the pose engine.",
   },
   hi: {
     tapForGuide: "गाइड देखने के लिए किसी भी आसन पर टैप करें।",
@@ -489,12 +512,12 @@ const TRANSLATIONS: {
     stateHolding: "स्थिर",
     stateTransitioning: "संक्रमण में",
     stateUnrecognized: "अपरिचित मुद्रा",
-    universalScore: "सार्वभौमिक रूप",
-    personalScore: "आपका अंशांकित रूप",
-    digitalTwinProfile: "डिजिटल ट्विन प्रोफ़ाइल",
-    activeProfile: "✓ सक्रिय अंशांकन प्रोफ़ाइल",
-    uncalibratedTwin: "डिजिटल ट्विन अंशांकित नहीं है। कैमरा शुरू करें और कुछ सहज मुद्राएँ धारण करें — आपकी व्यक्तिगत जोड़ सीमाएँ आपके अभ्यास से ही सीखी जाती हैं।",
-    calibratingTwin: "अंशांकन हो रहा है... संयुक्त सीमाओं को रिकॉर्ड किया जा रहा है।",
+    universalScore: "सामान्य मुद्रा",
+    personalScore: "आपके शरीर के अनुसार",
+    digitalTwinProfile: "आपकी गति सीमा",
+    activeProfile: "✓ गति सीमा सहेजी गई",
+    uncalibratedTwin: "कैमरा शुरू होने पर 15 सेकंड आरामदायक मुद्रा में खड़े रहें। AsanaAI सीखता है कि आपके जोड़ स्वाभाविक रूप से कितना हिलते हैं, ताकि सुझाव आपके शरीर के अनुसार हों।",
+    calibratingTwin: "आपकी गति सीमा सीखी जा रही है…",
     apiConfig: "एपीआई कॉन्फ़िगरेशन",
     backendApiUrl: "बैकएंड एपीआई यूआरएल",
     apiUrlHelper: "लोकलहोस्ट या अपने हगिंग फेस स्पेस यूआरएल को इंगित करें।",
@@ -503,8 +526,8 @@ const TRANSLATIONS: {
     focusMode: "फ़ोकस मोड",
     stopVideo: "वीडियो रोकें",
     startVideo: "वीडियो शुरू करें",
-    calibratingProgress: "डिजिटल ट्विन का अंशांकन",
-    stayInView: "कैमरे के सामने बने रहें...",
+    calibratingProgress: "आपकी गति सीमा सीखी जा रही है",
+    stayInView: "आराम से कैमरे के सामने खड़े रहें और साँस लें।",
     cameraInactive: "कैमरा शुरू करें और कोई भी मुद्रा करें। AsanaAI स्वयं पहचान लेगा — कुछ चुनने की ज़रूरत नहीं।",
     alignBody: "कैमरे के साथ अपने शरीर को संरेखित करें...",
     exit: "बाहर निकलें",
@@ -514,16 +537,16 @@ const TRANSLATIONS: {
     fusing: "फ्यूज़िंग",
     occlusionActive: "अस्पष्टता सक्रिय",
     allVisible: "सभी दृश्यमान",
-    staticMode: "स्थिर जाँच",
+    staticMode: "स्थिर",
     flowMode: "प्रवाह मोड",
     feedbackHub: "रीयल-टाइम फीडबैक हब",
     correctnessScore: "सटीकता स्कोर",
-    sequenceFlow: "अनुक्रम प्रवाह",
-    occlusionFusing: "अस्पष्टता फ्यूज़िंग",
-    active: "सक्रिय",
+    sequenceFlow: "प्रवाह जाँच",
+    occlusionFusing: "छिपे जोड़",
+    active: "अनुमान",
     inactive: "निष्क्रिय",
-    fusingOccluded: "अस्पष्ट अंगों को फ्यूज करना:",
-    mirroredCoordinates: "(ट्विन जोड़ से गतिशील रूप से प्रतिबिंबित समन्वयक)",
+    fusingOccluded: "कुछ जोड़ छिपे हैं, इसलिए अनुमान लगा रहा हूँ:",
+    mirroredCoordinates: "",
     systemStatus: "सिस्टम की स्थिति",
     detectingPose: "मुद्रा खोजी जा रही है... अपने शरीर को कैमरे के साथ संरेखित करें।",
     safetyCorrection: "सुरक्षा सुधार वॉयस गाइडेंस",
@@ -533,6 +556,28 @@ const TRANSLATIONS: {
     assumePosePrompt: "वास्तविक समय में जोड़ों के संरेखण और सुधार देखने के लिए एक लक्ष्य योग मुद्रा धारण करें।",
     targetFor: "लक्ष्य: {pose} के लिए {target}°",
     diff: "अंतर:",
+    privacyNote: "आपका वीडियो आपके डिवाइस पर ही रहता है। केवल शरीर की स्थिति का डेटा जाँचा जाता है।",
+    skip: "छोड़ें",
+    relearn: "फिर से सीखें",
+    rangeSet: "सहेजी गई",
+    rangeLearning: "सीख रहे हैं…",
+    rangeNotSet: "तय नहीं",
+    stepIntoView: "कैमरे के सामने आएँ",
+    stepBack: "थोड़ा पीछे हटें ताकि पैर दिखें",
+    cantSeeYou: "आप अभी दिख नहीं रहे। तब तक पीछे हटें जब तक पूरा शरीर दिखे।",
+    coachWaking: "आपका कोच जाग रहा है… पहली बार में एक मिनट लग सकता है।",
+    coachDown: "कोच से जुड़ नहीं पा रहे। इंटरनेट जाँचें; मैं कोशिश करता रहूँगा।",
+    summaryTitle: "सत्र का सारांश",
+    summaryTime: "समय",
+    summaryAvg: "औसत स्कोर",
+    summaryBest: "सबसे अच्छा आसन",
+    summaryPoses: "किए गए आसन",
+    summaryNone: "इस बार कोई आसन नहीं पहचाना गया। अगली बार पीछे हटें ताकि पूरा शरीर दिखे।",
+    close: "बंद करें",
+    again: "फिर अभ्यास करें",
+    basicMode: "बेसिक मोड · आपके डिवाइस पर",
+    coachOffline: "आप ऑफ़लाइन हैं। बेसिक पहचान और सुझाव आपके डिवाइस पर चल रहे हैं; इंटरनेट आने पर पूरा कोच लौट आएगा।",
+    poseEngineOffline: "ऐप को एक बार इंटरनेट के साथ खोलें ताकि वह पोज़ इंजन डाउनलोड कर सके।",
   },
   bn: {
     tapForGuide: "গাইড দেখতে যেকোনো আসনে ট্যাপ করুন।",
@@ -583,12 +628,12 @@ const TRANSLATIONS: {
     stateHolding: "স্থির",
     stateTransitioning: "পরিবর্তনে",
     stateUnrecognized: "অচেনা ভঙ্গি",
-    universalScore: "সর্বজনীন ভঙ্গি",
-    personalScore: "আপনার ক্যালিব্রেটেড ভঙ্গি",
-    digitalTwinProfile: "ডিজিটাল টুইন প্রোফাইল",
-    activeProfile: "✓ সক্রিয় ক্যালিব্রেশন প্রোফাইল",
-    uncalibratedTwin: "ডিজিটাল টুইন ক্যালিব্রেট করা নেই। ক্যামেরা চালু করে কয়েকটি স্বচ্ছন্দ আসন ধরে রাখুন — আপনার নিজস্ব জয়েন্ট সীমা আপনার অনুশীলন থেকেই শেখা হয়।",
-    calibratingTwin: "ক্যালিব্রেট করা হচ্ছে... জয়েন্ট রেঞ্জ রেকর্ড করা হচ্ছে।",
+    universalScore: "সাধারণ ভঙ্গি",
+    personalScore: "আপনার শরীর অনুযায়ী",
+    digitalTwinProfile: "আপনার গতির সীমা",
+    activeProfile: "✓ গতির সীমা সংরক্ষিত",
+    uncalibratedTwin: "ক্যামেরা চালু হলে ১৫ সেকেন্ড আরামদায়ক ভঙ্গিতে দাঁড়ান। AsanaAI শেখে আপনার জোড়গুলো স্বাভাবিকভাবে কতটা নড়ে, যাতে পরামর্শ আপনার শরীরের সঙ্গে মেলে।",
+    calibratingTwin: "আপনার গতির সীমা শেখা হচ্ছে…",
     apiConfig: "এপিআই কনফিগারেশন",
     backendApiUrl: "ব্যাকএন্ড এপিআই ইউআরএল",
     apiUrlHelper: "লোকালহোস্ট বা আপনার হাগিং ফেস স্পেস ইউআরএল নির্দেশ করুন।",
@@ -597,8 +642,8 @@ const TRANSLATIONS: {
     focusMode: "ফোকাস মোড",
     stopVideo: "ভিডিও বন্ধ করুন",
     startVideo: "ভিডিও চালু করুন",
-    calibratingProgress: "ডিজিটাল টুইন ক্যালিব্রেট হচ্ছে",
-    stayInView: "ক্যামেরার সামনে থাকুন...",
+    calibratingProgress: "আপনার গতির সীমা শেখা হচ্ছে",
+    stayInView: "আরামে ক্যামেরার সামনে দাঁড়ান এবং শ্বাস নিন।",
     cameraInactive: "ক্যামেরা চালু করে যেকোনো আসন করুন। AsanaAI নিজেই চিনে নেবে — কিছু নির্বাচন করার দরকার নেই।",
     alignBody: "ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন...",
     exit: "প্রস্থান",
@@ -608,16 +653,16 @@ const TRANSLATIONS: {
     fusing: "ফিউজিং",
     occlusionActive: "অস্পষ্টতা সক্রিয়",
     allVisible: "সব দৃশ্যমান",
-    staticMode: "স্থির পরীক্ষা",
+    staticMode: "স্থির",
     flowMode: "প্রবাহ মোড",
     feedbackHub: "রিয়েল-টাইম ফিডব্যাক হাব",
     correctnessScore: "সঠিকতা স্কোর",
-    sequenceFlow: "সিকোয়েন্স ফ্লো",
-    occlusionFusing: "অস্পষ্টতা ফিউজিং",
-    active: "সক্রিয়",
+    sequenceFlow: "প্রবাহ পরীক্ষা",
+    occlusionFusing: "লুকানো জোড়",
+    active: "আন্দাজ",
     inactive: "নিষ্ক্রিয়",
-    fusingOccluded: "অস্পষ্ট জয়েন্ট ফিউজ করা হচ্ছে:",
-    mirroredCoordinates: "(টুইন জয়েন্ট থেকে গতিশীলভাবে মিরর করা স্থানাঙ্ক)",
+    fusingOccluded: "কিছু জোড় লুকানো, তাই আন্দাজ করছি:",
+    mirroredCoordinates: "",
     systemStatus: "সিস্টেমের অবস্থা",
     detectingPose: "আসন শনাক্ত করা হচ্ছে... ক্যামেরার সাথে আপনার শরীর সারিবদ্ধ করুন।",
     safetyCorrection: "সুরক্ষা সংশোধন ভয়েস গাইডেন্স",
@@ -627,6 +672,28 @@ const TRANSLATIONS: {
     assumePosePrompt: "রিয়েল-টাইম জয়েন্ট অ্যালাইনমেন্ট এবং সংশোধন দেখতে একটি লক্ষ্য যোগাসন অনুশীলন করুন।",
     targetFor: "{pose} এর জন্য লক্ষ্য কোণ {target}°",
     diff: "পার্থক্য:",
+    privacyNote: "আপনার ভিডিও আপনার ডিভাইসেই থাকে। শুধু শরীরের অবস্থানের তথ্য বিশ্লেষণ করা হয়।",
+    skip: "এড়িয়ে যান",
+    relearn: "আবার শিখুন",
+    rangeSet: "সংরক্ষিত",
+    rangeLearning: "শেখা হচ্ছে…",
+    rangeNotSet: "ঠিক করা নেই",
+    stepIntoView: "ক্যামেরার সামনে আসুন",
+    stepBack: "একটু পিছিয়ে যান যাতে পা দেখা যায়",
+    cantSeeYou: "আপনাকে এখনও দেখা যাচ্ছে না। পুরো শরীর দেখা না যাওয়া পর্যন্ত পিছিয়ে যান।",
+    coachWaking: "আপনার কোচ জেগে উঠছে… প্রথমবার এক মিনিট লাগতে পারে।",
+    coachDown: "কোচের সঙ্গে সংযোগ হচ্ছে না। ইন্টারনেট দেখুন; আমি চেষ্টা চালিয়ে যাব।",
+    summaryTitle: "সেশনের সারাংশ",
+    summaryTime: "সময়",
+    summaryAvg: "গড় স্কোর",
+    summaryBest: "সেরা আসন",
+    summaryPoses: "অনুশীলন করা আসন",
+    summaryNone: "এবার কোনো আসন চেনা যায়নি। পরেরবার পুরো শরীর দেখা যাওয়া পর্যন্ত পিছিয়ে দাঁড়ান।",
+    close: "বন্ধ করুন",
+    again: "আবার অনুশীলন করুন",
+    basicMode: "বেসিক মোড · আপনার ডিভাইসে",
+    coachOffline: "আপনি অফলাইনে। বেসিক শনাক্তকরণ ও পরামর্শ আপনার ডিভাইসেই চলছে; ইন্টারনেট ফিরলে পূর্ণ কোচ ফিরে আসবে।",
+    poseEngineOffline: "অ্যাপটি একবার ইন্টারনেট সহ খুলুন, যাতে পোজ ইঞ্জিন ডাউনলোড হতে পারে।",
   }
 };
 
@@ -795,9 +862,29 @@ export default function Dashboard() {
       window.localStorage.setItem("asana.targetPose", targetPose);
     } catch { /* ignore */ }
   }, [practiceMode, targetPose]);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("asana.lang");
+      if (saved === "en" || saved === "hi" || saved === "bn") setLang(saved);
+      else {
+        const nav = (navigator.language || "en").toLowerCase();
+        if (nav.startsWith("hi")) setLang("hi");
+        else if (nav.startsWith("bn")) setLang("bn");
+      }
+      const v = window.localStorage.getItem("asana.voice");
+      if (v === "off") setSpeechEnabled(false);
+    } catch { /* storage unavailable: defaults */ }
+  }, []);
+  useEffect(() => {
+    try { window.localStorage.setItem("asana.lang", lang); } catch { /* ignore */ }
+    if (typeof document !== "undefined") document.documentElement.lang = lang;
+  }, [lang]);
   const [langDropOpen, setLangDropOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  useEffect(() => {
+    try { window.localStorage.setItem("asana.voice", speechEnabled ? "on" : "off"); } catch { /* ignore */ }
+  }, [speechEnabled]);
   // Installed speech voices. Chrome fills this list asynchronously, so listen for `voiceschanged`.
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   useEffect(() => {
@@ -851,6 +938,16 @@ export default function Dashboard() {
   const lastAnglePublishRef = useRef(0);
   const canvasCssRef = useRef({ w: 0, h: 0, dpr: 1 });
   const videoFrameCbRef = useRef<number | null>(null);
+  // Framing: is a body actually in view? (the screen must not keep showing the last pose after someone walks away)
+  const [framing, setFraming] = useState<"ok" | "partial" | "none">("ok");
+  const framingRef = useRef<"ok" | "partial" | "none">("ok");
+  const lastBodySeenRef = useRef(0);
+  const framingCandRef = useRef<{ v: "ok" | "partial"; since: number }>({ v: "ok", since: 0 });
+  const lastSendRef = useRef(0);
+  // Session recap, kept on the device
+  const statsRef = useRef<{ poses: { [id: string]: { sec: number; sum: number } }; total: number; startedAt: number }>({ poses: {}, total: 0, startedAt: 0 });
+  const liveRef = useRef({ pose: "", score: 0, active: false });
+  const [summary, setSummary] = useState<null | { total: number; durationSec: number; avg: number; best: string | null; rows: { pose: string; sec: number; avg: number }[] }>(null);
 
   // References
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -999,13 +1096,18 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    let timer: any;
     const handler = (e: any) => {
       e.preventDefault();
       setInstallPrompt(e);
-      setShowInstallBanner(true);
+      try {
+        const dismissed = Number(window.localStorage.getItem("asana.installDismissed") || 0);
+        if (Date.now() - dismissed < 7 * 24 * 3600 * 1000) return;
+      } catch { /* ignore */ }
+      timer = setTimeout(() => setShowInstallBanner(true), 25000); // let people try the app before asking
     };
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => { window.removeEventListener('beforeinstallprompt', handler); clearTimeout(timer); };
   }, []);
 
   // Unlock speech on first user gesture (required for iOS Safari)
@@ -1148,11 +1250,11 @@ export default function Dashboard() {
     setCalibrationCountdown(15);
     
     // Announce start of calibration with gentle, peaceful instructions
-    const text = lang === "hi" 
-      ? "डिजिटल ट्विन कैलिब्रेशन शुरू हो रहा है। कृपया कैमरे के सामने खड़े हों, गहरी सांस लें, और अपनी आरामदायक मुद्रा में रहें।" 
+    const text = lang === "hi"
+      ? "आइए आपकी गति की सीमा सीखें। आराम से कैमरे के सामने खड़े हों और गहरी साँस लें।"
       : lang === "bn"
-      ? "ডিজিটাল টুইন ক্যালিব্রেশন শুরু হচ্ছে। অনুগ্রহ করে ক্যামেরার সামনে শান্তভাবে দাঁড়িয়ে গভীর শ্বাস নিন এবং আরামদায়ক ভঙ্গিতে থাকুন।"
-      : "Starting digital twin calibration. Please stand peacefully in camera view, breathe deeply, and assume a comfortable resting posture.";
+      ? "আসুন আপনার গতির সীমা শিখি। আরামে ক্যামেরার সামনে দাঁড়ান এবং গভীর শ্বাস নিন।"
+      : "Let's learn your range of motion. Stand comfortably in view and take a deep breath.";
     announceTTS(text);
 
     let count = 15;
@@ -1167,8 +1269,13 @@ export default function Dashboard() {
   };
 
   const finishCalibration = () => {
-    updateCalibrationState("complete");
     const data = calibrationDataRef.current;
+    // If the person was not in view, there is nothing to learn from: do not pretend we calibrated.
+    if (data.length < 20) {
+      updateCalibrationState("idle");
+      return;
+    }
+    updateCalibrationState("complete");
     
     const profile: CalibrationProfile = {};
     FEATURE_NAMES_ORDER.forEach((joint, idx) => {
@@ -1190,13 +1297,39 @@ export default function Dashboard() {
     });
     
     setCalibratedProfile(profile);
+    try { window.localStorage.setItem("asana.range.v1", JSON.stringify({ profile, savedAt: Date.now() })); } catch { /* ignore */ }
 
-    const completeText = lang === "hi" 
-      ? "डिजिटल ट्विन कैलिब्रेशन पूरा हो गया है। अभ्यास शुरू करें।" 
+    const completeText = lang === "hi"
+      ? "आपकी गति की सीमा सहेज ली गई है। अब अभ्यास शुरू करें।"
       : lang === "bn"
-      ? "ডিজিটাল টুইন ক্যালিব্রেশন সম্পন্ন হয়েছে। অনুশীলন শুরু করুন।"
-      : "Calibration complete. Your digital twin has been established. You can now begin practicing.";
+      ? "আপনার গতির সীমা সংরক্ষিত হয়েছে। এবার অনুশীলন শুরু করুন।"
+      : "All set. Your range of motion is saved. You can begin practising.";
     announceTTS(completeText);
+  };
+
+  const skipCalibration = () => {
+    if (calibrationTimerRef.current) {
+      clearInterval(calibrationTimerRef.current);
+      calibrationTimerRef.current = null;
+    }
+    updateCalibrationState("idle");
+  };
+
+  const loadSavedRange = (): CalibrationProfile | null => {
+    try {
+      const raw = window.localStorage.getItem("asana.range.v1");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const prof = parsed?.profile;
+      if (prof && FEATURE_NAMES_ORDER.every((j) => prof[j] && typeof prof[j].min === "number")) return prof as CalibrationProfile;
+    } catch { /* corrupt or unavailable: learn again */ }
+    return null;
+  };
+
+  const relearnRange = () => {
+    try { window.localStorage.removeItem("asana.range.v1"); } catch { /* ignore */ }
+    setCalibratedProfile(null);
+    if (cameraActive) startCalibration();
   };
 
   useEffect(() => {
@@ -1224,6 +1357,8 @@ export default function Dashboard() {
     isLoading,
     processFrame,
     pushSequenceFrame,
+    coachSource,
+    coachReason,
     resetPipeline
   } = useYogaPipeline({
     language: lang,
@@ -1232,6 +1367,68 @@ export default function Dashboard() {
     correctnessThreshold: 0.75,
     targetPose: practiceMode === "guided" ? targetPose : null,
   });
+
+  const setFramingSafe = (v: "ok" | "partial" | "none") => {
+    if (framingRef.current === v) return;
+    framingRef.current = v;
+    setFraming(v);
+    if (v === "none") resetPipeline(); // nobody there: clear the stale pose, score and tips
+  };
+  const noteBody = (lm: any[]) => {
+    const now = performance.now();
+    const vis = (i: number) => lm[i]?.visibility ?? 0;
+    const core = (vis(11) + vis(12) + vis(23) + vis(24)) / 4;
+    if (core < 0.4) return; // landmarks exist but the body is barely visible: treat as not seen
+    lastBodySeenRef.current = now;
+    const feet = (vis(27) + vis(28)) / 2;
+    const cand: "ok" | "partial" = feet < 0.4 ? "partial" : "ok";
+    if (framingRef.current === "none") { framingCandRef.current = { v: cand, since: now }; setFramingSafe(cand); return; }
+    if (framingCandRef.current.v !== cand) framingCandRef.current = { v: cand, since: now };
+    else if (now - framingCandRef.current.since >= 1200) setFramingSafe(cand);
+  };
+  useEffect(() => {
+    if (!cameraActive) { framingRef.current = "ok"; setFraming("ok"); return; }
+    lastBodySeenRef.current = performance.now() + 1500; // grace while the person steps into view
+    const id = setInterval(() => {
+      if (performance.now() - lastBodySeenRef.current > 1500) setFramingSafe("none");
+    }, 500);
+    return () => clearInterval(id);
+  }, [cameraActive]);
+
+  // Keep the screen awake while practising: a phone that dims or locks mid-pose ends the session.
+  useEffect(() => {
+    if (!cameraActive) return;
+    let lock: any = null;
+    let stopped = false;
+    const acquire = async () => {
+      try {
+        if (!stopped && "wakeLock" in navigator && document.visibilityState === "visible") {
+          lock = await (navigator as any).wakeLock.request("screen");
+        }
+      } catch { /* not supported or refused: nothing to do */ }
+    };
+    acquire();
+    const onVis = () => { if (document.visibilityState === "visible") acquire(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      stopped = true;
+      document.removeEventListener("visibilitychange", onVis);
+      lock?.release?.().catch?.(() => {});
+    };
+  }, [cameraActive]);
+
+  // Session recap: one sample per second while a pose is recognised and scored.
+  useEffect(() => {
+    if (!cameraActive) return;
+    statsRef.current = { poses: {}, total: 0, startedAt: Date.now() };
+    const id = setInterval(() => {
+      const l = liveRef.current;
+      if (!l.active || !l.pose) return;
+      const e = statsRef.current.poses[l.pose] || (statsRef.current.poses[l.pose] = { sec: 0, sum: 0 });
+      e.sec += 1; e.sum += l.score; statsRef.current.total += 1;
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cameraActive]);
 
   // Free-form practice: there is no selected target pose any more. The app
   // detects whatever the user is actually doing and analyses THAT, so the
@@ -1479,7 +1676,9 @@ export default function Dashboard() {
       const tick = async () => {
         if (!stream.active || !videoRef.current) return;
         const v = videoRef.current;
-        if (v.readyState >= 2 && v.videoWidth > 0 && (poseRef.current || initMediaPipe())) {
+        const minGap = coarse ? 45 : 0; // phones: at most ~22 analyses/s, plenty for yoga and far kinder to the battery
+        if (v.readyState >= 2 && v.videoWidth > 0 && (poseRef.current || initMediaPipe()) && performance.now() - lastSendRef.current >= minGap) {
+          lastSendRef.current = performance.now();
           try {
             const t0 = performance.now();
             await poseRef.current.send({ image: v });
@@ -1534,8 +1733,14 @@ export default function Dashboard() {
         if (stream.active && lastResultAtRef.current === 0) setEngineState("error");
       }, 30000);
 
-      // Trigger automatic Calibration Sequence
-      startCalibration();
+      // Learn the user's range of motion only once; later sessions reuse it (they can re-learn from the sidebar).
+      const saved = loadSavedRange();
+      if (saved) {
+        setCalibratedProfile(saved);
+        updateCalibrationState("complete");
+      } else {
+        startCalibration();
+      }
 
     } catch (err) {
       console.error("Camera access failed:", err);
@@ -1578,6 +1783,17 @@ export default function Dashboard() {
     updateCalibrationState("idle");
     setCalibratedProfile(null);
     resetPipeline();
+  };
+
+  // The user pressed Stop: show a short recap if they actually practised something.
+  const endSession = () => {
+    const st = statsRef.current;
+    const durationSec = Math.round((Date.now() - st.startedAt) / 1000);
+    const rows = Object.entries(st.poses).map(([pose, e]) => ({ pose, sec: e.sec, avg: e.sum / Math.max(1, e.sec) })).sort((a, b) => b.sec - a.sec);
+    const avg = st.total > 0 ? rows.reduce((t, r) => t + r.avg * r.sec, 0) / st.total : 0;
+    const best = rows.filter((r) => r.sec >= 5).sort((a, b) => b.avg - a.avg)[0]?.pose ?? null;
+    stopCamera();
+    if (durationSec >= 20) setSummary({ total: st.total, durationSec, avg, best, rows });
   };
 
   // Camera facing mode toggle switcher
@@ -1677,6 +1893,7 @@ export default function Dashboard() {
     const fitY = (ch - fitH) / 2;
 
     if (results.poseLandmarks) {
+      noteBody(results.poseLandmarks);
       // 1. Draw joints skeleton overlay (with clinical palette aesthetics),
       // mapped through the same letterbox transform as the background frame
       drawSkeletonOverlay(canvasCtx, results.poseLandmarks, fitX, fitY, fitW, fitH);
@@ -2000,10 +2217,13 @@ export default function Dashboard() {
 
   const T = TRANSLATIONS[lang];
   const pct = Math.round(effectiveCorrectness * 100);
-  const scoreActive = !showMismatch && !isTransitioning && !isUnrecognized;
+  const bodyMissing = cameraActive && framing === "none";
+  const scoreActive = !bodyMissing && !showMismatch && !isTransitioning && !isUnrecognized;
   const scoreTone: "ok" | "mid" | "low" | "none" = !scoreActive ? "none" : effectiveCorrectness >= 0.75 ? "ok" : effectiveCorrectness >= 0.5 ? "mid" : "low";
   const verdict = !cameraActive
     ? T.cameraOff
+    : bodyMissing
+    ? T.stepIntoView
     : showMismatch
     ? T.wrongPoseBadge
     : isTransitioning
@@ -2013,7 +2233,8 @@ export default function Dashboard() {
     : effectiveCorrectness >= 0.75
     ? T.onTarget.replace("✓ ", "")
     : T.needsAdjustment;
-  const poseName = activePose === "transition/unknown" ? "" : getSanskritName(activePose, lang);
+  const poseName = bodyMissing || activePose === "transition/unknown" ? "" : getSanskritName(activePose, lang);
+  liveRef.current = { pose: scoreActive ? activePose : "", score: effectiveCorrectness, active: scoreActive };
   const retryEngine = () => {
     poseRef.current = null;
     engineErrorsRef.current = 0;
@@ -2025,6 +2246,8 @@ export default function Dashboard() {
   const coach: { tone: string; icon: any; label: React.ReactNode; text: string } =
     !cameraActive
       ? { tone: "", icon: <CameraIcon size={18} />, label: T.systemStatus, text: T.cameraInactive }
+      : bodyMissing
+      ? { tone: "warn", icon: <ScanLine size={18} />, label: T.stepIntoView, text: T.cantSeeYou }
       : activePose === "transition/unknown"
       ? { tone: "", icon: <Activity size={18} />, label: T.systemStatus, text: T.detectingPose }
       : showMismatch
@@ -2279,11 +2502,14 @@ export default function Dashboard() {
           })()}
 
           <Accordion title={T.digitalTwinProfile} open={openGroupTwin} onToggle={() => setOpenGroupTwin(!openGroupTwin)}
-            status={calibratedProfile ? "Calibrated" : calibrationState === "calibrating" ? "Calibrating…" : "Uncalibrated"}>
+            status={calibratedProfile ? T.rangeSet : calibrationState === "calibrating" ? T.rangeLearning : T.rangeNotSet}>
             <>
               {calibratedProfile ? (
                 <>
                   <div className="ap-note" style={{ color: "var(--ok)", fontWeight: 600 }}>{T.activeProfile}</div>
+                  <button className="ap-btn ghost sm" style={{ alignSelf: "flex-start" }} onClick={relearnRange}>
+                    <RotateCw size={14} /><span>{T.relearn}</span>
+                  </button>
                   <div className="ap-joint-list">
                     {Object.keys(calibratedProfile).map((joint) => (
                       <div key={joint} className="ap-joint-row">
@@ -2308,8 +2534,8 @@ export default function Dashboard() {
                 <div className="ap-kv-row"><i className={cameraActive ? "on" : ""} /><span>Camera</span><strong>{cameraActive ? "Active" : "Off"}</strong></div>
                 <div className="ap-kv-row">
                   <i className={calibratedProfile ? "on" : calibrationState === "calibrating" ? "warn" : ""} />
-                  <span>Digital Twin</span>
-                  <strong>{calibratedProfile ? "Calibrated" : calibrationState === "calibrating" ? "Calibrating…" : "Uncalibrated"}</strong>
+                  <span>{T.digitalTwinProfile}</span>
+                  <strong>{calibratedProfile ? T.rangeSet : calibrationState === "calibrating" ? T.rangeLearning : T.rangeNotSet}</strong>
                 </div>
                 <div className="ap-kv-row"><i className={speechEnabled ? "on" : ""} /><span>{T.voice}</span><strong>{speechEnabled ? "On" : "Muted"}</strong></div>
                 <div className="ap-kv-row"><i className="on" /><span>{T.targetPose}</span><strong>{getSanskritName(guidePose, lang)}</strong></div>
@@ -2355,6 +2581,7 @@ export default function Dashboard() {
                         <span><Sun size={14} />{T.tipLight}</span>
                         <span><PersonStanding size={14} />{T.tipFrame}</span>
                       </div>
+                      <p className="ap-privacy"><Lock size={13} />{T.privacyNote}</p>
                     </div>
                   )}
 
@@ -2376,6 +2603,7 @@ export default function Dashboard() {
                         <h3>{T.calibratingProgress}</h3>
                         <p>{T.stayInView}</p>
                         <strong className="num">{calibrationCountdown}s</strong>
+                        <button className="ap-btn ghost sm" style={{ marginTop: 14 }} onClick={skipCalibration}>{T.skip}</button>
                       </div>
                     </div>
                   )}
@@ -2384,12 +2612,20 @@ export default function Dashboard() {
                     <>
                       <div className="ap-hud tl">
                         <span className="ap-live"><i />{lang === "hi" ? "लाइव" : lang === "bn" ? "লাইভ" : "LIVE"}</span>
+                        {coachSource === "device" && (
+                          <span className="ap-engine basic" role="status" title={coachReason === "offline" ? T.coachOffline : coachReason === "waking" ? T.coachWaking : T.coachDown}>
+                            <ScanLine size={14} />{T.basicMode}
+                          </span>
+                        )}
+                        {framing === "partial" && !bodyMissing && (
+                          <span className="ap-engine" role="status"><PersonStanding size={14} />{T.stepBack}</span>
+                        )}
                         {engineState === "loading" && (
                           <span className="ap-engine" role="status"><Loader2 size={14} className="spin" />{T.poseEngineLoading}</span>
                         )}
                         {engineState === "error" && (
                           <span className="ap-engine err" role="alert">
-                            <AlertTriangle size={14} />{T.poseEngineSlow}
+                            <AlertTriangle size={14} />{isOnline ? T.poseEngineSlow : T.poseEngineOffline}
                             <button onClick={retryEngine}>{T.retry}</button>
                           </span>
                         )}
@@ -2409,7 +2645,7 @@ export default function Dashboard() {
                       {calibrationState !== "calibrating" && (
                         <div className="ap-hud bl">
                           <span className="ap-posechip" aria-live="polite">
-                            <b>{showMismatch ? T.wrongPoseBadge : isTransitioning ? T.stateTransitioning : poseName || T.lookingForPose}</b>
+                            <b>{bodyMissing ? T.stepIntoView : showMismatch ? T.wrongPoseBadge : isTransitioning ? T.stateTransitioning : poseName || T.lookingForPose}</b>
                             {scoreActive && <em className={scoreTone}>{pct}%</em>}
                           </span>
                         </div>
@@ -2446,7 +2682,7 @@ export default function Dashboard() {
                       <span>{T.exit}</span>
                     </button>
                     <div className={`ap-fs-score ${scoreTone === "ok" ? "good" : scoreTone === "none" ? "" : "warn"}`}>
-                      {showMismatch ? T.wrongPoseBadge : isTransitioning ? T.stateTransitioning : isUnrecognized ? "—" : `${pct}%`}
+                      {bodyMissing ? "—" : showMismatch ? T.wrongPoseBadge : isTransitioning ? T.stateTransitioning : isUnrecognized ? "—" : `${pct}%`}
                     </div>
                   </>
                 )}
@@ -2466,7 +2702,7 @@ export default function Dashboard() {
                 )}
                 <button
                   className={`ap-btn ${cameraActive ? "dark" : ""}`}
-                  onClick={cameraActive ? stopCamera : () => startCamera()}
+                  onClick={cameraActive ? endSession : () => startCamera()}
                   disabled={isInitializingCamera}
                 >
                   {StartStopLabel}
@@ -2502,6 +2738,9 @@ export default function Dashboard() {
               <div style={{ minWidth: 0 }}>
                 <div className="ap-coach-label">{coach.label}</div>
                 <div className="ap-coach-text">{coach.text}</div>
+                {cameraActive && coachSource === "device" && (
+                  <div className="ap-coach-note">{coachReason === "offline" ? T.coachOffline : coachReason === "waking" ? T.coachWaking : T.coachDown}</div>
+                )}
                 {coach.tone === "warn" && correctionText && !isTransitioning && lastEfficacy && (
                   <span className={`ap-efficacy ${lastEfficacy.worked ? "good" : ""}`} aria-live="polite">
                     {lastEfficacy.worked
@@ -2581,7 +2820,7 @@ export default function Dashboard() {
           </button>
           <button
             className={`ap-dock-main ${cameraActive ? "stop" : ""}`}
-            onClick={cameraActive ? stopCamera : () => startCamera()}
+            onClick={cameraActive ? endSession : () => startCamera()}
             disabled={isInitializingCamera}
           >
             {StartStopLabel}
@@ -2595,16 +2834,49 @@ export default function Dashboard() {
         </nav>
       </div>
 
+      {summary && (
+        <div className="ap-sheet-wrap" role="dialog" aria-modal="true" aria-label={T.summaryTitle} onClick={() => setSummary(null)}>
+          <div className="ap-sheet" onClick={(e) => e.stopPropagation()}>
+            <h2>{T.summaryTitle}</h2>
+            {summary.rows.length === 0 ? (
+              <p className="ap-sheet-none">{T.summaryNone}</p>
+            ) : (
+              <>
+                <div className="ap-sum-stats">
+                  <div><b className="num">{Math.floor(summary.durationSec / 60)}:{String(summary.durationSec % 60).padStart(2, "0")}</b><span>{T.summaryTime}</span></div>
+                  <div><b className="num">{Math.round(summary.avg * 100)}%</b><span>{T.summaryAvg}</span></div>
+                  <div><b>{summary.best ? getSanskritName(summary.best, lang) : "—"}</b><span>{T.summaryBest}</span></div>
+                </div>
+                <div className="ap-eyebrow" style={{ margin: "18px 0 8px" }}>{T.summaryPoses}</div>
+                <div className="ap-sum-rows">
+                  {summary.rows.map((r) => (
+                    <div key={r.pose} className="ap-sum-row">
+                      <span>{getSanskritName(r.pose, lang)}</span>
+                      <span className="num">{Math.floor(r.sec / 60)}:{String(r.sec % 60).padStart(2, "0")}</span>
+                      <strong className="num">{Math.round(r.avg * 100)}%</strong>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="ap-sheet-actions">
+              <button className="ap-btn ghost" onClick={() => setSummary(null)}>{T.close}</button>
+              <button className="ap-btn" onClick={() => { setSummary(null); startCamera(); }}>{T.again}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isOnline && <div className="ap-offline" role="status">{T.offline}</div>}
 
-      {showInstallBanner && (
+      {showInstallBanner && !cameraActive && (
         <div className="ap-toast" role="dialog" aria-label={T.installTitle}>
           <div className="grow">
             <strong>{T.installTitle}</strong>
             <small>{T.installBody}</small>
           </div>
           <button className="act" onClick={handleInstall}>{T.install}</button>
-          <button className="x" onClick={() => setShowInstallBanner(false)} aria-label="Dismiss"><X size={16} /></button>
+          <button className="x" onClick={() => { setShowInstallBanner(false); try { window.localStorage.setItem("asana.installDismissed", String(Date.now())); } catch { /* ignore */ } }} aria-label="Dismiss"><X size={16} /></button>
         </div>
       )}
     </>

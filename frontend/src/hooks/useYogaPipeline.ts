@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { FrameResponse, SequenceResponse, CalibrationProfile, MotionState } from "../types/yoga";
+import { FrameInput, FrameResponse, SequenceResponse, CalibrationProfile, MotionState, CorrectionInput, CorrectionResponse } from "../types/yoga";
+import { offlineFrame, offlineCorrection } from "../utils/offlineCoach";
 import { analyseFrame, analyseSequence, recoverOcclusion, generateCorrection } from "../utils/api";
 import { computeOrientation } from "../utils/geometry";
 import { StickyLabel, Ema, EmaMap } from "../utils/stability";
@@ -86,41 +87,101 @@ export function useYogaPipeline({
     seqBuffer.current.push(rawLandmarks, Date.now());
   };
 
+  // ── Who answers: the server (full models) or the on-device coach (basic rules, instant, works offline) ──────────────
+  // The server answers when it can. If it is asleep, slow or unreachable we answer locally AT ONCE (no waiting, no blank
+  // screen) while a background probe looks for the server again, and switch back the moment it responds.
+  const [coachSource, setCoachSource] = useState<"server" | "device">("server");
+  const [coachReason, setCoachReason] = useState<"" | "offline" | "waking" | "reconnecting">("");
+  const health = useRef({ mode: "device" as "server" | "device", fails: 0, everOk: false, nextProbe: 0, probing: false });
+  const isOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
+  const markDevice = (reason: "offline" | "waking" | "reconnecting") => { setCoachSource("device"); setCoachReason(reason); };
+  const markServer = () => { setCoachSource("server"); setCoachReason(""); };
+
+  const frameAnswer = async (req: FrameInput): Promise<FrameResponse> => {
+    const h = health.current;
+    if (isOffline()) { markDevice("offline"); return offlineFrame(req); }
+    if (h.mode === "server") {
+      try {
+        const r = await analyseFrame(req);
+        h.fails = 0; h.everOk = true;
+        markServer(); // no-op unless we had been showing "basic mode" (e.g. coming back online)
+        return r;
+      } catch {
+        h.fails += 1;
+        if (h.fails >= 2) { h.mode = "device"; h.nextProbe = Date.now() + 15000; markDevice(h.everOk ? "reconnecting" : "waking"); }
+        return offlineFrame(req);
+      }
+    }
+    // device mode: answer now, look for the server in the background
+    if (!h.probing && Date.now() >= h.nextProbe) {
+      h.probing = true;
+      analyseFrame(req)
+        .then(() => { h.mode = "server"; h.fails = 0; h.everOk = true; markServer(); })
+        .catch(() => { h.nextProbe = Date.now() + 15000; markDevice(h.everOk ? "reconnecting" : "waking"); })
+        .finally(() => { h.probing = false; });
+    }
+    return offlineFrame(req);
+  };
+
+  const correctionAnswer = async (input: CorrectionInput): Promise<CorrectionResponse> => {
+    if (isOffline() || health.current.mode === "device") return offlineCorrection(input.pose_id, input.deviations, input.language, input.attempt);
+    try {
+      return await generateCorrection(input);
+    } catch {
+      return offlineCorrection(input.pose_id, input.deviations, input.language, input.attempt);
+    }
+  };
+
+  // Only joints that matter for the pose rules; if all are clearly visible there is nothing for occlusion recovery to do.
+  const KEY_JOINTS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+  const LIVE_INTERVAL_MS = 1500; // pose + score refresh; coaching text/speech/sequence keep the slower cycle below
+  const lastLiveTime = useRef(0);
+
   const processFrame = async (rawLandmarks: number[][], currentAngles: number[], worldAngles?: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
     if (rawLandmarks.length !== 33) return;
 
+    // Measure how fast the body is moving. Done on EVERY frame so the hold/transition read stays responsive.
+    const motion = computeMotion(currentAngles, Date.now());
+
+    // Live refresh of pose + score every ~1.5 s (it used to be every 10 s, so a new pose took 10-20 s to show up).
+    const nowTick = Date.now();
+    if (nowTick - lastLiveTime.current < LIVE_INTERVAL_MS) return;
+    lastLiveTime.current = nowTick;
+    // The slower cycle (sequence model, spoken guidance cadence) still runs about every PREDICTION_INTERVAL_MS.
+    const heavy = nowTick - lastPredictionTime.current >= PREDICTION_INTERVAL_MS;
+    if (heavy) lastPredictionTime.current = nowTick;
+
     setIsLoading(true);
     try {
-      // 1. Stage 4: Occlusion Handling (the sequence buffer is filled separately, per camera frame).
-      const occRes = await recoverOcclusion({ mp_landmarks: rawLandmarks });
-      setRecoveredJoints(occRes.occluded_joints_recovered);
-      const fusedCoords = occRes.fused_landmarks; // Shape [33, 4]
-
-      // Measure how fast the body is moving. Done on EVERY frame (not just on
-      // the throttled prediction tick) so the hold/transition read stays
-      // responsive, which is what makes the transition state feel immediate.
-      const motion = computeMotion(currentAngles, Date.now());
-
-      // Gate the heavier classification/LLM/speech cycle to once per PREDICTION_INTERVAL_MS
-      const nowTick = Date.now();
-      if (nowTick - lastPredictionTime.current < PREDICTION_INTERVAL_MS) {
-        return;
+      // 1. Occlusion recovery: server only, and only when a key joint is actually hard to see.
+      let fusedCoords = rawLandmarks;
+      let recovered: string[] = [];
+      if (!isOffline() && health.current.mode === "server" && KEY_JOINTS.some((i) => (rawLandmarks[i]?.[3] ?? 0) < 0.5)) {
+        try {
+          const occRes = await recoverOcclusion({ mp_landmarks: rawLandmarks });
+          fusedCoords = occRes.fused_landmarks;
+          recovered = occRes.occluded_joints_recovered;
+        } catch { /* optional stage: carry on with the raw landmarks */ }
       }
-      lastPredictionTime.current = nowTick;
+      setRecoveredJoints((prev) => (prev.length === 0 && recovered.length === 0 ? prev : recovered));
 
       // 2. Stage 7: Sequence Flow Analysis (ST-GCN). It needs a full 2.4 s window at the training frame rate.
       // It is a SECOND OPINION shown in the "Sequence Flow" row, never the source of the headline pose or
       // of the form score: on held-out videos it is right ~3 times in 4 on the poses it knows, while the
       // per-frame cascade names the held poses far more reliably, and a model's confidence says how sure
       // it is of a NAME, not whether the FORM is right.
-      const seqWindow = seqBuffer.current.window();
+      const seqWindow = heavy && !isOffline() && health.current.mode === "server" ? seqBuffer.current.window() : null;
       if (seqWindow) {
-        const seqRes = await analyseSequence({ coordinates: seqWindow });
-        const confident = !seqRes.requires_static_fallback;
-        setFlowPose(confident ? seqRes.sequence_pose : "transition/unknown");
-        setFlowConfidence(seqRes.confidence);
-      } else {
+        try {
+          const seqRes = await analyseSequence({ coordinates: seqWindow });
+          const confident = !seqRes.requires_static_fallback;
+          setFlowPose(confident ? seqRes.sequence_pose : "transition/unknown");
+          setFlowConfidence(seqRes.confidence);
+        } catch {
+          setFlowPose("transition/unknown");
+        }
+      } else if (heavy) {
         setFlowPose("transition/unknown");
       }
 
@@ -148,7 +209,7 @@ export function useYogaPipeline({
       };
       let currentMotionState: MotionState = "unknown";
 
-      const frameRes = await analyseFrame(frameReq);
+      const frameRes = await frameAnswer(frameReq);
       const rawDevs = frameRes.calibrated_deviations ?? frameRes.deviations;
       currentPoseId = poseSticky.current.push(frameRes.pose_id);
       currentCorrectness = correctnessEma.current.push(frameRes.correctness_score);
@@ -185,7 +246,7 @@ export function useYogaPipeline({
       setPoseMismatch(isMismatch);
 
       // 6. Stage 9 & 10: LLM Correction Generation (with 30s debounce throttle for API calls)
-      const now = Date.now();
+      const now = nowTick;
 
       // Close the loop on the PREVIOUS cue before considering a new one: did
       // the joint it targeted actually move? This must run every frame, not
@@ -219,7 +280,7 @@ export function useYogaPipeline({
               // the joint we expect to be targeted: the worst deviation
               Object.entries(activeDeviations)
                 .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "");
-            const corrRes = await generateCorrection({
+            const corrRes = await correctionAnswer({
               pose_id: currentPoseId,
               deviations: activeDeviations,
               language,
@@ -256,9 +317,9 @@ export function useYogaPipeline({
         setCorrectionIsSafe(true);
       }
 
-      // Mark this prediction cycle complete — drives the 10s speech cadence
+      // Mark the slow cycle complete — drives the ~10s speech cadence
       // even when the displayed text is unchanged from the prior cycle.
-      setPredictionTimestamp(nowTick);
+      if (heavy) setPredictionTimestamp(nowTick);
 
     } catch (error: any) {
       if (error.name === "AbortError" || (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError") || error.message?.includes("aborted") || error.message?.includes("AbortError")) {
@@ -300,6 +361,7 @@ export function useYogaPipeline({
   const resetPipeline = () => {
     seqBuffer.current.clear();
     lastPredictionTime.current = 0;
+    lastLiveTime.current = 0;
     setActivePose("transition/unknown");
     setCorrectness(1.0);
     setFlowPose("transition/unknown");
@@ -334,6 +396,8 @@ export function useYogaPipeline({
     isLoading,
     processFrame,
     pushSequenceFrame,
+    coachSource,
+    coachReason,
     resetPipeline
   };
 }
