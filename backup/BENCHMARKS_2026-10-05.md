@@ -95,6 +95,28 @@ Reading: the ST-GCN is conservative -- misses go to "transition/unknown" (it say
 | Cross-fitted offset, objective = number of poses passing (offsets -0.25 / -1.25 / -1.5) | 81.9% | **4** (child pose .78/.89, downward dog .85/.72, triangle .75/.92, seated easy .86/.81; corpse drops to precision .67) |
 | Ceiling: best single offset picked ON the scored windows (-0.5 to -1.0; OPTIMISTIC, not a result) | ~82% | 5 (adds seated easy, triangle) |
 No offset anywhere in the sweep (-4 to +4) reaches 6. Honest statement for the report: **the ST-GCN reliably handles 3 poses on unseen videos, 4 with a less conservative cross-fitted threshold; tree, warrior 2 and plank have too few held-out windows (87 / 89 / 30) and low precision to claim.** The 6+ pose claim rests on the MLP cascade (section 4).
+**Old vs new ST-GCN on the SAME held-out windows** (kernel `asanaai-conf-stgcn-cmp`, `evals_stgcn/stgcn_old_vs_new_compare.json`). 24 videos, 8,002 windows (60 frames, stride 12), 3 folds by video. NEW = each fold model scored only on videos it never trained on. OLD = the ST-GCNs in the live model repo. 12 of the 24 videos arrived after the old models were trained, so on those the old models are clean (2,682 windows); on all 24 the old ones may be in-sample (flatters them). Every model's output is mapped to the 8-pose vocabulary (`hold:X` -> X; anything else -> transition/unknown).
+| Model | Overall | Macro recall | Macro precision | Poses passing | Production gate (answers that reach the UI): share of true-pose windows answered / precision of answers |
+|---|---|---|---|---|---|
+| OLD original (Jul) | 67.3% | 11.6% | 27.7% | 0 | 0% / - |
+| OLD v2 | 67.8% | 13.2% | 28.0% | 0 | 1.8% / 100% (19 answers) |
+| OLD LIVE `stgcn_transitions_v1` | 68.9% | 18.8% | 33.5% | 0 | 2.8% / 93.8% (32 answers) |
+| **NEW `stgcn_target_v1`** | **76.9%** | **82.1%** | **75.3%** | 2 (tree, triangle; most poses have n < 30 on this subset) | **50.5% / 88.1%** (611 answers) |
+On all 24 videos: OLD LIVE 67.5% overall, macro recall 20.9%, 1 pose passing (child), answers 22.8% of true-pose windows at 78.5% precision (possibly in-sample); NEW 82.2%, macro recall 76.8%, 3 passing, answers 60.8% at 86.8% precision (all held-out).
+Verdict: the new model recognises held poses on unseen videos; the old live model essentially cannot (macro recall ~19-21%, and it is confident on under 3% of windows). Old `orig`/`v2` are no better. The old model's other feature -- NAMED transitions (`transition:A->B`) -- is not measured here and the new model does not have it (one generic transition/unknown class).
+
+**Why the web app made the ST-GCN look broken -- frame rate.** The ST-GCN is trained on 60 consecutive native-rate frames (~2.4 s). The web app fed its buffer one frame per finished API cycle (at most 2/s, ~0.5/s in practice), so its "60 frames" spanned 30-120 s. Re-scoring the same held-out videos with every k-th frame (new-video subset):
+| Frames per second into the buffer | Window span | NEW macro recall (poses passing) | OLD LIVE macro recall (poses passing) |
+|---|---|---|---|
+| 25 (training scale, k=1) | 2.4 s | **0.82** (2) | 0.19 (0) |
+| 12.5 (k=2) | 4.8 s | 0.81 (2) | 0.24 (0) |
+| 6.2 (k=4) | 9.6 s | 0.51 (0) | 0.60 (1) |
+| 3.1 (k=8) | 19 s | 0.41 (0) | 0.62 (1) |
+| 2.1 (k=12) | 29 s | 0.39 (0) | 0.48 (0) |
+| 1.0 (k=25) | 60 s | n = 9 windows, not interpretable | |
+The new model needs training-rate windows; the old live model was partly trained on 3 fps windows and is relatively better at slow rates, but its best (0.60) is still far below the new model at the right rate (0.82). Fixed in the web app (commit d7d3825): a time-based buffer filled from every camera frame and resampled to 25 fps.
+
+**Implementation audit (server side is clean).** (1) Backend model + normalisation vs the trainer's: max |logit difference| = 0.0 on 64 windows. (2) Deployed `/analyse_sequence` vs a local run of the same weights: identical label AND confidence on 40/40 windows for `stgcn_transitions_v1` and 60/60 for `stgcn_target_v1`. (3) Architecture is a real ST-GCN: graph convolution over the 33-joint MediaPipe skeleton (symmetric-normalised adjacency) + 9-tap temporal convolution, 3 blocks. The weakness of the old model is generalisation, not serving; the live problems were the web app's frame feed and its use of model confidence as the form score (both fixed).
 Models: HF private `Arko007/asanaai-conference-runs/runs/cueT2_stgcn_{f0,f1,f2,all}/`; eval `evals_stgcn/stgcn_target_heldout_video.json`. Trainer-reported val accuracy (98.4-98.7%) is a leaky random split -- never quote it.
 Original 2-month-old training run, for reference only (random split, NOT generalisation): MLP 91.52% validation; ST-GCN 82.6% validation at epoch 55.
 
@@ -144,9 +166,11 @@ Mean over the 8 clips: held 0.94 -> knee broken 0.25 -> elbow broken 0.92.
 Reading: the correctness score is high for instructor-form holds and collapses when a LEG joint is broken (every probe on every clip), but it is nearly blind to a broken ARM joint (mean 0.94 -> 0.92). Arm errors are only caught, if at all, by the per-joint angle-band layer. State this in the report; do not claim whole-body form checking.
 Same caveat as above: these frames are in the gate's training data (it is a regression check of the deployed path, not a generalisation number).
 
-**Sequence model (`stgcn_transitions_v1`, the ST-GCN currently deployed):** its raw top answer on the held clips is mostly wrong (sequence accuracy 0.00 on 5 of 8 clips; frequent wrong answer: chair_pose) BUT it was NEVER confident:
-`requires_static_fallback` was True on 100% of its calls on all 11 clips (mean confidence 0.15-0.41), so `useYogaPipeline.ts` (lines 118-121) always takes the per-frame cascade path and the user never sees the sequence model's pose. Net effect today: the sequence model contributes nothing live.
-Hazard to remember: if that model ever became confident while wrong, the hook adopts its pose AND uses its confidence as the correctness score (lines 160-166). The new target-pose ST-GCN (training) is meant to replace it; do not change the `hf_loader.py` pointer without approval.
+**Live replay with the new ST-GCN deployed** (Space variables `STGCN_MODEL_FILE=stgcn_target_v1.pth`, `evals_compare/live_replay_v4.json`; native-rate windows every 0.5 s, same 8 hold + 3 moving clips). The ST-GCN answers confidently and correctly (100% of calls) on the poses it knows: corpse, seated easy (BOTH clips, including the one where the per-frame cascade says upward_dog for 94% of frames), child pose, tree. For mountain and lunge (not in its vocabulary) it stays "transition/unknown" (the UI shows "Static Check"), and on the 3 moving clips it says transition/unknown 100% / 100% / 86% of the time (2 confident corpse calls on the clip where the person lowers to the floor). Caveat as before: these videos are in the training data of the published `all` model, so this verifies the deployed path, not generalisation (the held-out numbers are in section 5).
+
+**Previous sequence model (`stgcn_transitions_v1`, deployed until 2026-10-05, now replaced by `stgcn_target_v1`):** its raw top answer on the held clips is mostly wrong (sequence accuracy 0.00 on 5 of 8 clips; frequent wrong answer: chair_pose) BUT it was NEVER confident:
+`requires_static_fallback` was True on 100% of its calls on all 11 clips (mean confidence 0.15-0.41), so `useYogaPipeline.ts` (lines 118-121) always takes the per-frame cascade path and the user never sees the sequence model's pose. Net effect while it was deployed: the sequence model contributed nothing live.
+That hazard (the UI adopting a wrong confident sequence pose and using its confidence as the form score) is removed: the per-frame cascade now always names the pose and scores the form (commit d7d3825).
 
 **Caveat (read before quoting any number above):** all 8 clips come from the 12 new YouTube videos, and those videos are in the data the gate (`mlp_3head_gate_v1` = `cueH_mlp_all`) was trained on. The pose NAME comes from the older v4 MLP (trained on photos before these videos existed), so naming is out-of-sample, but the veto and correctness score are in-sample. This is a plumbing/regression check of the deployed system, NOT a generalisation number. The generalisation number still has to come from recorded people/rooms not in any training set (the harness above runs any clip list).
 

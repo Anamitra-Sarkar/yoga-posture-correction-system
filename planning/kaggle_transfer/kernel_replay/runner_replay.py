@@ -141,4 +141,4 @@ results = []
 for c in CLIPS:
     t0 = time.time(); r = run_clip(*c); r["secs"] = round(time.time() - t0); results.append(r); print("RESULT", json.dumps(r, default=str), flush=True)
 json.dump(results, open(f"{ROOT}/replay.json", "w"), indent=1, default=str)
-api.upload_file(path_or_fileobj=f"{ROOT}/replay.json", path_in_repo="evals_compare/live_replay_v3.json", repo_id="Arko007/asanaai-conference-runs", repo_type="model")
+api.upload_file(path_or_fileobj=f"{ROOT}/replay.json", path_in_repo="evals_compare/live_replay_v4.json", repo_id="Arko007/asanaai-conference-runs", repo_type="model")

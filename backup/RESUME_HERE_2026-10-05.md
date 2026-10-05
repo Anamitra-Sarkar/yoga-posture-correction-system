@@ -1,6 +1,17 @@
 # AsanaAI — RESUME HERE (written 2026-10-05 night; UPDATED 2026-10-06 morning)
 
-## UPDATE 2026-10-06 (read this block first; it supersedes §1-§3 below)
+## UPDATE 2026-10-05 late (newest; read this block first)
+**Done and LIVE (all verified):**
+* **Decision: keep the NEW ST-GCN (`stgcn_target_v1`), retire the old ones.** Same held-out windows: new macro recall 0.82 vs old live 0.19 (docs/BENCHMARKS.md §5). Old files stay on HF untouched (rollback = delete the two Space variables below).
+* Live Space `Arko007/yoga_pose`: variables `ENABLE_POSE_CASCADE=1`, `STGCN_MODEL_FILE=stgcn_target_v1.pth`, `STGCN_ENCODER_FILE=stgcn_target_v1_encoder.npy`; `GROQ_API_KEY` rotated (LLM paraphrase works again: Hindi cue now differs from the template). Parity: deployed endpoint == local run of the published file on 60/60 windows.
+* Code on main (commits 2fcc1ba backend env switch, d7d3825 web fixes, 6e58b27 docs/scripts); Vercel production built; GitHub Actions -> Space sync WORKS (automatic "Sync backend from GitHub commit ..." on the Space).
+* **Root cause of "ST-GCN looks broken" = the web app's frame feed (0.5-2 fps into the buffer vs 25 fps training), NOT the model or the server** (server code == trainer code, max logit diff 0.0). Fixed: `frontend/src/utils/sequenceBuffer.ts` (time-based, camera-rate, resampled to 25 fps; unit test `backup/test_sequence_buffer.js`).
+* Also fixed: model confidence was used as the correctness score; the previous cycle's sequence pose was read from stale state. Now: the per-frame cascade names the pose and scores the form; the ST-GCN is a second opinion in the "Sequence Flow" row, shown only when confident (never overrides).
+* Kaggle credentials dataset: deleted then RECREATED (user: keep tokens, we may train again); private.
+* **Retraining: NOT needed now.** Open improvement (only if the mentor wants more): more videos/people for tree, warrior 2, plank, triangle, seated easy (held-out n is 30-90 windows for several); named transitions would need a retrain with transition classes on the new data.
+* NOT verified (needs a real camera, the user will test): the live Sequence Flow row with a real webcam at 15-30 fps.
+
+## UPDATE 2026-10-06 (earlier block; partly superseded by the one above)
 * **ST-GCN finished** (all 4 runs on HF `runs/cueT2_stgcn_{f0,f1,f2,all}`). Held-out-VIDEO result: overall 82.2% (flattered by the 60%-of-windows transition class; macro recall 78.0%), **3 poses pass** (child .74/.91, corpse 1.00/.85, downward dog .83/.77); seated easy (.68/.81), tree (.87/.67), triangle (.64/.95) are near misses. A cross-fitted threshold shift gets **4** (adds seated easy, triangle; corpse drops out); nothing reaches 6. Full tables: `docs/BENCHMARKS.md` §5.
 * **Conference claim, honestly:** MLP cascade = 7 poses on held-out photos (§4); ST-GCN = 3 (4 with the shifted threshold). Say exactly that.
 * **Correctness probe through the live endpoint** (§8): form score 0.94 while held -> 0.25 when a LEG joint is broken 45 deg (every probe, every clip) but 0.92 when an ARM joint is broken: the score is blind to arm errors.
