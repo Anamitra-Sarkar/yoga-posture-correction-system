@@ -20,7 +20,23 @@ import {
   Maximize2,
   X,
   Globe,
-  Gauge
+  Gauge,
+  LayoutGrid,
+  SwitchCamera,
+  AlertTriangle,
+  Loader2,
+  PersonStanding,
+  TreePine,
+  Mountain,
+  Waves,
+  Triangle,
+  Minus,
+  Ruler,
+  Sun,
+  ScanLine,
+  Leaf,
+  Menu as MenuIcon,
+  RotateCw
 } from "lucide-react";
 import { useYogaPipeline } from "../hooks/useYogaPipeline";
 import { CalibrationProfile } from "../types/yoga";
@@ -135,6 +151,24 @@ const POSE_DIFFICULTY: { [key: string]: { level: string; color: string } } = {
 // figure), which is a completely different pose from the standing Warrior II
 // lunge; the reference photo below is now the actual "how do I do this"
 // source of truth.
+// Line icons (consistent weight, inherit colour) instead of emoji; common English names for the sub-line.
+const POSE_ICONS: { [id: string]: any } = {
+  warrior_2: PersonStanding,
+  cobra_pose: Waves,
+  mountain_pose: Mountain,
+  tree_pose: TreePine,
+  plank: Minus,
+  downward_dog: Triangle,
+};
+const POSE_COMMON_NAME: { [id: string]: string } = {
+  warrior_2: "Warrior II",
+  cobra_pose: "Cobra",
+  mountain_pose: "Mountain",
+  tree_pose: "Tree",
+  plank: "Plank",
+  downward_dog: "Downward dog",
+};
+
 const POSE_LIBRARY: { id: PresetPoseId; icon: string }[] = [
   { id: "warrior_2", icon: "⚔️" },
   { id: "cobra_pose", icon: "🐍" },
@@ -312,6 +346,34 @@ const TRANSLATIONS: {
   [lang: string]: { [key: string]: string }
 } = {
   en: {
+    readyTitle: "Ready when you are",
+    readyBody: "Stand about two metres back so your whole body is in view, in good light.",
+    startCamera: "Start camera",
+    stopCamera: "Stop",
+    retry: "Retry",
+    poseEngineLoading: "Loading pose engine…",
+    poseEngineSlow: "Pose engine is slow to load. Check your connection.",
+    practice: "Practice",
+    poseGuide: "Pose guide",
+    sessionOverview: "Session",
+    cameraOff: "Camera off",
+    cameraLive: "Camera live",
+    coaching: "Coaching",
+    voice: "Voice",
+    flip: "Flip",
+    poses: "Poses",
+    tipDistance: "Stand 2 m back",
+    tipLight: "Face the light",
+    tipFrame: "Full body in frame",
+    measuredJoints: "Joints measured",
+    tagNow: "Now",
+    lookingForPose: "Looking for a pose…",
+    installTitle: "Install AsanaAI",
+    installBody: "Open it like an app: full screen, works offline.",
+    install: "Install",
+    offline: "You're offline — check your connection.",
+    jointAlignment: "Joint alignment",
+    livePanel: "Live feedback",
     appTitle: "AsanaAI — Smart Yoga Coach",
     newSession: "New Session",
     recognisedAsanas: "Recognised Asanas",
@@ -343,7 +405,7 @@ const TRANSLATIONS: {
     startVideo: "Start Video",
     calibratingProgress: "Calibrating Digital Twin",
     stayInView: "Stay in camera view...",
-    cameraInactive: "Start the camera and move into any posture. AsanaAI recognises what you are doing — there is nothing to select.",
+    cameraInactive: "Start the camera and move into any posture. AsanaAI recognises what you are doing.",
     alignBody: "Align your body with the camera...",
     exit: "Exit",
     postureScore: "Posture Score",
@@ -354,7 +416,7 @@ const TRANSLATIONS: {
     allVisible: "All visible",
     staticMode: "Static Check",
     flowMode: "Flow mode",
-    feedbackHub: "Real-Time Feedback Hub",
+    feedbackHub: "Live feedback",
     correctnessScore: "Correctness Score",
     sequenceFlow: "Sequence Flow",
     occlusionFusing: "Occlusion Fusing",
@@ -362,17 +424,45 @@ const TRANSLATIONS: {
     inactive: "Inactive",
     fusingOccluded: "Fusing Occluded landmarks:",
     mirroredCoordinates: "(Coordinate mirrored dynamically from twin joint)",
-    systemStatus: "System Status",
-    detectingPose: "Detecting pose... Align your body with the camera.",
-    safetyCorrection: "Safety Correction Voice Guidance",
+    systemStatus: "Status",
+    detectingPose: "Looking for your pose. Step back until your whole body is in view.",
+    safetyCorrection: "Coaching cue",
     alignmentCorrect: "Pose Alignment Correct",
     alignmentCorrectDesc: "Joint angle alignment is correct. Keep breathing steadily.",
-    angleDetails: "Angle Alignment Details",
+    angleDetails: "Joint alignment",
     assumePosePrompt: "Assume a target yoga pose to view real-time joint angle alignments and corrections.",
     targetFor: "Target: {target}° for {pose}",
     diff: "Diff:",
   },
   hi: {
+    readyTitle: "जब आप तैयार हों",
+    readyBody: "लगभग दो मीटर पीछे खड़े हों ताकि पूरा शरीर फ्रेम में दिखे, और रोशनी अच्छी हो।",
+    startCamera: "कैमरा शुरू करें",
+    stopCamera: "रोकें",
+    retry: "फिर कोशिश करें",
+    poseEngineLoading: "पोज़ इंजन लोड हो रहा है…",
+    poseEngineSlow: "पोज़ इंजन देर से लोड हो रहा है। इंटरनेट जाँचें।",
+    practice: "अभ्यास",
+    poseGuide: "आसन गाइड",
+    sessionOverview: "सत्र",
+    cameraOff: "कैमरा बंद",
+    cameraLive: "कैमरा चालू",
+    coaching: "मार्गदर्शन",
+    voice: "आवाज़",
+    flip: "पलटें",
+    poses: "आसन",
+    tipDistance: "2 मीटर दूर खड़े हों",
+    tipLight: "रोशनी की ओर मुँह रखें",
+    tipFrame: "पूरा शरीर फ्रेम में",
+    measuredJoints: "मापे गए जोड़",
+    tagNow: "अभी",
+    lookingForPose: "आसन खोज रहे हैं…",
+    installTitle: "AsanaAI इंस्टॉल करें",
+    installBody: "ऐप की तरह खोलें: फ़ुल स्क्रीन, ऑफ़लाइन भी।",
+    install: "इंस्टॉल",
+    offline: "आप ऑफ़लाइन हैं — इंटरनेट जाँचें।",
+    jointAlignment: "जोड़ों का संरेखण",
+    livePanel: "लाइव फ़ीडबैक",
     appTitle: "असनएआई — स्मार्ट योग कोच",
     newSession: "नया सत्र",
     recognisedAsanas: "पहचानी जाने वाली मुद्राएँ",
@@ -434,6 +524,34 @@ const TRANSLATIONS: {
     diff: "अंतर:",
   },
   bn: {
+    readyTitle: "আপনি প্রস্তুত হলেই",
+    readyBody: "প্রায় দুই মিটার পিছনে দাঁড়ান যাতে পুরো শরীর ফ্রেমে থাকে, আর আলো ভালো হয়।",
+    startCamera: "ক্যামেরা চালু করুন",
+    stopCamera: "থামান",
+    retry: "আবার চেষ্টা করুন",
+    poseEngineLoading: "পোজ ইঞ্জিন লোড হচ্ছে…",
+    poseEngineSlow: "পোজ ইঞ্জিন লোড হতে দেরি হচ্ছে। ইন্টারনেট দেখুন।",
+    practice: "অনুশীলন",
+    poseGuide: "আসন গাইড",
+    sessionOverview: "সেশন",
+    cameraOff: "ক্যামেরা বন্ধ",
+    cameraLive: "ক্যামেরা চালু",
+    coaching: "নির্দেশনা",
+    voice: "ভয়েস",
+    flip: "ঘোরান",
+    poses: "আসন",
+    tipDistance: "২ মিটার দূরে দাঁড়ান",
+    tipLight: "আলোর দিকে মুখ করুন",
+    tipFrame: "পুরো শরীর ফ্রেমে",
+    measuredJoints: "পরিমাপ করা জোড়",
+    tagNow: "এখন",
+    lookingForPose: "আসন খোঁজা হচ্ছে…",
+    installTitle: "AsanaAI ইনস্টল করুন",
+    installBody: "অ্যাপের মতো খুলুন: ফুল স্ক্রিন, অফলাইনেও চলে।",
+    install: "ইনস্টল",
+    offline: "আপনি অফলাইনে — ইন্টারনেট দেখুন।",
+    jointAlignment: "জোড়ের সারিবদ্ধতা",
+    livePanel: "লাইভ ফিডব্যাক",
     appTitle: "আসনএআই — স্মার্ট যোগ কোচ",
     newSession: "নতুন সেশন",
     recognisedAsanas: "চেনা আসনসমূহ",
@@ -565,78 +683,42 @@ const getPoseJoints = (poseId: string) => {
 
 
 interface ScoreRingProps {
-  correctness: number;
+  value: number;
+  tone: "ok" | "mid" | "low" | "none";
+  active: boolean;
 }
 
-function ScoreRing({ correctness }: ScoreRingProps) {
-  const percentage = Math.round(correctness * 100);
-  const [displayPercentage, setDisplayPercentage] = useState(percentage);
-  
-  useEffect(() => {
-    let start = displayPercentage;
-    const end = percentage;
-    if (start === end) return;
-    
-    const duration = 400; // ms
-    const startTime = performance.now();
-    
-    let animationFrameId: number;
-    
-    const updateCount = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Easing function (easeOutQuad)
-      const ease = progress * (2 - progress);
-      const current = Math.round(start + (end - start) * ease);
-      
-      setDisplayPercentage(current);
-      
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(updateCount);
-      }
-    };
-    
-    animationFrameId = requestAnimationFrame(updateCount);
-    
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [percentage]);
+function ScoreRing({ value, tone, active }: ScoreRingProps) {
+  const [shown, setShown] = useState(value);
 
-  const isSuccess = correctness >= 0.75;
-  const radius = 42;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  useEffect(() => {
+    const start = shown;
+    if (start === value) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.min((now - t0) / 400, 1);
+      setShown(Math.round(start + (value - start) * (p * (2 - p))));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+
+  const r = 44;
+  const c = 2 * Math.PI * r;
+  const offset = active ? c - (Math.min(100, Math.max(0, value)) / 100) * c : c;
+  const color = tone === "ok" ? "var(--ok)" : tone === "mid" ? "var(--amber)" : tone === "low" ? "var(--clay)" : "var(--line-2)";
 
   return (
-    <div className="gauge-circle">
-      <svg width="100" height="100" style={{ transform: "rotate(-90deg)" }}>
-        {/* Track */}
-        <circle
-          cx="50"
-          cy="50"
-          r={radius}
-          fill="transparent"
-          stroke={isSuccess ? "var(--color-success-muted)" : "var(--color-warning-muted)"}
-          strokeWidth="6"
-        />
-        {/* Fill */}
-        <circle
-          cx="50"
-          cy="50"
-          r={radius}
-          fill="transparent"
-          stroke={isSuccess ? "var(--color-success)" : "var(--color-warning)"}
-          strokeWidth="6"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.16, 1, 0.3, 1), stroke 400ms ease" }}
-        />
+    <div className="ap-ring" role="img" aria-label={active ? `Posture score ${value} percent` : "No score yet"}>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle className="track" cx="50" cy="50" r={r} fill="none" strokeWidth="7" />
+        <circle className="fill" cx="50" cy="50" r={r} fill="none" strokeWidth="7" stroke={color}
+          strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" />
       </svg>
-      <div className={`gauge-percentage-center ${isSuccess ? "success" : "warning"}`}>
-        {displayPercentage}%
+      <div className="ap-ring-num">
+        {active ? <span className="num">{shown}<small>%</small></span> : <span style={{ color: "var(--ink-3)" }}>—</span>}
       </div>
     </div>
   );
@@ -708,6 +790,12 @@ export default function Dashboard() {
   const [mediaPipeLoaded, setMediaPipeLoaded] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [isInitializingCamera, setIsInitializingCamera] = useState(false);
+  // Pose-engine lifecycle, so a slow or failed model load is VISIBLE instead of a black screen.
+  const [engineState, setEngineState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const engineErrorsRef = useRef(0);
+  const lastResultAtRef = useRef(0);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   // References
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -765,9 +853,9 @@ export default function Dashboard() {
     // Mirror (scaleX(-1)) only applies to the front camera -- the rear
     // camera must never be flipped, it was being mirrored unconditionally
     // here regardless of which camera was active.
-    if (canvasRef.current) {
+    if (stageRef.current) {
       const mirror = facingMode === "user" ? "scaleX(-1) " : "";
-      canvasRef.current.style.transform = clamped === 1
+      stageRef.current.style.transform = clamped === 1
         ? `${mirror}scale(1)`.trim()
         : `${mirror}scale(${clamped})`.trim();
     }
@@ -782,8 +870,8 @@ export default function Dashboard() {
     setZoomCapable(!!(caps?.zoom));
     // Reset zoom to 1x on new camera start
     setZoomLevel(1);
-    if (canvasRef.current) {
-      canvasRef.current.style.transform = facingMode === "user" ? "scaleX(-1)" : "scale(1)";
+    if (stageRef.current) {
+      stageRef.current.style.transform = facingMode === "user" ? "scaleX(-1)" : "scale(1)";
     }
   }, [cameraActive, facingMode]);
 
@@ -1172,7 +1260,7 @@ export default function Dashboard() {
 
   // Handle checking scripts loading
   const handleScriptLoad = () => {
-    if (typeof window !== "undefined" && (window as any).Pose && (window as any).Camera) {
+    if (typeof window !== "undefined" && (window as any).Pose) {
       setMediaPipeLoaded(true);
     }
   };
@@ -1189,46 +1277,77 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Initialize MediaPipe Pose Model
-  const initMediaPipe = () => {
-    if (!mediaPipeLoaded) return;
-    if (poseRef.current) return;
+  // Initialize MediaPipe Pose Model. Idempotent and independent of React state timing: it checks the
+  // global directly, so calling it from the frame loop picks the engine up the moment its script arrives
+  // (previously, pressing Start before the script finished loading left the engine uninitialised for the
+  // whole session and the camera view stayed black).
+  const initMediaPipe = (): boolean => {
+    if (poseRef.current) return true;
+    const PoseClass = typeof window !== "undefined" ? (window as any).Pose : undefined;
+    if (!PoseClass) return false;
+    try {
+      const pose = new PoseClass({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+      });
+      // Phones start on the Lite model: the first frames load 3-4x faster and 15+ fps is what matters.
+      const coarse = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+      pose.setOptions({
+        modelComplexity: coarse ? 0 : 1,
+        smoothLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+        // MediaPipe's own selfieMode default mirrors the image AND landmark
+        // x-coordinates internally, independent of and inconsistent with the
+        // CSS-level mirror this app already applies conditionally for the
+        // front camera only. Forcing this off makes the CSS mirror the single
+        // source of truth for display, and keeps landmark coordinates (and
+        // therefore angle-based pose classification) always true-to-camera
+        // regardless of which camera is active.
+        selfieMode: false
+      });
+      pose.onResults((results: any) => {
+        lastResultAtRef.current = performance.now();
+        engineErrorsRef.current = 0;
+        setEngineState((s) => (s === "ready" ? s : "ready"));
+        onPoseResultsRef.current?.(results);
+      });
+      poseRef.current = pose;
+      return true;
+    } catch (e) {
+      console.error("MediaPipe init failed:", e);
+      return false;
+    }
+  };
 
-    const PoseClass = (window as any).Pose;
-    const pose = new PoseClass({
-      locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-    });
-
-    pose.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-      // MediaPipe's own selfieMode default mirrors the image AND landmark
-      // x-coordinates internally, independent of and inconsistent with the
-      // CSS-level mirror this app already applies conditionally for the
-      // front camera only. Forcing this off makes the CSS mirror the single
-      // source of truth for display, and keeps landmark coordinates (and
-      // therefore angle-based pose classification) always true-to-camera
-      // regardless of which camera is active.
-      selfieMode: false
-    });
-
-    pose.onResults((results: any) => {
-      onPoseResultsRef.current?.(results);
-    });
-    poseRef.current = pose;
+  // Plain-language explanation for each way getUserMedia can fail (no alert() dialogs).
+  const describeCameraError = (err: any): string => {
+    const name = err?.name || "";
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia)
+      return "This browser can't access the camera here. Open the site over HTTPS in Chrome or Safari.";
+    if (name === "NotAllowedError" || name === "SecurityError")
+      return "Camera permission was blocked. Allow camera access for this site in your browser settings, then tap Retry.";
+    if (name === "NotFoundError" || name === "OverconstrainedError")
+      return "No camera was found on this device.";
+    if (name === "NotReadableError" || name === "AbortError")
+      return "The camera is busy in another app or tab. Close it and tap Retry.";
+    return "The camera could not be started. Tap Retry, or reload the page.";
   };
 
   // Start Live Webcam Video Loop (Custom Stream Implementation for swap/facingMode support)
   const startCamera = async (mode = facingMode) => {
-    if (!navigator.onLine) {
-      alert("No internet connection. MediaPipe requires internet on first load.");
+    setCameraError(null);
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError(describeCameraError(null));
       return;
     }
 
+    // Start loading the pose engine now; if its script has not arrived yet the frame loop keeps retrying,
+    // so the user always SEES the camera and a clear "loading" state instead of a black box.
     initMediaPipe();
-    
+    setEngineState("loading");
+    lastResultAtRef.current = 0;
+    engineErrorsRef.current = 0;
+
     setIsInitializingCamera(true);
     try {
       // Clean up previous streams and request frames
@@ -1239,24 +1358,46 @@ export default function Dashboard() {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
 
-      const constraints = {
+      // Phones: a smaller stream is decoded, copied and analysed faster, and MediaPipe resizes to ~256px anyway.
+      const coarse = !!window.matchMedia?.("(pointer: coarse)").matches;
+      const wanted: MediaStreamConstraints = {
+        audio: false,
         video: {
-          facingMode: mode,
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 60 }
+          facingMode: { ideal: mode },
+          width: { ideal: coarse ? 960 : 1280 },
+          height: { ideal: coarse ? 720 : 720 },
+          frameRate: { ideal: 30, max: 30 }
         }
       };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(wanted);
+      } catch (e: any) {
+        // Some devices reject the preferred size/frame rate; any working camera beats none.
+        if (e?.name === "OverconstrainedError" || e?.name === "TypeError") {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } else {
+          throw e;
+        }
+      }
       streamRef.current = stream;
 
       const videoElement = videoRef.current;
-      if (!videoElement) return;
+      if (!videoElement) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
 
       videoElement.srcObject = stream;
+      videoElement.muted = true;
+      videoElement.playsInline = true;
       videoElement.setAttribute("playsinline", "true");
-      await videoElement.play();
+      try {
+        await videoElement.play();
+      } catch (e: any) {
+        // A play() interrupted by a newer load (e.g. camera swap) is harmless.
+        if (e?.name !== "AbortError") throw e;
+      }
 
       setCameraActive(true);
       setFacingMode(mode);
@@ -1268,19 +1409,18 @@ export default function Dashboard() {
       // Start custom rendering loop tick to feed MediaPipe. This self-paces
       // to however fast the device can actually run inference (it only
       // schedules the next frame once the previous one finishes), so weak
-      // devices never queue up a growing backlog of frames — but the model
-      // itself was always running the heaviest "Full" complexity regardless
-      // of device. On slow/low-end hardware that means each frame can take
-      // several hundred ms, which reads as a stuck/laggy camera and can make
-      // it look like poses aren't being scanned properly. Measure the first
+      // devices never queue up a growing backlog of frames. Measure the first
       // ~20 frames after camera start and drop to the lighter "Lite" model
       // automatically if the device can't keep up.
+      // The picture itself is the <video> element, so the user sees themselves
+      // even while the engine is still loading or has failed.
       const tick = async () => {
         if (!stream.active || !videoRef.current) return;
-        if (videoRef.current.readyState >= 3) {
-          if (poseRef.current) {
+        const v = videoRef.current;
+        if (v.readyState >= 2 && v.videoWidth > 0 && (poseRef.current || initMediaPipe())) {
+          try {
             const t0 = performance.now();
-            await poseRef.current.send({ image: videoRef.current });
+            await poseRef.current.send({ image: v });
             const elapsed = performance.now() - t0;
 
             if (!hasDowngradedModelRef.current) {
@@ -1306,18 +1446,35 @@ export default function Dashboard() {
                 hasDowngradedModelRef.current = true;
               }
             }
+          } catch (e) {
+            // A throw here used to kill the loop silently (black screen forever). Back off and keep trying.
+            engineErrorsRef.current += 1;
+            console.error("Pose engine error:", e);
+            if (engineErrorsRef.current >= 3) setEngineState("error");
+            await new Promise((r) => setTimeout(r, 300 * Math.min(engineErrorsRef.current, 6)));
           }
         }
         animationFrameIdRef.current = requestAnimationFrame(tick);
       };
       animationFrameIdRef.current = requestAnimationFrame(tick);
 
+      // If no result ever arrives, say so (slow network, blocked CDN) rather than leave the user guessing.
+      window.setTimeout(() => {
+        if (stream.active && lastResultAtRef.current === 0) setEngineState("error");
+      }, 30000);
+
       // Trigger automatic Calibration Sequence
       startCalibration();
-      
+
     } catch (err) {
       console.error("Camera access failed:", err);
-      alert("Failed to access camera. Please check camera permissions.");
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      setCameraActive(false);
+      setEngineState("idle");
+      setCameraError(describeCameraError(err));
     } finally {
       setIsInitializingCamera(false);
     }
@@ -1329,6 +1486,7 @@ export default function Dashboard() {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) videoRef.current.srcObject = null;
     if (animationFrameIdRef.current) {
       cancelAnimationFrame(animationFrameIdRef.current);
       animationFrameIdRef.current = null;
@@ -1337,7 +1495,11 @@ export default function Dashboard() {
       clearInterval(calibrationTimerRef.current);
       calibrationTimerRef.current = null;
     }
+    const c = canvasRef.current;
+    c?.getContext("2d")?.clearRect(0, 0, c.width, c.height);
     setCameraActive(false);
+    setEngineState("idle");
+    setCameraError(null);
     updateCalibrationState("idle");
     setCalibratedProfile(null);
     resetPipeline();
@@ -1388,20 +1550,28 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Resize canvas to match its container dynamically
+  // Keep the overlay canvas matched to its box at the device's pixel density (crisp skeleton on phones).
   useEffect(() => {
     const resizeCanvas = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (w > 0 && h > 0) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
       }
     };
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', resizeCanvas);
+    const ro = typeof ResizeObserver !== "undefined" && canvasRef.current ? new ResizeObserver(resizeCanvas) : null;
+    if (ro && canvasRef.current) ro.observe(canvasRef.current);
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('orientationchange', resizeCanvas);
+      ro?.disconnect();
+    };
   }, []);
 
   // MediaPipe Result processing callback
@@ -1411,24 +1581,23 @@ export default function Dashboard() {
     const canvasCtx = canvasElement.getContext("2d");
     if (!canvasCtx) return;
 
-    // Draw raw camera frame onto canvas, preserving its native aspect ratio
-    // (letterboxed to fit) instead of stretching it to the box's fixed
-    // aspect-ratio — a plain stretch distorts the whole picture whenever the
-    // camera's native resolution doesn't match the CSS box (nearly always,
-    // since real cameras are commonly 16:9 or 4:3 while the box is fixed),
-    // making it hard to tell if the user's full body is actually in frame.
+    // The <video> element is the picture; this canvas only carries the skeleton overlay. Geometry mirrors
+    // the video's object-fit: contain letterbox (native aspect ratio preserved, never stretched) so the
+    // skeleton lands exactly on the body. Drawn in CSS pixels, scaled up to the device pixel density.
+    const dpr = canvasElement.width / Math.max(1, canvasElement.clientWidth || canvasElement.width);
     canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    const cw = canvasElement.width;
-    const ch = canvasElement.height;
-    const srcW = results.image.videoWidth || results.image.width || cw;
-    const srcH = results.image.videoHeight || results.image.height || ch;
+    canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvasCtx.clearRect(0, 0, canvasElement.clientWidth, canvasElement.clientHeight);
+    const cw = canvasElement.clientWidth || canvasElement.width;
+    const ch = canvasElement.clientHeight || canvasElement.height;
+    const vid = videoRef.current;
+    const srcW = vid?.videoWidth || results.image?.videoWidth || results.image?.width || cw;
+    const srcH = vid?.videoHeight || results.image?.videoHeight || results.image?.height || ch;
     const fitScale = Math.min(cw / srcW, ch / srcH);
     const fitW = srcW * fitScale;
     const fitH = srcH * fitScale;
     const fitX = (cw - fitW) / 2;
     const fitY = (ch - fitH) / 2;
-    canvasCtx.drawImage(results.image, fitX, fitY, fitW, fitH);
 
     if (results.poseLandmarks) {
       // 1. Draw joints skeleton overlay (with clinical palette aesthetics),
@@ -1618,19 +1787,19 @@ export default function Dashboard() {
       const status1 = getNodeStatus(idx1);
       const status2 = getNodeStatus(idx2);
       
-      if (status1 === "deviating" || status2 === "deviating") return "#ff2d55"; // neon red
-      if (status1 === "warning" || status2 === "warning") return "#ff9500"; // neon orange
-      if (status1 === "correct" || status2 === "correct") return "#34c759"; // neon green
+      if (status1 === "deviating" || status2 === "deviating") return "#f0715f"; // coral
+      if (status1 === "warning" || status2 === "warning") return "#f2b84b"; // amber
+      if (status1 === "correct" || status2 === "correct") return "#7fd1a8"; // sage
       
       // Neutral colors based on body side
       const leftNodes = [11, 13, 15, 23, 25, 27, 29, 31];
       const rightNodes = [12, 14, 16, 24, 26, 28, 30, 32];
       
       if (leftNodes.includes(idx1) && leftNodes.includes(idx2)) {
-        return "#00f0ff"; // neon cyan
+        return "rgba(255, 255, 255, 0.92)"; // left side
       }
       if (rightNodes.includes(idx1) && rightNodes.includes(idx2)) {
-        return "#ff007f"; // neon pink
+        return "rgba(236, 226, 205, 0.92)"; // right side (warm white)
       }
       return "rgba(255, 255, 255, 0.8)"; // white for cross-connections (shoulders, hips)
     };
@@ -1646,12 +1815,12 @@ export default function Dashboard() {
         ctx.moveTo(toX(pt1.x), toY(pt1.y));
         ctx.lineTo(toX(pt2.x), toY(pt2.y));
         
-        // Premium Neon Glow Effect
+        // Soft drop shadow only, so the line reads on any background without glowing
         ctx.strokeStyle = color;
-        ctx.lineWidth = width;
+        ctx.lineWidth = width * 0.8;
         ctx.lineCap = "round";
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+        ctx.shadowBlur = 4;
         ctx.stroke();
         ctx.restore();
       }
@@ -1673,12 +1842,12 @@ export default function Dashboard() {
       ctx.closePath();
       
       // Determine overall pose correctness color for torso fill
-      let torsoColor = "rgba(0, 240, 255, 0.06)"; // neutral cyan fill
+      let torsoColor = "rgba(255, 255, 255, 0.07)"; // neutral fill
       if (activePose !== "transition/unknown") {
         if (effectiveCorrectness >= 0.70) {
-          torsoColor = "rgba(52, 199, 89, 0.06)"; // green fill
+          torsoColor = "rgba(127, 209, 168, 0.12)"; // sage fill
         } else {
-          torsoColor = "rgba(255, 45, 85, 0.06)"; // red fill
+          torsoColor = "rgba(240, 113, 95, 0.12)"; // coral fill
         }
       }
       
@@ -1715,354 +1884,289 @@ export default function Dashboard() {
         const y = toY(pt.y);
         
         let color = "#ffffff";
-        let r = 5;
-        
+        let r = 4.5;
+
         if (status === "deviating") {
-          color = "#ff2d55";
-          r = 7;
+          color = "#f0715f";
+          r = 6;
         } else if (status === "warning") {
-          color = "#ff9500";
-          r = 6;
+          color = "#f2b84b";
+          r = 5.5;
         } else if (status === "correct") {
-          color = "#34c759";
-          r = 6;
+          color = "#7fd1a8";
+          r = 5.5;
         } else {
-          // Neutral side colors
-          const leftNodes = [11, 13, 15, 23, 25, 27];
-          color = leftNodes.includes(i) ? "#00f0ff" : "#ff007f";
+          color = "#ffffff";
         }
-        
+
         ctx.save();
-        
-        // Draw outer translucent halo
+
+        // Soft ring, then the joint itself: clean, no glow
         ctx.beginPath();
-        ctx.arc(x, y, r + 3, 0, 2 * Math.PI);
-        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.arc(x, y, r + 2.5, 0, 2 * Math.PI);
+        ctx.fillStyle = "rgba(20, 19, 16, 0.35)";
         ctx.fill();
-        
-        // Draw main colored circle
+
         ctx.beginPath();
         ctx.arc(x, y, r, 0, 2 * Math.PI);
         ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 10;
         ctx.fill();
-        
-        // Draw inner white core
-        ctx.beginPath();
-        ctx.arc(x, y, r * 0.4, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.shadowBlur = 0;
-        ctx.fill();
-        
+
         ctx.restore();
       }
     });
   };
 
+  const T = TRANSLATIONS[lang];
+  const pct = Math.round(effectiveCorrectness * 100);
+  const scoreActive = !showMismatch && !isTransitioning && !isUnrecognized;
+  const scoreTone: "ok" | "mid" | "low" | "none" = !scoreActive ? "none" : effectiveCorrectness >= 0.75 ? "ok" : effectiveCorrectness >= 0.5 ? "mid" : "low";
+  const verdict = showMismatch
+    ? T.wrongPoseBadge
+    : isTransitioning
+    ? T.stateTransitioning
+    : isUnrecognized
+    ? T.lookingForPose
+    : effectiveCorrectness >= 0.75
+    ? T.onTarget.replace("✓ ", "")
+    : T.needsAdjustment;
+  const poseName = activePose === "transition/unknown" ? "" : getSanskritName(activePose, lang);
+  const retryEngine = () => {
+    poseRef.current = null;
+    engineErrorsRef.current = 0;
+    setEngineState("loading");
+    initMediaPipe();
+  };
+
+  // What the coaching card says right now, and in which tone.
+  const coach: { tone: string; icon: any; label: React.ReactNode; text: string } =
+    activePose === "transition/unknown"
+      ? { tone: "", icon: <Activity size={18} />, label: T.systemStatus, text: T.detectingPose }
+      : showMismatch
+      ? { tone: "bad", icon: <ShieldAlert size={18} />, label: T.wrongPoseBadge, text: displayCorrectionText }
+      : isTransitioning
+      ? { tone: "warn", icon: <Activity size={18} />, label: T.stateTransitioning, text: displayCorrectionText }
+      : correctionText
+      ? {
+          tone: "warn",
+          icon: <Volume2 size={18} />,
+          label: (
+            <>
+              {T.safetyCorrection}
+              {correctionIsSafe ? (
+                <ShieldCheck size={13} aria-label="Checked for safety" />
+              ) : (
+                <ShieldAlert size={13} aria-label="Fell back to a reviewed template" />
+              )}
+            </>
+          ),
+          text: correctionText,
+        }
+      : { tone: "ok", icon: <CheckCircle2 size={18} />, label: T.alignmentCorrect, text: T.alignmentCorrectDesc };
+
+  const StartStopLabel = isInitializingCamera ? (
+    <>
+      <Loader2 className="spin" size={18} />
+      <span>{T.startCamera}</span>
+    </>
+  ) : cameraActive ? (
+    <>
+      <VideoOff size={18} />
+      <span>{T.stopCamera}</span>
+    </>
+  ) : (
+    <>
+      <CameraIcon size={18} />
+      <span>{T.startCamera}</span>
+    </>
+  );
+
   return (
     <>
-      {/* Load MediaPipe SDK from CDN */}
-      <Script 
-        src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" 
-        strategy="lazyOnload"
+      <Head>
+        <title>AsanaAI — Smart Yoga Coach</title>
+        <meta name="theme-color" content="#f5f2ec" />
+      </Head>
+
+      {/* Pose engine (MediaPipe). Loaded early; the camera view never depends on it to show the picture. */}
+      <Script
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"
+        strategy="afterInteractive"
         onLoad={handleScriptLoad}
       />
-      <Script 
-        src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" 
-        strategy="lazyOnload"
-        onLoad={handleScriptLoad}
-      />
 
-      {/* Offline Toast Notification */}
-      {!isOnline && (
-        <div className="offline-toast">
-          <span className="offline-dot" />
-          You're offline — please check your internet connection.
-        </div>
-      )}
-
-      {/* PWA Install Banner */}
-      {showInstallBanner && (
-        <div className="install-banner">
-          <div className="install-banner-content">
-            <div className="install-banner-icon">🧘</div>
-            <div className="install-banner-text">
-              <strong>Add AsanaAI to your home screen</strong>
-              <span>Practice yoga with your coach, anytime, offline.</span>
-            </div>
-          </div>
-          <div className="install-banner-actions">
-            <button className="btn-install" onClick={handleInstall}>Install</button>
-            <button className="btn-dismiss" onClick={() => setShowInstallBanner(false)}>✕</button>
-          </div>
-        </div>
-      )}
-
-      <div className={`app-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
-        <Head>
-          <title>AsanaAI — Smart Yoga Coach</title>
-        </Head>
-
-        <header className="app-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button 
-              className="mobile-menu-btn" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-            </button>
-            <div className="app-logo">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--color-primary)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="logo-mark"
-              >
-                <path d="M12 2C12 2 15 7 15 11C15 15 12 22 12 22C12 22 9 15 9 11C9 7 12 2 12 2Z" />
-                <path d="M12 11C15 9 20 9 21 11C22 13 19 16 12 22" />
-                <path d="M12 11C9 9 4 9 3 11C2 13 5 16 12 22" />
-              </svg>
-              <span>AsanaAI</span>
-            </div>
+      <div className={`ap ${sidebarOpen ? "side-open" : ""} ${cameraActive ? "cam-on" : ""}`}>
+        {/* ─────────── Header ─────────── */}
+        <header className="ap-header">
+          <button
+            className="ap-iconbtn"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={sidebarOpen}
+          >
+            {sidebarOpen ? <PanelLeftClose size={19} /> : <PanelLeftOpen size={19} />}
+          </button>
+          <div className="ap-brand">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3c1.6 2.6 2.4 5 2.4 7.2 0 3.2-1.6 6.5-2.4 10.8-.8-4.3-2.4-7.6-2.4-10.8C9.6 8 10.4 5.6 12 3Z" />
+              <path d="M12 13.2c2.4-3.4 6.2-4.4 8.6-3.7-.5 3.1-3.9 6.7-8.6 8.2" />
+              <path d="M12 13.2C9.6 9.8 5.8 8.8 3.4 9.5c.5 3.1 3.9 6.7 8.6 8.2" />
+            </svg>
+            <span>AsanaAI</span>
           </div>
 
-          <div className="header-actions">
-            <div className={`session-timer ${cameraActive ? "active" : ""}`}>
-              {formatTime(sessionSeconds)}
+          <div className="ap-spacer" />
+
+          <div className="ap-header-actions">
+            <div className={`ap-timer hide-s ${cameraActive ? "on" : ""}`} aria-label="Session time">
+              <i />
+              <span className="num">{formatTime(sessionSeconds)}</span>
             </div>
-            <div className="status-pill">
-              <div className={`status-dot ${cameraActive ? "active" : ""}`} />
-              <span>{cameraActive ? "Live" : "Ready"}</span>
-            </div>
-            
-            <div 
-              className="language-selector-wrapper-custom"
+
+            <div
+              className="ap-menu"
               onBlur={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) {
-                  setLangDropOpen(false);
-                }
+                if (!e.currentTarget.contains(e.relatedTarget)) setLangDropOpen(false);
               }}
             >
               <button
-                className="language-selector-trigger"
+                className="ap-menu-trigger"
                 onClick={() => setLangDropOpen(!langDropOpen)}
                 aria-expanded={langDropOpen}
                 aria-haspopup="listbox"
                 aria-label="Select language"
               >
-                <Globe size={14} />
+                <Globe size={15} />
                 <span>{lang.toUpperCase()}</span>
-                <ChevronDown size={14} className={`chevron-icon ${langDropOpen ? "open" : ""}`} />
+                <ChevronDown size={14} />
               </button>
-
               {langDropOpen && (
-                <div className="language-dropdown-menu" role="listbox">
-                  <button 
-                    role="option" 
-                    aria-selected={lang === "en"} 
-                    className={`language-dropdown-item ${lang === "en" ? "active" : ""}`}
-                    onClick={() => {
-                      setLang("en");
-                      setLangDropOpen(false);
-                    }}
-                  >
-                    EN
-                  </button>
-                  <button 
-                    role="option" 
-                    aria-selected={lang === "hi"} 
-                    className={`language-dropdown-item ${lang === "hi" ? "active" : ""}`}
-                    onClick={() => {
-                      setLang("hi");
-                      setLangDropOpen(false);
-                    }}
-                  >
-                    HI
-                  </button>
-                  <button 
-                    role="option" 
-                    aria-selected={lang === "bn"} 
-                    className={`language-dropdown-item ${lang === "bn" ? "active" : ""}`}
-                    onClick={() => {
-                      setLang("bn");
-                      setLangDropOpen(false);
-                    }}
-                  >
-                    BN
-                  </button>
+                <div className="ap-menu-list" role="listbox">
+                  {(["en", "hi", "bn"] as const).map((code) => (
+                    <button
+                      key={code}
+                      role="option"
+                      aria-selected={lang === code}
+                      className={`ap-menu-item ${lang === code ? "active" : ""}`}
+                      onClick={() => {
+                        setLang(code);
+                        setLangDropOpen(false);
+                      }}
+                    >
+                      {code === "en" ? "English" : code === "hi" ? "हिन्दी" : "বাংলা"}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
             <button
-              className={`btn-toggle${speechEnabled ? " active" : ""}`}
+              className="ap-iconbtn hide-m"
               onClick={() => setSpeechEnabled(!speechEnabled)}
               aria-pressed={speechEnabled}
+              aria-label={speechEnabled ? "Mute voice guidance" : "Enable voice guidance"}
               title={speechEnabled ? "Mute voice guidance" : "Enable voice guidance"}
             >
               {speechEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             </button>
 
-            <button
-              className="btn-primary btn-sm new-session-btn"
-              onClick={resetPipeline}
-              aria-label={TRANSLATIONS[lang].newSession}
-              title={TRANSLATIONS[lang].newSession}
-            >
-              <RefreshCw size={14} className="new-session-icon" />
-              <span className="new-session-label">{TRANSLATIONS[lang].newSession}</span>
+            <button className="ap-btn ghost sm hide-m" onClick={resetPipeline} title={T.newSession}>
+              <RotateCw size={15} />
+              <span>{T.newSession}</span>
+            </button>
+            <button className="ap-iconbtn hide-d" onClick={resetPipeline} aria-label={T.newSession} title={T.newSession}>
+              <RotateCw size={17} />
             </button>
           </div>
         </header>
 
-        {/* Sidebar overlay behind drawer on mobile */}
-        {sidebarOpen && (
-          <div className="sidebar-overlay visible" onClick={() => setSidebarOpen(false)} />
-        )}
+        <div className="ap-scrim" onClick={() => setSidebarOpen(false)} />
 
-        {/* LEFT COLUMN: SIDEBAR CONTROLS */}
-        <aside className={`app-sidebar ${sidebarOpen ? "mobile-open" : ""}`}>
-          
-
-
-          {/* Group 2: Recognisable Asana Library.
-              This used to be a TARGET selector -- you picked a pose and the app
-              checked whether you matched it. That put the classification work
-              on the user. Now the app detects whatever you're doing, so this is
-              a passive reference of what it can recognise, with the currently
-              detected pose highlighted live. */}
-          <div className="sidebar-group">
-            <div className="sidebar-group-header" onClick={() => setOpenGroupPose(!openGroupPose)}>
-              <span>{practiceMode === "guided" ? TRANSLATIONS[lang].targetPose : TRANSLATIONS[lang].recognisedAsanas}</span>
-              <ChevronDown size={16} className={`chevron-icon ${!openGroupPose ? "collapsed" : ""}`} />
+        {/* ─────────── Sidebar (drawer on phones) ─────────── */}
+        <aside className="ap-side" aria-label={T.practice}>
+          <section className="ap-sec">
+            <div className="ap-sec-head">
+              <span className="ap-eyebrow">{practiceMode === "guided" ? T.targetPose : T.recognisedAsanas}</span>
             </div>
-            <div className={`sidebar-group-body ${!openGroupPose ? "collapsed" : ""}`}>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }} role="group" aria-label="Practice mode">
-                <button type="button" className={`btn-toggle ${practiceMode === "free" ? "active" : ""}`}
-                  aria-pressed={practiceMode === "free"} onClick={() => setPracticeMode("free")}>
-                  {TRANSLATIONS[lang].modeFree}
-                </button>
-                <button type="button" className={`btn-toggle ${practiceMode === "guided" ? "active" : ""}`}
-                  aria-pressed={practiceMode === "guided"} onClick={() => setPracticeMode("guided")}>
-                  {TRANSLATIONS[lang].modeGuided}
-                </button>
-              </div>
-              <div style={{ fontSize: "11px", color: "var(--color-text-muted)", lineHeight: 1.4, marginBottom: 8 }}>
-                {practiceMode === "guided" ? TRANSLATIONS[lang].modeGuidedHint : TRANSLATIONS[lang].modeFreeHint}
-              </div>
-              <div className="pose-card-grid">
-                {POSE_LIBRARY.map(({ id, icon }) => (
+            <div className="ap-seg" role="group" aria-label="Practice mode">
+              <button type="button" aria-pressed={practiceMode === "free"} onClick={() => setPracticeMode("free")}>
+                {T.modeFree}
+              </button>
+              <button type="button" aria-pressed={practiceMode === "guided"} onClick={() => setPracticeMode("guided")}>
+                {T.modeGuided}
+              </button>
+            </div>
+            <p className="ap-hint">{practiceMode === "guided" ? T.modeGuidedHint : T.modeFreeHint}</p>
+            <div className="ap-poses">
+              {POSE_LIBRARY.map(({ id }) => {
+                const Icon = POSE_ICONS[id] || Leaf;
+                const isOn = practiceMode === "guided" ? targetPose === id : activePose === id;
+                const pick = practiceMode === "guided";
+                return (
                   <div
                     key={id}
-                    className={`pose-card ${(practiceMode === "guided" ? targetPose === id : activePose === id) ? "active" : ""}`}
-                    title={getSanskritName(id, lang)}
-                    onClick={practiceMode === "guided" ? () => { setTargetPose(id); setSidebarOpen(false); } : undefined}
+                    role={pick ? "button" : undefined}
+                    tabIndex={pick ? 0 : undefined}
+                    className={`ap-pose ${isOn ? "active" : ""} ${pick ? "pick" : ""}`}
+                    onClick={pick ? () => { setTargetPose(id); setSidebarOpen(false); } : undefined}
+                    onKeyDown={pick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTargetPose(id); setSidebarOpen(false); } } : undefined}
                   >
-                    <span className="pose-card-icon">{icon}</span>
-                    <span className="pose-card-label">{getSanskritName(id, lang)}</span>
+                    <span className="ap-pose-ic"><Icon size={19} strokeWidth={1.8} /></span>
+                    <span>
+                      <div className="ap-pose-name">{getSanskritName(id, lang)}</div>
+                      <div className="ap-pose-sub">{POSE_COMMON_NAME[id]}</div>
+                    </span>
+                    {isOn && (
+                      <span className="ap-pose-tag"><i />{practiceMode === "guided" ? T.targetPose : T.tagNow}</span>
+                    )}
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          </div>
+          </section>
 
-
-          {/* Group 4: Digital Twin Profile */}
-          <div className="sidebar-group">
-            <div className="sidebar-group-header" onClick={() => setOpenGroupTwin(!openGroupTwin)}>
-              <span>{TRANSLATIONS[lang].digitalTwinProfile}</span>
-              <ChevronDown size={16} className={`chevron-icon ${!openGroupTwin ? "collapsed" : ""}`} />
-            </div>
-            <div className={`sidebar-group-body ${!openGroupTwin ? "collapsed" : ""}`}>
-              {calibratedProfile ? (
-                <div className="scrollable-panel" style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "220px", overflowY: "auto", padding: "4px 4px 4px 0", margin: "4px 0" }}>
-                  <div style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500", marginBottom: "4px" }}>
-                    {TRANSLATIONS[lang].activeProfile}
-                  </div>
-                  {Object.keys(calibratedProfile).map((joint) => (
-                    <div key={joint} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "4px" }}>
-                      <span style={{ color: "rgba(255,255,255,0.7)" }}>{(JOINT_TRANSLATIONS[lang][joint] || joint.replace('_', ' ')).toUpperCase()}</span>
-                      <span style={{ fontWeight: "600" }}>
-                        {calibratedProfile[joint].min}° – {calibratedProfile[joint].max}°
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", lineHeight: "1.5" }}>
-                  {calibrationState === "calibrating" ? (
-                    <span style={{ color: "var(--color-warning)" }}>{TRANSLATIONS[lang].calibratingTwin}</span>
-                  ) : (
-                    TRANSLATIONS[lang].uncalibratedTwin
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Group 5: Pose Guide — alignment cues for the selected pose */}
           {(() => {
             const cues = POSE_GUIDE[guidePose];
             const diff = POSE_DIFFICULTY[guidePose];
             const joints = (POSE_TARGET_ANGLES[guidePose] || []).slice(0, 3);
             return cues ? (
-              <div className="sidebar-group">
-                <div className="sidebar-group-header" onClick={() => setOpenGroupPoseGuide(!openGroupPoseGuide)}>
-                  <span>Pose Guide</span>
-                  <ChevronDown size={16} className={`chevron-icon ${!openGroupPoseGuide ? "collapsed" : ""}`} />
-                </div>
-                <div className={`sidebar-group-body ${!openGroupPoseGuide ? "collapsed" : ""}`}>
-                  {/* Reference photo — the actual source of truth for what this
-                      pose should look like, since a single emoji can't show
-                      correct body position and (as warrior_2's old 🧘 icon
-                      proved) a wrong one can teach the wrong form entirely. */}
+              <div className="ap-acc">
+                <button className="ap-acc-head" aria-expanded={openGroupPoseGuide} onClick={() => setOpenGroupPoseGuide(!openGroupPoseGuide)}>
+                  <span>{T.poseGuide}</span>
+                  <ChevronDown size={17} />
+                </button>
+                <div className="ap-acc-body" hidden={!openGroupPoseGuide}>
                   {POSE_REFERENCE_IMAGES[guidePose] && (
-                    <div className="pose-guide-reference">
+                    <figure className="ap-ref">
                       <img
                         src={POSE_REFERENCE_IMAGES[guidePose].src}
                         alt={`Correct form for ${getSanskritName(guidePose, "en")}`}
-                        className="pose-guide-reference-img"
+                        loading="lazy"
                       />
-                      <span className="pose-guide-reference-credit">
-                        {POSE_REFERENCE_IMAGES[guidePose].credit}
-                      </span>
-                    </div>
+                      <figcaption>{POSE_REFERENCE_IMAGES[guidePose].credit}</figcaption>
+                    </figure>
                   )}
-
-                  {/* Difficulty badge */}
                   {diff && (
-                    <div className="pose-guide-diff">
-                      <span className="pose-guide-diff-dot" style={{ background: diff.color }} />
-                      <span className="pose-guide-diff-label" style={{ color: diff.color }}>{diff.level}</span>
-                      <span className="pose-guide-diff-name">{getSanskritName(guidePose, lang)}</span>
+                    <div className="ap-level">
+                      <i style={{ background: diff.color }} />
+                      <span style={{ color: diff.color }}>{diff.level}</span>
+                      <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>· {getSanskritName(guidePose, lang)}</span>
                     </div>
                   )}
-
-                  {/* Alignment cue list */}
-                  <div className="pose-guide-cues">
+                  <div className="ap-cues">
                     {cues.map((c, i) => (
-                      <div key={i} className="pose-guide-cue-row">
-                        <span className="pose-guide-cue-icon">{c.icon}</span>
-                        <span className="pose-guide-cue-text">{c.cue}</span>
+                      <div key={i} className="ap-cue">
+                        <b>{c.icon}</b>
+                        <span>{c.cue}</span>
                       </div>
                     ))}
                   </div>
-
-                  {/* Target joints being measured */}
                   {joints.length > 0 && (
-                    <div className="pose-guide-joints">
-                      <span className="pose-guide-joints-label">AI measures:</span>
-                      <div className="pose-guide-joint-chips">
+                    <div>
+                      <div className="ap-eyebrow" style={{ marginBottom: 8 }}>{T.measuredJoints}</div>
+                      <div className="ap-chips">
                         {joints.map((j, i) => (
-                          <span key={i} className="pose-guide-chip">{j.label.replace(" Angle", "").replace(" Extension", "")}</span>
+                          <span key={i} className="ap-chip">{j.label.replace(" Angle", "").replace(" Extension", "")}</span>
                         ))}
                       </div>
                     </div>
@@ -2072,512 +2176,335 @@ export default function Dashboard() {
             ) : null;
           })()}
 
-          {/* Group 6: Session Overview — live status strip */}
-          <div className="sidebar-group">
-            <div className="sidebar-group-header" onClick={() => setOpenGroupSession(!openGroupSession)}>
-              <span>Session Overview</span>
-              <ChevronDown size={16} className={`chevron-icon ${!openGroupSession ? "collapsed" : ""}`} />
-            </div>
-            <div className={`sidebar-group-body ${!openGroupSession ? "collapsed" : ""}`}>
-              <div className="session-overview-grid">
-                {/* Camera */}
-                <div className="session-stat-row">
-                  <div className={`session-stat-dot ${cameraActive ? "active" : ""}`} />
-                  <span className="session-stat-label">Camera</span>
-                  <span className={`session-stat-val ${cameraActive ? "on" : "off"}`}>
-                    {cameraActive ? "Active" : "Off"}
-                  </span>
-                </div>
-                {/* Calibration */}
-                <div className="session-stat-row">
-                  <div className={`session-stat-dot ${calibratedProfile ? "calibrated" : calibrationState === "calibrating" ? "calibrating-anim" : ""}`} />
-                  <span className="session-stat-label">Digital Twin</span>
-                  <span className={`session-stat-val ${
-                    calibratedProfile ? "on" : calibrationState === "calibrating" ? "warn" : "off"
-                  }`}>
-                    {calibratedProfile ? "Calibrated" : calibrationState === "calibrating" ? "Calibrating…" : "Uncalibrated"}
-                  </span>
-                </div>
-                {/* Voice */}
-                <div className="session-stat-row">
-                  <div className={`session-stat-dot ${speechEnabled ? "active" : ""}`} />
-                  <span className="session-stat-label">Voice</span>
-                  <span className={`session-stat-val ${speechEnabled ? "on" : "off"}`}>
-                    {speechEnabled ? "On" : "Muted"}
-                  </span>
-                </div>
-                {voiceMissingForLang && (
-                  <div role="status" style={{ fontSize: "11px", color: "var(--color-warning)", lineHeight: 1.4, padding: "4px 2px" }}>
-                    {TRANSLATIONS[lang].voiceMissing}
+          <div className="ap-acc">
+            <button className="ap-acc-head" aria-expanded={openGroupTwin} onClick={() => setOpenGroupTwin(!openGroupTwin)}>
+              <span>{T.digitalTwinProfile}</span>
+              <ChevronDown size={17} />
+            </button>
+            <div className="ap-acc-body" hidden={!openGroupTwin}>
+              {calibratedProfile ? (
+                <>
+                  <div className="ap-note" style={{ color: "var(--ok)", fontWeight: 600 }}>{T.activeProfile}</div>
+                  <div className="ap-joint-list">
+                    {Object.keys(calibratedProfile).map((joint) => (
+                      <div key={joint} className="ap-joint-row">
+                        <span>{JOINT_TRANSLATIONS[lang][joint] || joint.replace("_", " ")}</span>
+                        <strong className="num">{calibratedProfile[joint].min}° – {calibratedProfile[joint].max}°</strong>
+                      </div>
+                    ))}
                   </div>
-                )}
-                {/* Pose */}
-                <div className="session-stat-row">
-                  <div className="session-stat-dot active" />
-                  <span className="session-stat-label">Target Pose</span>
-                  <span className="session-stat-val on" style={{ fontFamily: "var(--font-mono)", fontSize: "0.68rem" }}>
-                    {getSanskritName(guidePose, "en").split(" ")[0]}
-                  </span>
-                </div>
-              </div>
+                </>
+              ) : (
+                <p className={`ap-note ${calibrationState === "calibrating" ? "warn" : ""}`}>
+                  {calibrationState === "calibrating" ? T.calibratingTwin : T.uncalibratedTwin}
+                </p>
+              )}
             </div>
           </div>
 
+          <div className="ap-acc">
+            <button className="ap-acc-head" aria-expanded={openGroupSession} onClick={() => setOpenGroupSession(!openGroupSession)}>
+              <span>{T.sessionOverview}</span>
+              <ChevronDown size={17} />
+            </button>
+            <div className="ap-acc-body" hidden={!openGroupSession}>
+              <div className="ap-kv">
+                <div className="ap-kv-row"><i className={cameraActive ? "on" : ""} /><span>Camera</span><strong>{cameraActive ? "Active" : "Off"}</strong></div>
+                <div className="ap-kv-row">
+                  <i className={calibratedProfile ? "on" : calibrationState === "calibrating" ? "warn" : ""} />
+                  <span>Digital Twin</span>
+                  <strong>{calibratedProfile ? "Calibrated" : calibrationState === "calibrating" ? "Calibrating…" : "Uncalibrated"}</strong>
+                </div>
+                <div className="ap-kv-row"><i className={speechEnabled ? "on" : ""} /><span>{T.voice}</span><strong>{speechEnabled ? "On" : "Muted"}</strong></div>
+                <div className="ap-kv-row"><i className="on" /><span>{T.targetPose}</span><strong>{getSanskritName(guidePose, lang)}</strong></div>
+              </div>
+              {voiceMissingForLang && <p className="ap-note warn" role="status">{T.voiceMissing}</p>}
+            </div>
+          </div>
         </aside>
 
-
-        {/* RIGHT COLUMN: MAIN CONTENT */}
-        <main className="app-content">
-          
-          <div className="camera-kpi-layout">
-            {/* Camera stream block */}
-            <div className="camera-panel">
-              <div className="camera-panel-header">
-                <div className="camera-panel-title">
-                  <CameraIcon size={18} />
-                  <span>{TRANSLATIONS[lang].cameraStream}</span>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {cameraActive && hasMultipleCameras && (
-                    <button
-                      className="btn-primary btn-sm"
-                      style={{ background: "var(--color-primary-muted)", border: "1px solid var(--color-primary)", display: "flex", alignItems: "center", gap: "6px" }}
-                      onClick={toggleCamera}
-                      disabled={isInitializingCamera}
-                    >
-                      <RefreshCw size={16} />
-                      <span>{TRANSLATIONS[lang].swapCamera}</span>
-                    </button>
-                  )}
-
-                  {cameraActive && (
-                    <button
-                      className="btn-primary btn-sm"
-                      style={{
-                        background: 'var(--color-surface-offset)',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                      onClick={enterFullscreen}
-                      title="Enter fullscreen yoga mode"
-                    >
-                      <Maximize2 size={16} />
-                      <span>{TRANSLATIONS[lang].focusMode}</span>
-                    </button>
-                  )}
-
-                  <button 
-                    className={`btn-primary btn-sm ${cameraActive ? "btn-error" : ""} ${isInitializingCamera ? "btn-loading" : ""}`}
-                    onClick={cameraActive ? stopCamera : () => startCamera()}
-                    disabled={!mediaPipeLoaded || isInitializingCamera}
-                  >
-                    {isInitializingCamera ? (
-                      <RefreshCw className="animate-spin" size={16} />
-                    ) : cameraActive ? (
-                      <>
-                        <VideoOff size={16} />
-                        <span>{TRANSLATIONS[lang].stopVideo}</span>
-                      </>
-                    ) : (
-                      <>
-                        <CameraIcon size={16} />
-                        <span>{TRANSLATIONS[lang].startVideo}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div
-                ref={fullscreenContainerRef}
-                className={`camera-frame-wrapper ${isFullscreen ? 'yoga-fullscreen' : ''}`}
-              >
+        {/* ─────────── Main: pinned camera + its own scroll region ─────────── */}
+        <main className="ap-main">
+          <section className="ap-stage-col" aria-label="Camera">
+            <div className="ap-cam">
+              <div ref={fullscreenContainerRef} className={`ap-cam-wrap ${isFullscreen ? "yoga-fullscreen" : ""}`}>
                 <div
-                  className="camera-frame"
-                  style={{ position: "relative" }}
+                  className={`ap-frame ${cameraActive && poseName ? "has-chip" : ""}`}
                   onTouchStart={cameraActive ? handleTouchStart : undefined}
                   onTouchMove={cameraActive ? handleTouchMove : undefined}
                   onTouchEnd={cameraActive ? handleTouchEnd : undefined}
                   onClick={cameraActive ? showZoomBarBriefly : undefined}
                 >
-                  <video 
-                    ref={videoRef} 
-                    className="camera-video-element"
-                    playsInline 
-                    muted 
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className={`camera-canvas ${facingMode === "user" ? "mirrored" : ""}`}
-                  />
-                  {cameraActive && calibrationState === "calibrating" && (
-                    <div style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(10, 15, 30, 0.7)",
-                      backdropFilter: "blur(4px)",
-                      borderRadius: "12px",
-                      zIndex: 10,
-                      color: "#fff",
-                      textAlign: "center"
-                    }}>
-                      <div style={{
-                        padding: "24px 32px",
-                        borderRadius: "16px",
-                        background: "rgba(255, 255, 255, 0.1)",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.37)"
-                      }}>
-                        <Sparkles style={{ color: "var(--color-primary)", marginBottom: "12px", animation: "pulse-spin 3s linear infinite" }} size={40} />
-                        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>{TRANSLATIONS[lang].calibratingProgress}</h3>
-                        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px 0" }}>{TRANSLATIONS[lang].stayInView}</p>
-                        <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--color-primary)" }}>{calibrationCountdown}s</div>
+                  {/* The video is the picture (always visible, so a slow pose engine never means a black screen);
+                      the canvas on top carries only the skeleton. Both share one mirror/zoom transform. */}
+                  <div ref={stageRef} className={`ap-stage ${facingMode === "user" ? "mirrored" : ""}`}>
+                    <video ref={videoRef} className="ap-video" playsInline muted autoPlay />
+                    <canvas ref={canvasRef} className="ap-canvas" />
+                  </div>
+
+                  {!cameraActive && !cameraError && (
+                    <div className="ap-idle">
+                      <div className="ap-idle-mark"><ScanLine size={26} strokeWidth={1.6} /></div>
+                      <h2>{T.readyTitle}</h2>
+                      <p>{T.readyBody}</p>
+                      <button className="ap-btn" onClick={() => startCamera()} disabled={isInitializingCamera}>
+                        {StartStopLabel}
+                      </button>
+                      <div className="ap-tips">
+                        <span><Ruler size={14} />{T.tipDistance}</span>
+                        <span><Sun size={14} />{T.tipLight}</span>
+                        <span><PersonStanding size={14} />{T.tipFrame}</span>
                       </div>
                     </div>
                   )}
-                  {cameraActive && (
-                    <div className="camera-live-badge">
-                      <div className="live-dot" />
-                      <span>{lang === 'hi' ? "लाइव" : lang === 'bn' ? "লাইভ" : "LIVE"}</span>
-                    </div>
-                  )}
 
-                  {/* Zoom level badge — top right, always visible while zoomed */}
-                  {cameraActive && zoomLevel !== 1 && (
-                    <div className="zoom-badge">
-                      {zoomLevel < 1 ? `${zoomLevel.toFixed(1)}×` : zoomLevel >= 10 ? '10×' : `${zoomLevel.toFixed(1)}×`}
-                    </div>
-                  )}
-
-                  {/* Transparent Vertical Zoom Control — always visible */}
-                  {cameraActive && (
-                    <div className="zoom-vertical-control" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        className="zoom-btn"
-                        onClick={() => applyZoom(zoomLevel + 0.5)}
-                        aria-label="Zoom in"
-                      >
-                        +
+                  {cameraError && (
+                    <div className="ap-idle err" role="alert">
+                      <div className="ap-idle-mark"><AlertTriangle size={26} strokeWidth={1.6} /></div>
+                      <h2>Camera unavailable</h2>
+                      <p>{cameraError}</p>
+                      <button className="ap-btn" onClick={() => startCamera()} disabled={isInitializingCamera}>
+                        <RefreshCw size={17} className={isInitializingCamera ? "spin" : ""} />
+                        <span>{T.retry}</span>
                       </button>
-                      
-                      <div className="zoom-vertical-slider-container">
+                    </div>
+                  )}
+
+                  {cameraActive && calibrationState === "calibrating" && (
+                    <div className="ap-calib">
+                      <div>
+                        <h3>{T.calibratingProgress}</h3>
+                        <p>{T.stayInView}</p>
+                        <strong className="num">{calibrationCountdown}s</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {cameraActive && (
+                    <>
+                      <div className="ap-hud tl">
+                        <span className="ap-live"><i />{lang === "hi" ? "लाइव" : lang === "bn" ? "লাইভ" : "LIVE"}</span>
+                        {engineState === "loading" && (
+                          <span className="ap-engine" role="status"><Loader2 size={14} className="spin" />{T.poseEngineLoading}</span>
+                        )}
+                        {engineState === "error" && (
+                          <span className="ap-engine err" role="alert">
+                            <AlertTriangle size={14} />{T.poseEngineSlow}
+                            <button onClick={retryEngine}>{T.retry}</button>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="ap-hud tr">
+                        {hasMultipleCameras && (
+                          <button className="ap-hudbtn" onClick={toggleCamera} disabled={isInitializingCamera} aria-label={T.swapCamera} title={T.swapCamera}>
+                            <SwitchCamera size={18} />
+                          </button>
+                        )}
+                        <button className="ap-hudbtn" onClick={enterFullscreen} aria-label={T.focusMode} title={T.focusMode}>
+                          <Maximize2 size={18} />
+                        </button>
+                      </div>
+
+                      {calibrationState !== "calibrating" && (
+                        <div className="ap-hud bl">
+                          <span className="ap-posechip" aria-live="polite">
+                            <b>{showMismatch ? T.wrongPoseBadge : isTransitioning ? T.stateTransitioning : poseName || T.lookingForPose}</b>
+                            {scoreActive && <em className={scoreTone}>{pct}%</em>}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className={`ap-zoom ${showZoomBar || zoomLevel !== 1 ? "show" : ""}`} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => applyZoom(zoomLevel + 0.5)} aria-label="Zoom in">+</button>
                         <input
                           type="range"
-                          className="zoom-slider-vertical"
                           min={0.5}
                           max={10}
                           step={0.1}
                           value={zoomLevel}
                           onChange={(e) => applyZoom(parseFloat(e.target.value))}
+                          aria-label="Zoom"
                         />
+                        <button onClick={() => applyZoom(zoomLevel - 0.5)} aria-label="Zoom out">−</button>
+                        <small>{zoomLevel.toFixed(1)}×</small>
                       </div>
 
-                      <button 
-                        className="zoom-btn"
-                        onClick={() => applyZoom(zoomLevel - 0.5)}
-                        aria-label="Zoom out"
-                      >
-                        −
-                      </button>
-                      
-                      {zoomCapable && (
-                        <span className="zoom-hw-dot" title="Hardware Zoom Active" />
+                      {calibrationState !== "calibrating" && (
+                        <div className="ap-caption" key={displayCorrectionText} aria-live="polite">
+                          {displayCorrectionText || T.alignBody}
+                        </div>
                       )}
-                    </div>
-                  )}
-
-                  {!cameraActive && (
-                    <div className="camera-placeholder">
-                      <div className="camera-empty-icon">
-                        <VideoOff size={32} />
-                      </div>
-                      <p>{TRANSLATIONS[lang].cameraInactive}</p>
-                    </div>
+                    </>
                   )}
                 </div>
 
-                {/* Caption bar visible inside the camera frame wrapper unconditionally */}
-                {cameraActive && (
-                  <div className="fullscreen-caption-bar" key={displayCorrectionText}>
-                    <span className={displayCorrectionText ? 'caption-text active' : 'caption-text placeholder'}>
-                      {displayCorrectionText || TRANSLATIONS[lang].alignBody}
-                    </span>
-                  </div>
-                )}
-
-                {/* Fullscreen-only overlays */}
                 {isFullscreen && (
                   <>
-                    {/* Exit button */}
-                    <button
-                      className="fullscreen-exit-btn"
-                      onClick={exitFullscreen}
-                      aria-label="Exit fullscreen"
-                    >
+                    <button className="ap-fs-exit" onClick={exitFullscreen} aria-label="Exit fullscreen">
                       <X size={16} />
-                      <span>{TRANSLATIONS[lang].exit}</span>
+                      <span>{T.exit}</span>
                     </button>
-
-                    {/* Score badge */}
-                    <div className={`fullscreen-score-badge ${effectiveCorrectness >= 0.75 ? 'good' : 'warn'}`}>
-                      {showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}
+                    <div className={`ap-fs-score ${scoreTone === "ok" ? "good" : scoreTone === "none" ? "" : "warn"}`}>
+                      {showMismatch ? T.wrongPoseBadge : isTransitioning ? T.stateTransitioning : isUnrecognized ? "—" : `${pct}%`}
                     </div>
                   </>
                 )}
               </div>
+
+              {/* tablet / desktop: status + main action under the picture (phones use the dock) */}
+              <div className="ap-cam-bar">
+                <div className={`ap-cam-status ${cameraActive ? "on" : ""}`}>
+                  <i />
+                  <span>{cameraActive ? T.cameraLive : T.cameraOff}</span>
+                </div>
+                <div className="ap-spacer" />
+                {cameraActive && hasMultipleCameras && (
+                  <button className="ap-btn ghost sm" onClick={toggleCamera} disabled={isInitializingCamera}>
+                    <SwitchCamera size={16} /><span>{T.swapCamera}</span>
+                  </button>
+                )}
+                <button
+                  className={`ap-btn ${cameraActive ? "dark" : ""}`}
+                  onClick={cameraActive ? stopCamera : () => startCamera()}
+                  disabled={isInitializingCamera}
+                >
+                  {StartStopLabel}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="ap-live-col" aria-label={T.livePanel}>
+            {/* Score */}
+            <div className="ap-card ap-score" aria-live="polite">
+              <ScoreRing value={pct} tone={scoreTone} active={scoreActive} />
+              <div>
+                <div className="ap-card-title">{T.postureScore}</div>
+                <div className="ap-verdict">{verdict}</div>
+                <span className={`ap-state ${isTransitioning ? "moving" : isUnrecognized ? "" : "holding"}`}>
+                  <i />
+                  {isTransitioning ? T.stateTransitioning : isUnrecognized ? T.stateUnrecognized : T.stateHolding}
+                </span>
+                {effectivePersonalCorrectness !== null && effectivePersonalCorrectness !== undefined && !isUnrecognized && (
+                  <div className="ap-personal">
+                    {T.personalScore}: <b className="num">{Math.round(effectivePersonalCorrectness * 100)}%</b>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* KPI Cards Column */}
-            <div className="kpi-column">
-              {isLoading ? (
-                <>
-                  <div className="kpi-card skeleton">
-                    <div className="kpi-label skeleton-text" />
-                    <div className="kpi-value skeleton-heading" />
-                    <div className="kpi-sub skeleton-text" />
-                  </div>
-                  <div className="kpi-card skeleton">
-                    <div className="kpi-label skeleton-text" />
-                    <div className="kpi-value skeleton-heading" />
-                    <div className="kpi-sub skeleton-text" />
-                  </div>
-                  <div className="kpi-card skeleton">
-                    <div className="kpi-label skeleton-text" />
-                    <div className="kpi-value skeleton-heading" />
-                    <div className="kpi-sub skeleton-text" />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="kpi-card">
-                    <span className="kpi-label">{TRANSLATIONS[lang].postureScore}</span>
-                    <span className="kpi-value">{showMismatch ? TRANSLATIONS[lang].wrongPoseBadge : isTransitioning ? TRANSLATIONS[lang].stateTransitioning : isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}</span>
-                    <span className="kpi-sub">{effectiveCorrectness >= 0.75 ? TRANSLATIONS[lang].onTarget : TRANSLATIONS[lang].needsAdjustment}</span>
-                  </div>
-                  {/* Personalised score, shown only once the user has
-                      calibrated their Digital Twin. Kept as a SEPARATE card
-                      from the universal score rather than replacing it: the
-                      gap between the two is the interesting part -- it's the
-                      difference between "your form is off" and "your body
-                      just doesn't move that way". */}
-                  {effectivePersonalCorrectness !== null && effectivePersonalCorrectness !== undefined && (
-                    <div className="kpi-card">
-                      <span className="kpi-label">{TRANSLATIONS[lang].personalScore}</span>
-                      <span className="kpi-value">{isUnrecognized ? "—" : `${Math.round(effectivePersonalCorrectness * 100)}%`}</span>
-                      <span className="kpi-sub">{TRANSLATIONS[lang].universalScore}: {isUnrecognized ? "—" : `${Math.round(effectiveCorrectness * 100)}%`}</span>
-                    </div>
-                  )}
-                  <div className="kpi-card">
-                    <span className="kpi-label">{TRANSLATIONS[lang].detectedPose}</span>
-                    <span className="kpi-value">{activePose === "transition/unknown" ? "—" : getSanskritName(activePose, lang)}</span>
-                    {/* Motion state is one of this system's distinguishing
-                        capabilities -- telling a genuine HOLD apart from a
-                        TRANSITION, rather than lumping both into one
-                        "unknown" bucket. It was rendered as grey sub-text
-                        indistinguishable from a caption. As a colour-coded
-                        badge the user can read it at a glance from across a
-                        mat, which is the only distance it is ever read from. */}
-                    <span
-                      className={`state-pill ${
-                        isTransitioning ? "moving" : isUnrecognized ? "unknown" : "holding"
-                      }`}
-                      aria-live="polite"
-                    >
-                      <span className="state-dot" aria-hidden="true" />
-                      {isTransitioning
-                        ? TRANSLATIONS[lang].stateTransitioning
-                        : isUnrecognized
-                        ? TRANSLATIONS[lang].stateUnrecognized
-                        : TRANSLATIONS[lang].stateHolding}
-                    </span>
-                  </div>
-                  <div className="kpi-card">
-                    <span className="kpi-label">{TRANSLATIONS[lang].fusing}</span>
-                    <span className="kpi-value">{recoveredJoints.length > 0 ? recoveredJoints.length : "—"}</span>
-                    <span className="kpi-sub">{recoveredJoints.length > 0 ? TRANSLATIONS[lang].occlusionActive : TRANSLATIONS[lang].allVisible}</span>
-                  </div>
-                </>
+            {/* Coaching */}
+            <div className={`ap-coach ${coach.tone}`} key={coach.text}>
+              <div className="ap-coach-ic">{coach.icon}</div>
+              <div style={{ minWidth: 0 }}>
+                <div className="ap-coach-label">{coach.label}</div>
+                <div className="ap-coach-text">{coach.text}</div>
+                {coach.tone === "warn" && correctionText && !isTransitioning && lastEfficacy && (
+                  <span className={`ap-efficacy ${lastEfficacy.worked ? "good" : ""}`} aria-live="polite">
+                    {lastEfficacy.worked
+                      ? `${formatJointName(lastEfficacy.joint, lang)} ${lang === "hi" ? "में" : lang === "bn" ? "" : "improved"} ${Math.round(lastEfficacy.improvementDeg)}°${lang === "hi" ? " सुधार" : lang === "bn" ? " উন্নত" : ""}`
+                      : lang === "hi"
+                      ? "कोई बदलाव नहीं — अलग तरीके से बताता हूँ"
+                      : lang === "bn"
+                      ? "পরিবর্তন হয়নি — অন্যভাবে বলছি"
+                      : "No change yet — I'll try a different cue"}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Pose */}
+            <div className="ap-card">
+              <div className="ap-card-title">{T.detectedPose}</div>
+              <div className={`ap-pose-now ${poseName ? "" : "dim"}`} style={{ marginTop: 6 }}>{poseName || "—"}</div>
+              <div className="ap-rows">
+                <div className="ap-row">
+                  <span>{T.sequenceFlow}</span>
+                  <strong>{flowPose === "transition/unknown" ? T.staticMode : getSanskritName(flowPose, lang)}</strong>
+                </div>
+                <div className="ap-row">
+                  <span>{T.occlusionFusing}</span>
+                  <strong className={recoveredJoints.length > 0 ? "warn" : "ok"}>
+                    {recoveredJoints.length > 0 ? `${T.active} (${recoveredJoints.length})` : T.allVisible}
+                  </strong>
+                </div>
+              </div>
+              {recoveredJoints.length > 0 && (
+                <div className="ap-occl">
+                  <ShieldAlert size={15} style={{ flex: "none", marginTop: 2 }} />
+                  <span><strong>{T.fusingOccluded}</strong> {recoveredJoints.map((j) => JOINT_TRANSLATIONS[lang][j] || j).join(", ")}</span>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Real-time Feedback & Guidance */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <Gauge size={20} />
-              <span>{TRANSLATIONS[lang].feedbackHub}</span>
-            </h2>
-
-            <div className="feedback-grid">
-              <div className="gauge-container glass-panel">
-                <ScoreRing correctness={effectiveCorrectness} />
-                <span className="gauge-label">{TRANSLATIONS[lang].correctnessScore}</span>
-              </div>
-
-              <div className="metrics-list">
-                <div className="deviation-item m-0">
-                  <span className="deviation-name">{TRANSLATIONS[lang].detectedPose}</span>
-                  <span className="metric-value primary">
-                    {getSanskritName(activePose, lang)}
-                  </span>
-                </div>
-                <div className="deviation-item m-0">
-                  <span className="deviation-name">{TRANSLATIONS[lang].sequenceFlow}</span>
-                  <span className="metric-value">
-                    {flowPose === "transition/unknown" ? TRANSLATIONS[lang].staticMode : getSanskritName(flowPose, lang)}
-                  </span>
-                </div>
-                <div className="deviation-item m-0">
-                  <span className="deviation-name">{TRANSLATIONS[lang].occlusionFusing}</span>
-                  <span className={`metric-value ${recoveredJoints.length > 0 ? "warning" : "success"}`}>
-                    {recoveredJoints.length > 0 ? `${TRANSLATIONS[lang].active} (${recoveredJoints.length})` : TRANSLATIONS[lang].inactive}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Occlusion recovery logs */}
-            {recoveredJoints.length > 0 && (
-              <div className="occlusion-alert">
-                <p className="occlusion-alert-text">
-                  <ShieldAlert size={14} />
-                  <span><strong>{TRANSLATIONS[lang].fusingOccluded}</strong> {recoveredJoints.map(j => JOINT_TRANSLATIONS[lang][j] || j).join(", ")} {TRANSLATIONS[lang].mirroredCoordinates}</span>
-                </p>
-              </div>
-            )}
-
-            {/* Stable height status/guidance box */}
-            {activePose === "transition/unknown" ? (
-              <div className="guidance-box info" key="waiting-pose">
-                <Activity size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">{TRANSLATIONS[lang].systemStatus}</span>
-                  <span className="guidance-text">{TRANSLATIONS[lang].detectingPose}</span>
-                </div>
-              </div>
-            ) : showMismatch ? (
-              <div className="guidance-box" key="pose-mismatch">
-                <ShieldAlert size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">{TRANSLATIONS[lang].wrongPoseBadge}</span>
-                  <span className="guidance-text">{displayCorrectionText}</span>
-                </div>
-              </div>
-            ) : isTransitioning ? (
-              <div className="guidance-box" key="pose-transitioning">
-                <Activity size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">{TRANSLATIONS[lang].stateTransitioning}</span>
-                  <span className="guidance-text">{displayCorrectionText}</span>
-                </div>
-              </div>
-            ) : correctionText ? (
-              <div className="guidance-box" key={correctionText}>
-                <Volume2 size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">
-                    {TRANSLATIONS[lang].safetyCorrection}
-                    {correctionIsSafe ? (
-                      <ShieldCheck size={13} className="safety-verified-icon" aria-label="AI-verified safe" />
-                    ) : (
-                      <ShieldAlert size={13} className="safety-flagged-icon" aria-label="Fell back to reviewed template" />
-                    )}
-                  </span>
-                  <span className="guidance-text">{correctionText}</span>
-                  {/* Closed-loop feedback: we measured whether the joint this
-                      cue targeted actually moved. Telling the user the real
-                      number is far more useful than repeating the instruction,
-                      and it is the visible half of the escalation logic -- if
-                      nothing moved, the next cue will not be the same sentence. */}
-                  {lastEfficacy && (
-                    <span
-                      className={`efficacy-chip ${lastEfficacy.worked ? "good" : "flat"}`}
-                      aria-live="polite"
-                    >
-                      {lastEfficacy.worked
-                        ? `${formatJointName(lastEfficacy.joint, lang)} ${
-                            lang === "hi" ? "में" : lang === "bn" ? "" : "improved"
-                          } ${Math.round(lastEfficacy.improvementDeg)}°${
-                            lang === "hi" ? " सुधार" : lang === "bn" ? " উন্নত" : ""
-                          }`
-                        : lang === "hi"
-                        ? "कोई बदलाव नहीं — अलग तरीके से बताता हूँ"
-                        : lang === "bn"
-                        ? "পরিবর্তন হয়নি — অন্যভাবে বলছি"
-                        : "No change yet — I'll try a different cue"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="guidance-box success" key="alignment-correct">
-                <CheckCircle2 size={24} />
-                <div className="guidance-content">
-                  <span className="guidance-label-text">{TRANSLATIONS[lang].alignmentCorrect}</span>
-                  <span className="guidance-text">{TRANSLATIONS[lang].alignmentCorrectDesc}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Angle details */}
-          <div className="glass-panel">
-            <h2 className="section-title">
-              <HelpCircle size={20} />
-              <span>{TRANSLATIONS[lang].angleDetails}</span>
-            </h2>
-            
-            {activePose === "transition/unknown" ? (
-              <div className="angle-placeholder-text">
-                <p>{TRANSLATIONS[lang].assumePosePrompt}</p>
-              </div>
-            ) : isTransitioning ? (
-              <div className="angle-placeholder-text">
-                <p>{displayCorrectionText}</p>
-              </div>
-            ) : (
-              <>
-                {getPoseJoints(activePose).map(({ joint, label, target, tolerance }) => {
+            {/* Joint alignment */}
+            <div className="ap-card">
+              <div className="ap-card-head"><span className="ap-card-title">{T.angleDetails}</span></div>
+              {activePose === "transition/unknown" ? (
+                <p className="ap-empty">{T.assumePosePrompt}</p>
+              ) : isTransitioning ? (
+                <p className="ap-empty">{displayCorrectionText}</p>
+              ) : (
+                getPoseJoints(activePose).map(({ joint, label, target, tolerance }) => {
                   const jointIdx = FEATURE_NAMES_ORDER.indexOf(joint);
-                  const currentAngle = allCurrentAngles[jointIdx] !== undefined 
-                    ? Math.round(allCurrentAngles[jointIdx]) 
-                    : (joint === "knee_l" ? currentKneeAngle : (joint === "shoulder_l" ? currentShoulderAngle : 180));
+                  const currentAngle =
+                    allCurrentAngles[jointIdx] !== undefined
+                      ? Math.round(allCurrentAngles[jointIdx])
+                      : joint === "knee_l" ? currentKneeAngle : joint === "shoulder_l" ? currentShoulderAngle : 180;
                   const diff = currentAngle - target;
-                  const isDeviating = Math.abs(diff) > tolerance;
-                  const translatedLabel = JOINT_TRANSLATIONS[lang][joint] || label;
-
+                  const off = Math.abs(diff) > tolerance;
                   return (
-                    <div className="deviation-item" key={joint}>
-                      <span className="deviation-name">{translatedLabel} ({TRANSLATIONS[lang].targetFor.replace('{target}', target.toString()).replace('{pose}', getSanskritName(activePose, lang))})</span>
-                      <div className="deviation-row-detail">
-                        <div className="deviation-bar-bg">
-                          <div 
-                            className={`deviation-bar-fill ${isDeviating ? "error" : "success"}`}
-                            style={{ 
-                              width: `${Math.min(100, Math.abs(diff) * 1.5)}%` 
-                            }} 
-                          />
-                        </div>
-                        <span className={`deviation-value ${isDeviating ? "error" : "success"}`}>
-                          {currentAngle}° ({TRANSLATIONS[lang].diff} {diff > 0 ? "+" : ""}{diff}°)
-                        </span>
+                    <div className="ap-joint" key={joint}>
+                      <div className="ap-joint-top">
+                        <span className="ap-joint-name">{JOINT_TRANSLATIONS[lang][joint] || label}</span>
+                        <span className={`ap-joint-val ${off ? "off" : ""}`}>{currentAngle}° ({diff > 0 ? "+" : ""}{diff}°)</span>
                       </div>
+                      <div className="ap-joint-sub">
+                        {T.targetFor.replace("{target}", target.toString()).replace("{pose}", getSanskritName(activePose, lang))}
+                      </div>
+                      <div className="ap-bar"><i className={off ? "off" : ""} style={{ width: `${Math.min(100, Math.abs(diff) * 1.5)}%` }} /></div>
                     </div>
                   );
-                })}
-              </>
-            )}
-          </div>
-
+                })
+              )}
+            </div>
+          </section>
         </main>
+
+        {/* ─────────── Phone dock ─────────── */}
+        <nav className="ap-dock" aria-label="Controls">
+          <button className="ap-dock-btn" onClick={() => setSidebarOpen(!sidebarOpen)} aria-pressed={sidebarOpen}>
+            <LayoutGrid size={21} /><span>{T.poses}</span>
+          </button>
+          <button
+            className={`ap-dock-main ${cameraActive ? "stop" : ""}`}
+            onClick={cameraActive ? stopCamera : () => startCamera()}
+            disabled={isInitializingCamera}
+          >
+            {StartStopLabel}
+          </button>
+          <button className="ap-dock-btn" onClick={toggleCamera} disabled={!cameraActive || !hasMultipleCameras || isInitializingCamera}>
+            <SwitchCamera size={21} /><span>{T.flip}</span>
+          </button>
+          <button className="ap-dock-btn" onClick={() => setSpeechEnabled(!speechEnabled)} aria-pressed={speechEnabled}>
+            {speechEnabled ? <Volume2 size={21} /> : <VolumeX size={21} />}<span>{T.voice}</span>
+          </button>
+        </nav>
       </div>
+
+      {!isOnline && <div className="ap-offline" role="status">{T.offline}</div>}
+
+      {showInstallBanner && (
+        <div className="ap-toast" role="dialog" aria-label={T.installTitle}>
+          <div className="grow">
+            <strong>{T.installTitle}</strong>
+            <small>{T.installBody}</small>
+          </div>
+          <button className="act" onClick={handleInstall}>{T.install}</button>
+          <button className="x" onClick={() => setShowInstallBanner(false)} aria-label="Dismiss"><X size={16} /></button>
+        </div>
+      )}
     </>
   );
 }
