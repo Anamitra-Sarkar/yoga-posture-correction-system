@@ -40,8 +40,8 @@
 
   --cam: #141310;
 
-  --font-display: var(--nf-display), 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-ui: var(--nf-ui), 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --r-sm: 8px;
   --r-md: 12px;
@@ -690,3 +690,13 @@
 .ap-btn:active, .ap-dock-main:active, .ap-iconbtn:active { transform: scale(0.97); }
 .ap-dock-btn:active { background: var(--paper-2); }
 @media (hover: none) { .ap-btn:hover { background: var(--brand); } .ap-btn.ghost:hover { background: transparent; } .ap-btn.dark:hover { background: var(--ink); } }
+
+/* Self-hosted fonts (next/font): the variables exist only on this wrapper, so the tokens are rebound here.
+   If a font fails to load, the named fallbacks above still apply. */
+.nf-root {
+  --font-ui: var(--nf-ui), 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: var(--font-ui);
+  --font-display: var(--nf-display), 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-mono: var(--nf-mono), 'DM Mono', ui-monospace, monospace;
+  font-family: var(--font-ui);
+}

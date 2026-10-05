@@ -1,8 +1,7 @@
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { useEffect } from 'react';
-// Importing the font module here is what makes Next emit the @font-face CSS (the <html> classes are set in _document).
-import '../lib/fonts';
+import { fontUi, fontDisplay, fontMono } from '../lib/fonts';
 import '../styles/globals.css';
 import '../styles/app.css';
 
@@ -89,7 +88,10 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="twitter:title" content="AsanaAI" />
         <meta name="twitter:description" content="AI-powered real-time yoga posture correction." />
       </Head>
-      <Component {...pageProps} />
+      {/* The font variable classes must be applied here (client tree) for Next to emit the @font-face CSS. */}
+      <div className={`nf-root ${fontUi.variable} ${fontDisplay.variable} ${fontMono.variable}`}>
+        <Component {...pageProps} />
+      </div>
     </>
   );
 }

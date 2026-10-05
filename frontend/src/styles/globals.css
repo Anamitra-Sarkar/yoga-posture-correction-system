@@ -92,9 +92,9 @@
   --shadow-glow-success: 0 0 16px rgba(5, 150, 105, 0.20);
 
   /* Typography */
-  --font-body: var(--nf-ui), 'DM Sans', 'Helvetica Neue', system-ui, sans-serif;
+  --font-body: 'DM Sans', 'Helvetica Neue', system-ui, sans-serif;
   --font-accent: 'Lora', Georgia, serif;
-  --font-mono: var(--nf-mono), 'DM Mono', 'Fira Code', monospace;
+  --font-mono: 'DM Mono', 'Fira Code', ui-monospace, monospace;
 
   /* Type Scale */
   --text-xs:   clamp(0.7rem,   0.65rem + 0.2vw,  0.75rem);
