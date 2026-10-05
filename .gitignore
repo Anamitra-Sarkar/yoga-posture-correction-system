@@ -53,3 +53,10 @@ frontend/android/.idea/
 frontend/android/captures/
 frontend/android/*.iml
 frontend/android/app/*.iml
+
+# Run output and local caches (regenerable)
+*.log
+modal/*.out
+backup/run_logs_*/
+.pytest_cache/
+planning/kaggle_transfer/code_stage/

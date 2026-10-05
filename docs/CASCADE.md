@@ -29,3 +29,5 @@ path and reports the reason in `cascade.reason`.
 
 **API (all new fields optional; the Expo app is unaffected):** response `candidates` (top-3), `cascade`, `guided`; request `target_pose` (Guided mode).
 Reproduce: `planning/kaggle_transfer/kernel_e2e`, `kernel_prod2`; data and code on `Arko007/Yoga-1M`, checkpoints on `Arko007/asanaai-conference-runs`.
+
+**When the server is unreachable (added 2026-10-05):** the web app falls back to an on-device copy of the rule engine ("basic mode", `frontend/src/utils/offlineCoach.ts`): no MLP, no gate, no cascade. Its pose naming equals the "Rules only" policy in `docs/BENCHMARKS.md` section 4 (36.9% overall, 78.3% false alarms), so basic mode should be described as a fallback, not as the cascade. Joints the camera cannot see are neither scored nor coached in either mode (`docs/BENCHMARKS.md` section 9).

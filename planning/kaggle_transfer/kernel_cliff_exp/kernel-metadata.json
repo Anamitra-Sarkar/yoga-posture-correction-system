@@ -1,0 +1,13 @@
+{
+  "id": "anamitrasarkar007/asanaai-cliff-exp",
+  "title": "asanaai-cliff-exp",
+  "code_file": "runner_cliff.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["anamitrasarkar007/asanaai-conf-creds"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

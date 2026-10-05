@@ -1,5 +1,7 @@
 # Incoming Agent Handoff — AsanaAI Android Companion
 
+> **Historical (2026-08-21):** written for an earlier agent session; the paths (`/home/ubuntu/...`) and the commit it names belong to that machine. The Expo app is unchanged by the 2026-10 web work and still talks to the same API (new response fields are optional, so it keeps working).
+
 ## Current Baseline
 
 The active mobile project is located at `/home/ubuntu/asana-ai-mobile`. The latest stable checkpoint before this handoff is **`97fb5cdb`**. It is an Expo SDK 54 / React Native Android companion designed to share the yoga project’s existing backend while remaining a distinct, native mobile product. The original repository clone used for reference is located at `/home/ubuntu/yoga-repo-push`; its Android source had previously been copied to `mobile/` and pushed to the selected GitHub repository.

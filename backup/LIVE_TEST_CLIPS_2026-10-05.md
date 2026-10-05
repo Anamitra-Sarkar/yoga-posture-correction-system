@@ -1,8 +1,8 @@
-# Live-test clips (play these in front of the camera) -- 2026-10-05
+# Live-test clips (play these in front of the camera) -- 2026-10-05 (cadence note updated later the same day)
 
 Each link jumps to a steady, cue-verified hold of the named pose (the instructor named it AND the body shape matched AND it was held still).
 Play it full-screen on a second screen or phone, ~1 m from the laptop camera, bright screen, so the whole body is in frame, and let it run **at least 20 s**:
-the app only classifies once every ~10 s, so a 5 s clip can be missed entirely.
+the pose and score refresh about every 1.5 s, but the coaching text, speech and the Flow check (sequence model) only update about every 10 s, so a 5 s clip can pass without a spoken cue.
 
 **What this is and is not:** a sanity / demo test of the live pipeline (camera -> MediaPipe -> backend -> UI, both modes, all three languages).
 These videos were used to TRAIN the models, so do not quote results from them as accuracy; use unseen people for the benchmark (BENCHMARKS.md section 8).
@@ -30,3 +30,6 @@ Expected: unrecognised / quiet, not a confident named pose (false alarms were ~2
 
 **Checklist per clip:** Free mode (detected pose + score) - Guided mode (choose the matching pose: should score; choose a different one: should say "Wrong Pose") -
 switch the UI to Hindi and Bengali and check the spoken guidance (needs a device with a Hindi/Bengali voice; otherwise the new notice appears).
+
+**Also test the no-server path ("basic mode"):** turn the phone/laptop offline (airplane mode, or DevTools -> Network -> Offline) while a clip plays. The app must keep scoring and coaching (rules only: no model, no Flow check, no spoken paraphrase) and say why (offline / waking / reconnecting); switching back online should return to normal within ~15 s.
+**And the "camera cannot see me" path:** step out of frame (should say "Step into view" and clear the old pose/score), stand so your feet are cut off ("Step back so your feet are in view"), cover one leg with a cushion (the app should say which joints it is NOT checking instead of scoring them).

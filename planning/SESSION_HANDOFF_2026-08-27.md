@@ -1,5 +1,7 @@
 # AsanaAI Session Handoff — 2026-08-27
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-08-27.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`.
+
 ## ⚠️ READ THIS FIRST ON RESUME
 
 Two things may still be running on Kaggle when you resume — check their real

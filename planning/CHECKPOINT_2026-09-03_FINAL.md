@@ -1,5 +1,7 @@
 # AsanaAI — FINAL CHECKPOINT, 2026-09-03
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-09-03.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`.
+
 Written under rate-limit pressure. Everything below is **measured**, not assumed.
 Where a number is weak, the weakness is stated.
 

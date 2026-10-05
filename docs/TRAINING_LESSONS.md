@@ -216,6 +216,19 @@ did it.
 
 ---
 
+## 14. Serving rate is part of the model's input
+The sequence model is trained on 60 consecutive native-rate frames (~2.4 s, about 25 fps). The web app fed its buffer one frame per finished API call (0.5-2 fps), so the "60 frames" spanned 30-120 s and the same weights looked broken: macro recall 0.82 at 25 fps, 0.51 at 6 fps, 0.39 at 2 fps (`docs/BENCHMARKS.md` section 5). The server code matched the trainer to a logit difference of 0.0; the bug was entirely in what the client sent.
+**Instead:** when a model looks bad only in production, re-score the held-out data at the production input rate/format before touching the model.
+
+## 15. A fallback that reports "recovered" must say what it assumed
+The occlusion fallback mirrored the visible side onto the hidden one and reported the joint as recovered. That is exact for symmetric stances and wrong for asymmetric ones (tree pose: the raised foot landed on the floor, 0.23 of the frame height off), yet the score and cue used it with full confidence. Real CLIFF was never connected.
+**Instead:** decline to score what cannot be seen, say so in the UI, and measure the alternative offline before wiring it (CLIFF vs mirror: neither wins everywhere, CLIFF needs the camera image, `docs/BENCHMARKS.md` section 10).
+
+## 16. When you port logic, prove the port with a generated-case harness
+The on-device coach is a TypeScript port of the Python rule engine. Reading both did not establish equivalence; `backend/tools/offline_parity.py` did: 10,000 generated frames and 2,500 coaching texts across 21 poses, 0 mismatches, plus a check that the joint-to-angle visibility map matches the Python angle code. Re-run it whenever either side changes.
+
+---
+
 ## Proven hyperparameters (ST-GCN, from the 2026-07-19 run)
 
 Kept because they worked **on the 15-class non-transition task**. Measured NOT
@@ -239,7 +252,7 @@ AdamW lr=1e-3 wd=1e-4, cosine over 40 epochs.
 
 ---
 
-## Current honest numbers
+## Honest numbers as of 2026-09-21 (HISTORICAL: superseded by `docs/BENCHMARKS.md`; the live MLP is now the cascade and the live ST-GCN is `stgcn_target_v1`)
 
 | thing | number | measured on |
 |---|---|---|

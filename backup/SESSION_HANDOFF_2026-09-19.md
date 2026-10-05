@@ -1,5 +1,7 @@
 # AsanaAI handoff — 2026-09-19
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-09-19.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`.
+
 Terminal closed mid-session. Two Kaggle kernels were left RUNNING; they run
 server-side and are unaffected. Everything below is committed and pushed to
 `main`.

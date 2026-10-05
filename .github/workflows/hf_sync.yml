@@ -27,7 +27,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           
           # Clone the Hugging Face Space repository
-          # HF_SPACE should be in the format: username/space-name (e.g. Anamitra-Sarkar/yoga-posture-correction)
+          # HF_SPACE should be in the format: username/space-name (this project: Arko007/yoga_pose)
           git clone https://x-access-token:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE hf_space_repo
           
           # Clean existing files in HF Space repo (except git configuration files)

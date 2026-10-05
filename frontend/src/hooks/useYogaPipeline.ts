@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FrameInput, FrameResponse, SequenceResponse, CalibrationProfile, MotionState, CorrectionInput, CorrectionResponse } from "../types/yoga";
+import { FrameInput, FrameResponse, CalibrationProfile, MotionState, CorrectionInput, CorrectionResponse } from "../types/yoga";
 import { offlineFrame, offlineCorrection, maskDeviations } from "../utils/offlineCoach";
 import { analyseFrame, analyseSequence, generateCorrection } from "../utils/api";
 import { computeOrientation } from "../utils/geometry";
@@ -31,10 +31,8 @@ export function useYogaPipeline({
   const [poseMismatch, setPoseMismatch] = useState<boolean>(false);
   const [guided, setGuided] = useState<FrameResponse["guided"]>(null);
   const [flowPose, setFlowPose] = useState<string>("transition/unknown");
-  const [flowConfidence, setFlowConfidence] = useState<number>(0.0);
   const [correctionText, setCorrectionText] = useState<string>("");
   const [correctionIsSafe, setCorrectionIsSafe] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [predictionTimestamp, setPredictionTimestamp] = useState<number>(0);
   const [lastEfficacy, setLastEfficacy] = useState<EfficacyRecord | null>(null);
 
@@ -44,7 +42,6 @@ export function useYogaPipeline({
   // measured. These change only when the display updates, never what the
   // model predicts.
   const poseSticky = useRef(new StickyLabel("transition/unknown"));
-  const flowSticky = useRef(new StickyLabel("transition/unknown"));
   const correctnessEma = useRef(new Ema(0.35));
   const personalEma = useRef(new Ema(0.35));
   const deviationEma = useRef(new EmaMap(0.35));
@@ -149,7 +146,6 @@ export function useYogaPipeline({
     const heavy = nowTick - lastPredictionTime.current >= PREDICTION_INTERVAL_MS;
     if (heavy) lastPredictionTime.current = nowTick;
 
-    setIsLoading(true);
     try {
       // Hidden joints are NOT guessed at (a left-right mirror is only right for symmetric stances and wrong for tree, warrior,
       // lunge...). They are reported to the user and left out of scoring and coaching instead.
@@ -166,7 +162,6 @@ export function useYogaPipeline({
           const seqRes = await analyseSequence({ coordinates: seqWindow });
           const confident = !seqRes.requires_static_fallback;
           setFlowPose(confident ? seqRes.sequence_pose : "transition/unknown");
-          setFlowConfidence(seqRes.confidence);
         } catch {
           setFlowPose("transition/unknown");
         }
@@ -316,8 +311,6 @@ export function useYogaPipeline({
         return;
       }
       console.error("Error running yoga posture pipeline:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -354,7 +347,6 @@ export function useYogaPipeline({
     setActivePose("transition/unknown");
     setCorrectness(1.0);
     setFlowPose("transition/unknown");
-    setFlowConfidence(0.0);
     setCorrectionText("");
     setCorrectionIsSafe(true);
     setPersonalCorrectness(null);
@@ -369,7 +361,6 @@ export function useYogaPipeline({
     activePose,
     correctness,
     flowPose,
-    flowConfidence,
     correctionText,
     correctionIsSafe,
     lastEfficacy,
@@ -380,7 +371,6 @@ export function useYogaPipeline({
     personalCorrectness,
     deviations,
     predictionTimestamp,
-    isLoading,
     processFrame,
     pushSequenceFrame,
     coachSource,

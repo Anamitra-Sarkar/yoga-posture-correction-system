@@ -10,112 +10,92 @@ python_version: "3.10"
 pinned: false
 ---
 
-# Smart Yoga Posture Correction System
+# AsanaAI — Smart Yoga Posture Correction System
 
-An advanced, production-grade dual-model system for real-time yoga pose classification, posture correctness evaluation, joint deviation regression, and intelligent voice correction generation. Designed as a final-year project at the RCC Institute of Information Technology, Kolkata, Department of Computer Science & Engineering.
+A yoga coach that watches your form through the camera, recognises the pose you are in, scores your alignment, and tells you — in English, हिन्दी or বাংলা, on screen and aloud — what to adjust. Final-year project (P05), RCC Institute of Information Technology, Kolkata, Department of CSE-AIML.
 
----
+* **App:** https://yoga-posture-correction-system.vercel.app  (website: `/landing`)
+* **API:** https://arko007-yoga-pose.hf.space  (`/docs` for the interactive reference)
+* Your video never leaves your device: the browser extracts body landmarks locally and sends only body-position numbers (landmark coordinates and joint angles) to the API, never images.
 
-## 🌟 Key Features
+## How it works
 
-*   **Dual-Model Hybrid Architecture**:
-    *   **3-Head ResMLP Classifier**: Evaluates frame-level pose ID (23 classes), overall posture correctness logit, and 15 joint deviation values simultaneously.
-    *   **Sequence Flow Classifier (ST-GCN/GRU-Attention)**: Processes 60-frame coordinate sequences with self-attention pooling for scale and translation invariant flow verification.
-*   **Occlusion Recovery Protocol**: Fuses coordinates and mirrors skeletal landmarks when limbs are occluded (MediaPipe threshold < 0.5) to keep predictions stable.
-*   **Personalised Digital Twin limits**: Calibrates joints to match user mobility profiles, preventing incorrect warnings for physical constraints.
-*   **LLM Guidance Engine**: Integrates with the **Groq API** (Llama-3-8B) to generate natural, fluid, and multi-lingual voice feedback, bounded strictly by safety filters to prevent injuries.
-*   **Production Deployment Ready**: Equipped with Docker configurations and Uvicorn deployment targets optimized for low-resource servers (e.g. 4GB RAM) running on port `7860`.
-
----
-
-## 🏗️ Architecture
-
-```mermaid
-graph TD
-    A["Video/Camera Input"] --> B["MediaPipe Landmarker"]
-    B --> C{"Occlusion Check"}
-    C -->|"Yes: Visibility < 0.5"| D["Skeletal Mirroring and Fusion"]
-    C -->|"No"| E["15 Biomechanical Angles"]
-    D --> E
-    E --> F["3-Head ResMLP Classifier"]
-    F --> G["Pose ID, Correctness Score, Joint Deviations"]
-    G --> H["Digital Twin Validation"]
-    H --> I["Groq LLM Safe Correction Engine"]
-    I --> J["Audio/Visual Correction Feedback"]
+```
+camera ─▶ MediaPipe Pose (in the browser) ─▶ 33 landmarks ─▶ 15 joint angles + body orientation
+                                                  │
+        ┌─────────────────────────────────────────┴──────────────────────────────┐
+        ▼ every ~1.5 s                                                              ▼ every ~10 s
+  per-frame coach                                                          sequence model (ST-GCN)
+  server: 3-head ResMLP names the pose, a second MLP "gate"                60-frame window at 25 fps,
+  screens out poses we do not know and supplies the form score,            shown as a second opinion
+  angle bands give per-joint deviations                                    ("Flow check"), never overrides
+  on device (offline / server asleep): the same rule engine,
+  ported line for line, answers instantly ("basic mode")
+        │
+        ▼
+  visibility-aware scoring: joints the camera cannot see are neither scored nor coached
+        │
+        ▼
+  coaching: reviewed templates (+ optional LLM paraphrase behind safety filters) ─▶ screen + speech
 ```
 
----
+* **3-head ResMLP** (pose · correctness · 15 joint deviations) over 15 biomechanical angles, trained on cue-verified video frames and real photos.
+* **ST-GCN** (graph convolution over the 33-joint skeleton + temporal convolution) on 60-frame windows.
+* **Pose cascade** (`docs/CASCADE.md`) and **sequence model** (`docs/SEQUENCE_MODEL.md`): rollout flags, rollback and design notes.
+* **On-device coach** (`frontend/src/utils/offlineCoach.ts`): generated from the backend rule engine and verified identical to it on 12,500 generated cases (`python3 backend/tools/offline_parity.py`).
+* **Not deployed:** CLIFF-based two-stream occlusion fusion exists in `backend/app/services/occlusion.py` only as an optional hook (nothing sends it CLIFF data and no CLIFF model is deployed). The live system is visibility-aware instead: it declines to score a joint it cannot see. An offline experiment comparing CLIFF with the old mirror fallback is written up in `docs/BENCHMARKS.md` section 10 (CLIFF needs the camera image, which the app never uploads).
 
-## 📊 Best Training Performance
+## Results (held-out only)
 
-### 1. Multi-Output 3-Head MLP
-*   **Best Validation Loss**: `0.2263`
-*   **Validation Pose Accuracy**: `93.38%`
-*   **Validation Correctness Accuracy**: `96.81%`
+Training/validation accuracies printed by the trainers come from a random frame split and are **not** reported as results. Honest numbers (held-out videos, held-out public photos) are in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Headlines:
 
-| Epoch | Train Loss | Train Pose Acc | Val Loss | Val Pose Acc | Val Correctness Acc |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Epoch 01 | 0.8631 | 79.04% | 0.5059 | 86.08% | 92.83% |
-| Epoch 10 | 0.4389 | 88.33% | 0.3079 | 91.43% | 95.30% |
-| Epoch 30 | 0.3597 | 90.42% | 0.2545 | 92.22% | 96.42% |
-| **Epoch 39** | **0.3224** | **91.36%** | **0.2263** | **93.38%** | **96.81%** |
+| | Before | Now |
+|---|---|---|
+| Held-out public photos: pose accuracy | 36.9% | 78.9% (pose cascade) |
+| Photos of poses we do NOT cover wrongly named as ours (lower is better) | 78.3% | 20.8% |
+| Poses with recall and precision >= 0.70 on held-out photos | 0 | 7 |
+| ST-GCN on held-out videos | live model: macro recall 0.19 | new model: macro recall 0.82, 3 poses pass the bar (4 with a cross-fitted threshold) |
+| Live correctness check (one joint broken by 45 degrees) | - | form score 0.94 -> 0.25 for a leg joint; **arm joints are barely detected** |
 
-### 2. Sequence Flow Classifier (ST-GCN/GRU-Attention)
-*   **Best Validation Accuracy**: `75.25%` (Epoch 90, early-stopped at Epoch 110).
+Known limits are listed in section 7 of `docs/BENCHMARKS.md`.
 
----
+## Repository layout
 
-## 🚀 Getting Started
+| Path | What |
+|---|---|
+| `backend/` | FastAPI service (also the Hugging Face Space): models, rule engine, cascade, coaching, tests (`backend/tests`), tools (`backend/tools`) |
+| `frontend/` | Next.js PWA (app at `/`, website at `/landing`) and the Capacitor Android project (`frontend/android`) |
+| `mobile/` | Separate Expo (React Native) client |
+| `modal/` | Data and training pipeline scripts (cue-verified relabelling, windows, training); index in `modal/README.md` |
+| `planning/` | Experiments, Kaggle harnesses (`planning/kaggle_transfer`), rescued checkpoints (`planning/modal_rescue`), archive of superseded files; index in `planning/README.md` |
+| `docs/` | Benchmarks, cascade and sequence-model notes, training lessons, live-test clips |
+| `backup/` | Resume/handoff notes (start with `backup/RESUME_HERE_2026-10-05.md`) and dated copies of key docs |
 
-### Prerequisites
-*   Python 3.9+ or Docker
-*   A Hugging Face account and Groq API key
+## Run it locally
 
-### Installation
+```bash
+# backend (needs the model files from the Hugging Face repo; set HF_TOKEN if the repo is private)
+pip install -r backend/requirements.txt
+cd backend && uvicorn app.main:app --port 7860          # API docs at /docs
+cd backend && python3 -m pytest tests -q                 # 72 tests
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Anamitra-Sarkar/yoga-posture-correction-system.git
-   cd yoga-posture-correction-system
-   ```
+# frontend
+cd frontend && npm install && npm run dev                # http://localhost:3000  (set NEXT_PUBLIC_YOGA_API_URL)
 
-2. Set up environment variables:
-   ```bash
-   export HF_TOKEN="your_huggingface_token"
-   ```
+# on-device coach parity check (Python original vs TypeScript port)
+python3 backend/tools/offline_parity.py
+```
 
-3. Run with Docker:
-   ```bash
-   docker build -t yoga-backend .
-   docker run -p 7860:7860 -e HF_TOKEN=$HF_TOKEN yoga-backend
-   ```
+## Deploy
 
-4. Or run locally:
-   ```bash
-   pip install -r backend/requirements.txt
-   cd backend
-   uvicorn app.main:app --host 0.0.0.0 --port 7860
-   ```
+* **Backend:** pushing to `main` with changes under `backend/` syncs the Space (`.github/workflows/hf_sync.yml`). Behaviour switches are Space variables: `ENABLE_POSE_CASCADE`, `STGCN_MODEL_FILE`, `STGCN_ENCODER_FILE` (delete a variable to roll back). `GROQ_API_KEY` (secret) enables the optional LLM paraphrase.
+* **Web:** Vercel builds `main` (production) and every other branch (preview URL).
+* **Android:** `.github/workflows/android_build.yml`.
 
----
+## Safety
 
-## 🛠️ Repository Directory Structure
+AsanaAI gives general guidance and is not medical advice. Cues never ask you to push further, and a safety filter rejects any generated cue that would.
 
-*   `backend/`: Modular FastAPI app layout, Dockerfile, and requirements.
-*   `frontend/`: TypeScript Next.js hooks and API interfaces for the client.
-*   `.github/workflows/hf_sync.yml`: Automates CI/CD synchronization of the backend folder to Hugging Face Spaces.
+## Licence
 
----
-
-## 📄 License & Attribution
-
-This project is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)** license.
-
-### Attribution Required:
-Any research, commercial projects, derivatives, or code reuse of this repository must give appropriate credit. Please cite:
-*   **Anamitra Sarkar** (Anamitra-Sarkar)
-*   **Arko**
-
-### Restrictions:
-*   **NonCommercial**: You may not use the material for commercial purposes.
-*   **ShareAlike**: If you remix, transform, or build upon the material, you must distribute your contributions under the same license.
+See `LICENSE`. Pose reference photographs in `frontend/public/pose-images` are CC BY / CC BY-SA from Wikimedia Commons; credits are shown beside each photo in the app.

@@ -1,5 +1,7 @@
 # AsanaAI: Video-Frame Pipeline + Model Retraining Plan (v2)
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-08-27.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`. The video pipeline was built (`modal/`, `planning/kaggle_transfer/`).
+
 ## ⚠️ RESUME NOTES — read first
 
 User asked to stop active verification and pivot to planning because they're

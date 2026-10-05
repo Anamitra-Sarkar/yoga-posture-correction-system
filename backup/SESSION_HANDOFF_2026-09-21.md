@@ -1,5 +1,7 @@
 # AsanaAI handoff — 2026-09-21
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-09-21.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`. Still valid from it: the goal/architecture rules and the lessons in `docs/TRAINING_LESSONS.md`. The live MLP is no longer v4 alone (it is the cascade) and the live ST-GCN is no longer `stgcn_transitions_v1`.
+
 ## THE GOAL (do not drift from this)
 
 **Same two models, better real-world metrics.** The architecture is fixed by

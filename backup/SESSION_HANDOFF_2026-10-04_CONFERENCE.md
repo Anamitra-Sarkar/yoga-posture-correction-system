@@ -1,5 +1,7 @@
 # AsanaAI — CONFERENCE PIVOT handoff (2026-10-04)
 
+> **Status (2026-10-05):** the next-step lists in this file are DONE (retrained models, held-out evaluation, new ST-GCN deployed, cascade live). Current state and open items: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE). Keep this file for the reasoning and verified facts.
+
 Read this FIRST. It supersedes the photo-domain (v3/v4) route for the conference
 deliverable. The older `SESSION_HANDOFF_2026-09-21.md` + `docs/TRAINING_LESSONS.md`
 still hold for the deployed app.

@@ -4,14 +4,11 @@ import Script from "next/script";
 import { 
   Volume2, 
   VolumeX, 
-  Settings, 
   RefreshCw, 
   ShieldCheck,
   ShieldAlert,
   Activity,
   CheckCircle2, 
-  HelpCircle,
-  Sparkles,
   Camera as CameraIcon,
   VideoOff,
   PanelLeftClose,
@@ -20,7 +17,6 @@ import {
   Maximize2,
   X,
   Globe,
-  Gauge,
   LayoutGrid,
   SwitchCamera,
   AlertTriangle,
@@ -35,7 +31,6 @@ import {
   Sun,
   ScanLine,
   Leaf,
-  Menu as MenuIcon,
   RotateCw,
   Check,
   Lock
@@ -963,7 +958,6 @@ export default function Dashboard() {
   // ── Zoom feature ─────────────────────────────────────────
   const [zoomLevel, setZoomLevel] = useState(1);         // current zoom (0.5 – 10)
   const [showZoomBar, setShowZoomBar] = useState(false); // show slider on demand
-  const [zoomCapable, setZoomCapable] = useState(false); // hw zoom available
   const zoomHideTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Pinch gesture tracking
   const pinchStartDistRef = useRef<number | null>(null);
@@ -973,7 +967,6 @@ export default function Dashboard() {
   const [allCurrentAngles, setAllCurrentAngles] = useState<number[]>(new Array(15).fill(180));
 
   // MediaPipe state
-  const [mediaPipeLoaded, setMediaPipeLoaded] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [isInitializingCamera, setIsInitializingCamera] = useState(false);
   // Pose-engine lifecycle, so a slow or failed model load is VISIBLE instead of a black screen.
@@ -1008,7 +1001,6 @@ export default function Dashboard() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
-  const cameraRef = useRef<any>(null);
   const poseRef = useRef<any>(null);
   const onPoseResultsRef = useRef<any>(null);
   const inferenceTimesRef = useRef<number[]>([]);
@@ -1031,7 +1023,6 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Collapsible Groups states
-  const [openGroupPose, setOpenGroupPose] = useState(true);
   const [openGroupTwin, setOpenGroupTwin] = useState(true);
   const [openGroupPoseGuide, setOpenGroupPoseGuide] = useState(true);
   const [openGroupSession, setOpenGroupSession] = useState(true);
@@ -1070,11 +1061,7 @@ export default function Dashboard() {
 
   // Auto-detect zoom capability when stream starts
   useEffect(() => {
-    if (!cameraActive || !streamRef.current) { setZoomCapable(false); return; }
-    const track = streamRef.current.getVideoTracks()[0];
-    if (!track) { setZoomCapable(false); return; }
-    const caps = track.getCapabilities?.() as any;
-    setZoomCapable(!!(caps?.zoom));
+    if (!cameraActive || !streamRef.current) return;
     // Reset zoom to 1x on new camera start
     setZoomLevel(1);
     if (stageRef.current) {
@@ -1399,7 +1386,6 @@ export default function Dashboard() {
     activePose,
     correctness,
     flowPose,
-    flowConfidence,
     correctionText,
     correctionIsSafe,
     lastEfficacy,
@@ -1408,7 +1394,6 @@ export default function Dashboard() {
     personalCorrectness,
     deviations,
     predictionTimestamp,
-    isLoading,
     processFrame,
     pushSequenceFrame,
     coachSource,
@@ -1575,16 +1560,8 @@ export default function Dashboard() {
   }, []);
 
 
-  // Handle checking scripts loading
-  const handleScriptLoad = () => {
-    if (typeof window !== "undefined" && (window as any).Pose) {
-      setMediaPipeLoaded(true);
-    }
-  };
-
-  // Check on mount if scripts are already in window
+  // Sidebar starts open on wide screens, as a drawer on phones
   useEffect(() => {
-    handleScriptLoad();
     if (typeof window !== "undefined") {
       if (window.innerWidth >= 768) {
         setSidebarOpen(true);
@@ -2383,7 +2360,6 @@ export default function Dashboard() {
       <Script
         src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"
         strategy="afterInteractive"
-        onLoad={handleScriptLoad}
       />
 
       <div className={`ap ${sidebarOpen ? "side-open" : ""} ${cameraActive ? "cam-on" : ""}`}>

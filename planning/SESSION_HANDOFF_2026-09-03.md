@@ -1,5 +1,7 @@
 # AsanaAI Session Handoff — 2026-09-03
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-09-03.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`. The Modal lesson (never launch long jobs with ephemeral `modal run`) still holds.
+
 ## ⚠️ READ FIRST: the Modal lesson that cost us two training runs
 
 Both training agents launched their Modal jobs with `modal run`, which creates an

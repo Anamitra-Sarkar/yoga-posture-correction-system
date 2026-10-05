@@ -1,5 +1,7 @@
 # AsanaAI: Model/Backend Improvement + Native Android App
 
+> **SUPERSEDED (2026-10-05) — historical record from 2026-08-27.** What was running, live or pending below was true then only. Current state: `backup/RESUME_HERE_2026-10-05.md` (CURRENT STATE block); report numbers: `docs/BENCHMARKS.md`. Its three phases (world-landmark vote, pose vocabulary expansion, Capacitor Android app) were completed; the Lightning account it mentions is no longer used.
+
 ## ⚠️ RESUME NOTES (read this first)
 
 Work on this plan paused here: **Lightning AI banned the user's account**, killing

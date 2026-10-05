@@ -5,11 +5,9 @@ import {
   SequenceResponse,
   CorrectionInput,
   CorrectionResponse,
-  OcclusionInput,
-  OcclusionResponse,
 } from "../types/yoga";
 
-// In production, point to your Hugging Face Space URL (e.g. https://arko007-yoga-posture-models.hf.space)
+// In production NEXT_PUBLIC_YOGA_API_URL (set in Vercel) points at the Hugging Face Space API; the fallback is for local development
 const getApiUrl = () => {
   if (typeof window !== "undefined" && (window as any).customApiUrl) {
     return (window as any).customApiUrl;
@@ -52,4 +50,3 @@ async function post<T>(path: string, data: unknown, timeoutMs: number): Promise<
 export const analyseFrame = (data: FrameInput) => post<FrameResponse>("analyse_frame", data, 9000);
 export const analyseSequence = (data: SequenceInput) => post<SequenceResponse>("analyse_sequence", data, 9000);
 export const generateCorrection = (data: CorrectionInput) => post<CorrectionResponse>("generate_correction", data, 15000);
-export const recoverOcclusion = (data: OcclusionInput) => post<OcclusionResponse>("occlusion_recovery", data, 9000);
