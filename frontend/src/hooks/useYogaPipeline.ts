@@ -3,6 +3,7 @@ import { FrameResponse, SequenceResponse, CalibrationProfile, MotionState } from
 import { analyseFrame, analyseSequence, recoverOcclusion, generateCorrection } from "../utils/api";
 import { computeOrientation } from "../utils/geometry";
 import { StickyLabel, Ema, EmaMap } from "../utils/stability";
+import { SequenceBuffer } from "../utils/sequenceBuffer";
 import { CorrectionEfficacyTracker, EfficacyRecord } from "../utils/correctionEfficacy";
 
 interface UseYogaPipelineProps {
@@ -53,7 +54,9 @@ export function useYogaPipeline({
   const efficacy = useRef(new CorrectionEfficacyTracker());
 
   // Buffers and timers
-  const coordBuffer = useRef<number[][]>([]); // Holds 60 frames of coordinates [60, 99]
+  // Landmarks for the ST-GCN. Filled from EVERY camera result (pushSequenceFrame), NOT from the
+  // throttled API loop, and resampled to the 25 fps / 60-frame window the model was trained on.
+  const seqBuffer = useRef(new SequenceBuffer());
   const lastCorrectionTime = useRef<number>(0);
   const DEBOUNCE_MS = 30000; // 30 second throttle for LLM guidance API calls
   const lastPredictionTime = useRef<number>(0);
@@ -78,26 +81,21 @@ export function useYogaPipeline({
     return total / angles.length / dtSec;
   };
 
+  /** Call on every MediaPipe result (before any API throttling). */
+  const pushSequenceFrame = (rawLandmarks: number[][]) => {
+    seqBuffer.current.push(rawLandmarks, Date.now());
+  };
+
   const processFrame = async (rawLandmarks: number[][], currentAngles: number[], worldAngles?: number[]) => {
     // rawLandmarks shape: [33, 4] -> [x, y, z, visibility]
     if (rawLandmarks.length !== 33) return;
 
     setIsLoading(true);
     try {
-      // 1. Stage 4: Occlusion Handling — always kept fresh so the 60-frame
-      // sequence buffer isn't stretched thin by the slower prediction cadence below.
+      // 1. Stage 4: Occlusion Handling (the sequence buffer is filled separately, per camera frame).
       const occRes = await recoverOcclusion({ mp_landmarks: rawLandmarks });
       setRecoveredJoints(occRes.occluded_joints_recovered);
       const fusedCoords = occRes.fused_landmarks; // Shape [33, 4]
-
-      // Flatten fused coordinate space [33 joints * 3 coordinates] to 99 values
-      const flatFrameCoords = fusedCoords.map(pt => pt.slice(0, 3)).flat(); // Length 99
-
-      // Update rolling sequence buffer (Stage 5)
-      coordBuffer.current.push(flatFrameCoords);
-      if (coordBuffer.current.length > 60) {
-        coordBuffer.current.shift();
-      }
 
       // Measure how fast the body is moving. Done on EVERY frame (not just on
       // the throttled prediction tick) so the hold/transition read stays
@@ -111,21 +109,27 @@ export function useYogaPipeline({
       }
       lastPredictionTime.current = nowTick;
 
-      let fallbackRequired = true;
-      
-      // 2. Stage 7: Sequence Flow Analysis (requires complete 60 frame window)
-      if (coordBuffer.current.length === 60) {
-        const seqRes = await analyseSequence({ coordinates: coordBuffer.current });
-        setFlowPose(seqRes.sequence_pose);
+      // 2. Stage 7: Sequence Flow Analysis (ST-GCN). It needs a full 2.4 s window at the training frame rate.
+      // It is a SECOND OPINION shown in the "Sequence Flow" row, never the source of the headline pose or
+      // of the form score: on held-out videos it is right ~3 times in 4 on the poses it knows, while the
+      // per-frame cascade names the held poses far more reliably, and a model's confidence says how sure
+      // it is of a NAME, not whether the FORM is right.
+      const seqWindow = seqBuffer.current.window();
+      if (seqWindow) {
+        const seqRes = await analyseSequence({ coordinates: seqWindow });
+        const confident = !seqRes.requires_static_fallback;
+        setFlowPose(confident ? seqRes.sequence_pose : "transition/unknown");
         setFlowConfidence(seqRes.confidence);
-        fallbackRequired = seqRes.requires_static_fallback;
+      } else {
+        setFlowPose("transition/unknown");
       }
-      
-      // 3. Stage 6: Static Pose Classifier (executes on fallback or alongside sequence)
+
+      // 3. Stage 6: per-frame classification (MLP cascade): names the pose, scores the form, returns the
+      // per-joint deviations. Always runs.
       let currentPoseId = activePose;
       let currentCorrectness = correctness;
       let activeDeviations: { [jointName: string]: number } = {};
-      
+
       // The calibration profile now goes to the backend, which returns BOTH a
       // universal correctness score and a personalised one, so "wrong" and
       // "just a different body" stay distinguishable.
@@ -144,48 +148,23 @@ export function useYogaPipeline({
       };
       let currentMotionState: MotionState = "unknown";
 
-      if (fallbackRequired) {
-        const frameRes = await analyseFrame(frameReq);
-        const rawDevs = frameRes.calibrated_deviations ?? frameRes.deviations;
-        currentPoseId = poseSticky.current.push(frameRes.pose_id);
-        currentCorrectness = correctnessEma.current.push(frameRes.correctness_score);
-        activeDeviations = deviationEma.current.push(rawDevs);
-        currentMotionState = frameRes.motion_state ?? "unknown";
+      const frameRes = await analyseFrame(frameReq);
+      const rawDevs = frameRes.calibrated_deviations ?? frameRes.deviations;
+      currentPoseId = poseSticky.current.push(frameRes.pose_id);
+      currentCorrectness = correctnessEma.current.push(frameRes.correctness_score);
+      activeDeviations = deviationEma.current.push(rawDevs);
+      currentMotionState = frameRes.motion_state ?? "unknown";
 
-        setActivePose(currentPoseId);
-        setCorrectness(currentCorrectness);
-        setPersonalCorrectness(
-          frameRes.personal_correctness_score == null
-            ? null
-            : personalEma.current.push(frameRes.personal_correctness_score));
-        setMotionState(currentMotionState);
-        setDeviations(activeDeviations);
-        setGuided(frameRes.guided ?? null);
-      } else {
-        // If sequence model is confident, sync Pose ID with the sequence target
-        currentPoseId = poseSticky.current.push(flowPose);
-        currentCorrectness = correctnessEma.current.push(flowConfidence);
-        setActivePose(currentPoseId);
-        setCorrectness(currentCorrectness);
+      setActivePose(currentPoseId);
+      setCorrectness(currentCorrectness);
+      setPersonalCorrectness(
+        frameRes.personal_correctness_score == null
+          ? null
+          : personalEma.current.push(frameRes.personal_correctness_score));
+      setMotionState(currentMotionState);
+      setDeviations(activeDeviations);
+      setGuided(frameRes.guided ?? null);
 
-        // Fetch frame deviations for sequence flow to provide rich context to the correction generator
-        try {
-          const frameRes = await analyseFrame(frameReq);
-          activeDeviations = deviationEma.current.push(
-            frameRes.calibrated_deviations ?? frameRes.deviations);
-          currentMotionState = frameRes.motion_state ?? "unknown";
-          setPersonalCorrectness(
-            frameRes.personal_correctness_score == null
-              ? null
-              : personalEma.current.push(frameRes.personal_correctness_score));
-          setMotionState(currentMotionState);
-          setDeviations(activeDeviations);
-          setGuided(frameRes.guided ?? null);
-        } catch (err) {
-          console.error("Error fetching deviations for sequence:", err);
-        }
-      }
-      
       // Stage 8 (User Digital Twin range filter) now runs server-side: the
       // backend receives the calibration profile and returns
       // calibrated_deviations plus a personal_correctness_score, already
@@ -319,7 +298,7 @@ export function useYogaPipeline({
   }, [language, activePose, correctness, correctnessThreshold, motionState, poseMismatch]);
 
   const resetPipeline = () => {
-    coordBuffer.current = [];
+    seqBuffer.current.clear();
     lastPredictionTime.current = 0;
     setActivePose("transition/unknown");
     setCorrectness(1.0);
@@ -354,6 +333,7 @@ export function useYogaPipeline({
     recoveredJoints,
     isLoading,
     processFrame,
+    pushSequenceFrame,
     resetPipeline
   };
 }

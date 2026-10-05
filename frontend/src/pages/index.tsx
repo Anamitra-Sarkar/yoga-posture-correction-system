@@ -1103,6 +1103,7 @@ export default function Dashboard() {
     recoveredJoints,
     isLoading,
     processFrame,
+    pushSequenceFrame,
     resetPipeline
   } = useYogaPipeline({
     language: lang,
@@ -1441,6 +1442,9 @@ export default function Dashboard() {
         pt.z, 
         pt.visibility || 0.0
       ]);
+
+      // 2b. ST-GCN input: every camera result, at the camera's own rate (the API loop below is throttled to ~0.5-2 fps)
+      pushSequenceFrame(rawLandmarks);
 
       // 3. Compute client-side angles for feature list (15 biomechanical features)
       const points = results.poseLandmarks.map((pt: any) => ({
