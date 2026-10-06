@@ -1,0 +1,41 @@
+# Repository audit -- 2026-10-07
+
+**Method.** Read-only checks across the whole repo (tracked files, docs, code, CI, deployments) plus black-box requests to the deployed backend. Nothing was built, installed or trained locally (the dev machine has 3.7 GB RAM); backend tests were NOT re-run locally (see B7). Evidence for every finding is given so it can be re-checked.
+
+## A. Findings that affect users or safety (need a decision -- none of these were changed)
+
+| # | Finding | Evidence | Options |
+|---|---|---|---|
+| A1 | **Tree and Lunge have no angle bands**, so with the cascade on their per-joint deviations (limb colours, cue joint) come from the gate model's deviation head, which is close to chance (top joint correct 12.4% vs 6.7% chance, `BENCHMARKS.md` s3). A correct Tree can show a coral standing leg. Tree is one of the 8 guided poses and the best-performing pose. | `rules_classifier._POSE_FEATURE_BANDS`: 17 poses with bands, `tree_pose` and `lunge_pose` empty. `cascade.py`: `dsrc = "gate_head"` when no bands. Live: a hand-built Tree frame (gate open, `deviations_source: "gate_head"`) returned deviations knee_l 73, knee_r 72, hip_l 47, hip_abduct_l 38 although the standing knee is 180 deg. Screenshot: `paper/figures/raw/guided_tree_right.png` (coral standing leg at 95% score). | (a) hand-set Tree/Lunge bands with an either-leg rule; (b) return zero deviations for `gate_head` poses (UI shows neutral, cues fall back to the generic one); (c) leave and disclose (the paper does). |
+| A2 | **The unsafe-word screen is a list of English words.** The LLM paraphrase is live in production (English output differs from the stored template), so Hindi/Bengali paraphrases are generated at run time and cannot be flagged by that screen. The README claimed a safety filter rejects any such cue. | `correction.py` `forbidden_words = ["push","force","hurt","pain","stretch more","further"]`; live `generate_correction` hi/bn answers are model text. | (a) add reviewed Hindi/Bengali forbidden-word lists (native-speaker review is available); (b) disable the paraphrase for hi/bn (templates only); (c) leave and disclose (README and paper now say so). |
+| A3 | **Code defaults are the OLD behaviour; production is correct only because of Space variables.** `ENABLE_POSE_CASCADE` defaults to off, `STGCN_MODEL_FILE` to `stgcn_transitions_v1.pth`. If the Space is recreated or the variables are lost, the app silently falls back to the rules-only path (36.9% accuracy, 78.3% false alarms) and the old ST-GCN. | `backend/app/config.py` lines 17, 25-26; README "Deploy" section documents the variables. | Flip the defaults to the proven configuration (cascade on, `stgcn_target_v1*`); keep the env switches for rollback. |
+| A4 | **`orientation` / `world_angles` are ignored while the cascade is active.** The client still computes and sends them; they only reach `hybrid_classify` (non-cascade path) and the on-device basic mode. | `routers/pose.py` lines 238-272: `cascade_decide(...)` takes neither. The old live check "same angles upright vs lying" no longer tested anything. | Documented (README, `CASCADE.md`). Optionally use orientation as an extra veto, or stop sending it. |
+| A5 | **Calibration is real but unvalidated.** Verified end to end (see `BENCHMARKS.md` s13): the personal score rises only when the profile contains a deviating joint's angle; the universal score never changes. A profile spanning 0-180 deg forgives every deviation (personal score 1.000), and nothing has been tested with users. | `bash backup/verify_live.sh` (calibration check); `backend/tests/test_freeform_helpers.py` (unit tests). | Consider clamping profile ranges to a plausible width; user study. |
+
+## B. Stale content and hygiene (low risk)
+
+| # | Finding | Status |
+|---|---|---|
+| B1 | `backup/verify_live.sh` pre-dated the cascade: its hand-made angle vectors are rejected by the gate, so the calibration check compared 0.0 with 0.0 and printed OK, and the orientation check printed "transition/unknown" twice. | **Fixed**: real frames, 6 assertions, non-zero exit on failure; passes against production. |
+| B2 | README overstated the safety filter, listed orientation as a main-pipeline input, had no pointer to the paper or the new baselines. | **Fixed** (README, `CASCADE.md`, `BENCHMARKS.md` s13, `backup/BENCHMARKS_2026-10-07.md`). Note: a README change triggers the Space sync workflow when merged to `main`. |
+| B3 | "Digital Twin" is still the internal name in comments/types (`routers/pose.py`, `hooks/useYogaPipeline.ts`, `types/yoga.ts`, `pages/index.tsx` torso-hull comment, `mobile/lib/yoga-api.ts`); the UI says "Your range of motion". `pages/index.tsx:2197` still says "13-stage pipeline". | Not changed (comment-only, but backend/frontend edits redeploy). |
+| B4 | `backend/test_backend_groq.py` sits outside `tests/`, needs a Groq key and a live network (a June script). | Not changed. |
+| B5 | `public/manifest.json` shortcut "New Session" opens `/?mode=live`; the app reads no `mode` query parameter. | Not changed. |
+| B6 | 15 merged remote branches still exist (`compat-engine-2`, `edge-cases`, `engine-first`, `flip-fix`, `graphics-fix`, `guided-mode`, `guided-passing-poses`, `hotfix-init-order`, `occlusion-honesty`, `polish-final`, `sequence-fix`, `speech-i18n`, `ui-polish`, `update-check`, `worker-pool`) and one unmerged old branch (`compat-engine`); Vercel builds a preview for every branch. | Not changed (deleting remote branches needs your OK). |
+| B7 | CI runs only the Space sync and the Android build; **no workflow runs the backend tests** (70 test functions in 9 files; the README's "72 tests" counts parametrised cases). The Expo companion's TypeScript is only checked by the Android workflow. | Not changed; suggest a small `pytest backend/tests -q` job. |
+| B8 | `planning/modal_rescue/*.pth` (about 17 MB of old checkpoints) are tracked in git. The HF model repos must not be touched; these are repo-only copies. | Not changed. |
+| B9 | `mobile/` still carries template scaffolding unrelated to yoga (`package.json` name `app-template`, `server/`, `drizzle/`, `oauth`, `todo.md` TODOs) and the older six-pose vocabulary (web guided mode has 8). Last functional change 2026-09-21. | Not changed. |
+| B10 | Stray local files: `session_summary_20170209.json` (June output; git-ignored), old `frontend/public/sw.js` + `workbox-*.js` build artifacts (git-ignored). | Harmless. |
+
+## C. Verified OK (no action)
+* No secrets or tokens in any tracked file (pattern scan for HF/Groq/GitHub/OpenAI/AWS/Slack/private-key formats); no `.env` files tracked.
+* Hindi/Bengali strings: 114 keys each in en/hi/bn, none missing, none left untranslated; checked by a native speaker.
+* All relative markdown links resolve; every local file path named in the docs exists (HF-remote paths excluded).
+* CI: `Sync Backend to Hugging Face Space` and `Build Android Debug APK` green on the latest runs.
+* Vercel production deployment = `main` HEAD (`da3f23c`), state READY.
+* All 7 model files the backend loads exist on `Arko007/yoga-posture-models` (HTTP 302 to the CDN, no 404).
+* Live backend: `/health` healthy; cascade active; Tree frame named `tree_pose` (gate open); motion states correct; escalation tiers correct (plain, quantified, back off); `analyse_sequence` and `occlusion_recovery` respond.
+* Phone app settings of the owner were restored after every automated capture (language, theme, mode, target pose, voice, saved range).
+
+## D. What this audit changed (branch `paper-ieee-2026-10`, nothing deployed)
+`docs/REPO_AUDIT_2026-10-07.md` (new), `docs/BENCHMARKS.md` s13, `backup/BENCHMARKS_2026-10-07.md`, `docs/CASCADE.md`, `README.md`, `backup/verify_live.sh`, `backup/README.md`, `planning/README.md`, plus the paper (`paper/`).

@@ -16,7 +16,7 @@ The scratchpad gets wiped; anything worth keeping lives here. Newest first.
 * `verify_live.sh` — smoke-tests the DEPLOYED backend (all 6 endpoints, no local build, no GPU). Run after any backend deploy: `bash backup/verify_live.sh`.
 * `phone_debug/` — test the web app on a USB-connected Android phone (adb + DevTools protocol); see its README.
 * `test_sequence_buffer.js` — unit test of `frontend/src/utils/sequenceBuffer.ts` (the 25 fps resampler).
-* `BENCHMARKS_2026-10-05.md`, `LIVE_TEST_CLIPS_2026-10-05.md`, `SEQUENCE_MODEL_2026-10-05.md` — verbatim copies of `docs/BENCHMARKS.md`, `docs/LIVE_TEST_CLIPS.md`, `docs/SEQUENCE_MODEL.md` (keep identical: `cmp` them after editing the originals).
+* `BENCHMARKS_2026-10-07.md` (current; adds section 13), `BENCHMARKS_2026-10-05.md`, `LIVE_TEST_CLIPS_2026-10-05.md`, `SEQUENCE_MODEL_2026-10-05.md` — verbatim copies of `docs/BENCHMARKS.md`, `docs/LIVE_TEST_CLIPS.md`, `docs/SEQUENCE_MODEL.md` (keep identical: `cmp` them after editing the originals).
 * `CLEANUP_2026-10-05.md` — what the repo cleanup deleted / moved / deliberately kept, and why; plus the file-by-file freshness audit.
 * `run_logs_2026-10/` — Modal run logs moved out of `modal/` (untracked, git-ignored; no secrets).
 * `../planning/kernel_metadata/` — exactly what each Kaggle kernel was pushed with, so a run can be reproduced without reconstructing the dataset wiring.

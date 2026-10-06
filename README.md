@@ -21,7 +21,7 @@ A yoga coach that watches your form through the camera, recognises the pose you 
 ## How it works
 
 ```
-camera ─▶ MediaPipe Pose (in the browser) ─▶ 33 landmarks ─▶ 15 joint angles + body orientation
+camera ─▶ MediaPipe Pose (in the browser) ─▶ 33 landmarks ─▶ 15 joint angles (+ body orientation, used only by the rule engine in basic mode / the non-cascade path)
                                                   │
         ┌─────────────────────────────────────────┴──────────────────────────────┐
         ▼ every ~1.5 s                                                              ▼ every ~10 s
@@ -58,7 +58,9 @@ Training/validation accuracies printed by the trainers come from a random frame 
 | ST-GCN on held-out videos | live model: macro recall 0.19 | new model: macro recall 0.82, 3 poses pass the bar (4 with a cross-fitted threshold) |
 | Live correctness check (one joint broken by 45 degrees) | - | form score 0.94 -> 0.25 for a leg joint; **arm joints are barely detected** |
 
-Known limits are listed in section 7 of `docs/BENCHMARKS.md`.
+Standard methods (k-NN, SVM, random forest, plain MLP) trained on the same data and scored on the same photos are in section 13 of `docs/BENCHMARKS.md`: a random forest beats the cascade on photos from the training sources (85.3% vs 78.9%) but is the weakest method on a wild photo set from another source (35.0% vs 55.3%), so no single method wins everywhere.
+
+Known limits are listed in section 7 of `docs/BENCHMARKS.md` and in `docs/REPO_AUDIT_2026-10-07.md` (Tree and Lunge have no angle bands, so their per-joint colours come from the learned deviation head, which is near chance).
 
 ## Repository layout
 
@@ -69,7 +71,8 @@ Known limits are listed in section 7 of `docs/BENCHMARKS.md`.
 | `mobile/` | Separate Expo (React Native) client |
 | `modal/` | Data and training pipeline scripts (cue-verified relabelling, windows, training); index in `modal/README.md` |
 | `planning/` | Experiments, Kaggle harnesses (`planning/kaggle_transfer`), rescued checkpoints (`planning/modal_rescue`), archive of superseded files; index in `planning/README.md` |
-| `docs/` | Benchmarks, cascade and sequence-model notes, training lessons, live-test clips |
+| `docs/` | Benchmarks, cascade and sequence-model notes, training lessons, live-test clips, repository audit |
+| `paper/` | The IEEE research paper (LaTeX + PDF, `paper/asanaai_ieee_paper.pdf`), figures, verified bibliography |
 | `backup/` | Resume/handoff notes (start with `backup/RESUME_HERE_2026-10-05.md`) and dated copies of key docs |
 
 ## Run it locally
@@ -83,6 +86,9 @@ cd backend && python3 -m pytest tests -q                 # 72 tests
 # frontend
 cd frontend && npm install && npm run dev                # http://localhost:3000  (set NEXT_PUBLIC_YOGA_API_URL)
 
+# live smoke test of the DEPLOYED backend (assertions; see backup/verify_live.sh)
+bash backup/verify_live.sh
+
 # on-device coach parity check (Python original vs TypeScript port)
 python3 backend/tools/offline_parity.py
 ```
@@ -95,7 +101,7 @@ python3 backend/tools/offline_parity.py
 
 ## Safety
 
-AsanaAI gives general guidance and is not medical advice. Cues never ask you to push further, and a safety filter rejects any generated cue that would.
+AsanaAI gives general guidance and is not medical advice. Cues are built from reviewed templates and never ask you to push further. If the optional LLM paraphrase is enabled, a post-generation screen rejects English wording such as "push", "force", "pain" or "further"; that screen is a list of English words, so Hindi and Bengali paraphrases are not covered by it (known gap, see `docs/REPO_AUDIT_2026-10-07.md`).
 
 ## Licence
 

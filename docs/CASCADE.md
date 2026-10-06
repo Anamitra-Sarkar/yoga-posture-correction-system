@@ -31,3 +31,7 @@ path and reports the reason in `cascade.reason`.
 Reproduce: `planning/kaggle_transfer/kernel_e2e`, `kernel_prod2`; data and code on `Arko007/Yoga-1M`, checkpoints on `Arko007/asanaai-conference-runs`.
 
 **When the server is unreachable (added 2026-10-05):** the web app falls back to an on-device copy of the rule engine ("basic mode", `frontend/src/utils/offlineCoach.ts`): no MLP, no gate, no cascade. Its pose naming equals the "Rules only" policy in `docs/BENCHMARKS.md` section 4 (36.9% overall, 78.3% false alarms), so basic mode should be described as a fallback, not as the cascade. Joints the camera cannot see are neither scored nor coached in either mode (`docs/BENCHMARKS.md` section 9).
+
+**Two behaviours worth knowing (found 2026-10-07 while verifying the calibration feature):**
+* **Per-joint deviations come from the angle bands only where a pose has bands (17 of 19 poses).** `tree_pose` and `lunge_pose` have none, so with the cascade on their deviations come from the gate model's deviation head (`cascade.deviations_source == "gate_head"`), which is close to chance (section 3 of `BENCHMARKS.md`). Consequence: a correct Tree can show a coral/amber limb and Tree cues can name the wrong joint. Fix options: add hand-set Tree/Lunge bands (with an either-leg rule) or return zero deviations for `gate_head` poses.
+* **`orientation` and `world_angles` are ignored while the cascade is active** (they only feed `hybrid_classify`, the non-cascade path, and the on-device basic mode). The cascade decides from the 15 angles alone.
