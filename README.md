@@ -72,7 +72,8 @@ Known limits are listed in section 7 of `docs/BENCHMARKS.md` and in `docs/REPO_A
 | `modal/` | Data and training pipeline scripts (cue-verified relabelling, windows, training); index in `modal/README.md` |
 | `planning/` | Experiments, Kaggle harnesses (`planning/kaggle_transfer`), rescued checkpoints (`planning/modal_rescue`), archive of superseded files; index in `planning/README.md` |
 | `docs/` | Benchmarks, cascade and sequence-model notes, training lessons, live-test clips, repository audit |
-| `paper/` | The IEEE research paper (LaTeX + PDF, `paper/asanaai_ieee_paper.pdf`), figures, verified bibliography |
+| `paper/` | The research paper for the conference (LaTeX + PDF, `paper/asanaai_research_paper.pdf`), figures, verified bibliography |
+| `report/` | The project report (LaTeX + PDF, `report/asanaai_project_report.pdf`): design, deployment, verification, audit, operations |
 | `backup/` | Resume/handoff notes (start with `backup/RESUME_HERE_2026-10-05.md`) and dated copies of key docs |
 
 ## Run it locally
