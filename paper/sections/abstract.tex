@@ -1,8 +1,8 @@
 \begin{abstract}
 Practising yoga without an instructor can risk injury, yet automated coaches are usually validated on random train/validation splits that overstate how well they work for new people, rooms and cameras.
-We present \textbf{AsanaAI}, a browser-based yoga posture coach in which the camera image never leaves the device: the page extracts 33 body landmarks, and only those numbers reach a small CPU server.
-The server runs a \emph{cascade} of 3-head residual MLPs (one model names the pose, a second vetoes photos that are not one of the app's poses and scores form), a rule engine that turns joint-angle bands into per-joint cues, and an ST-GCN over the 33-joint skeleton as a second opinion on held poses.
-Training labels come from 24 instructor-led videos (1.2\,M frames) and are \emph{cue-verified}: the instructor names the pose in a Whisper transcript, a biomechanical rule engine agrees, and the pose is held steady.
+We present AsanaAI, a browser-based yoga posture coach in which the camera image never leaves the device: the page extracts 33 body landmarks, and only those numbers reach a small CPU server.
+The server runs a cascade of 3-head residual MLPs (one model names the pose, a second vetoes photos that are not one of the app's poses and scores form), a rule engine that turns joint-angle bands into per-joint cues, and an ST-GCN over the 33-joint skeleton as a second opinion on held poses.
+Training labels come from 24 instructor-led videos (1.2\,M frames) and are cue-verified: the instructor names the pose in a Whisper transcript, a biomechanical rule engine agrees, and the pose is held steady.
 Scoring only on data never used in training, the cascade names the pose on 78.9\% of 1{,}685 held-out public photos with a 20.8\% false-alarm rate on photos of other poses and clears a 0.70 recall/precision bar on seven poses; the rules-only path it replaces reaches 36.9\%, 78.3\% and none.
 On held-out videos the ST-GCN reaches 78.0\% macro recall, against 19--21\% for the sequence model it replaces.
 Against standard methods trained on the same data, a random forest is stronger on held-out photos from the training sources (85.3\% vs.\ 78.9\% overall) but weakest on wild photos from another source (35.0\% vs.\ 55.3\%), so no single method wins everywhere.

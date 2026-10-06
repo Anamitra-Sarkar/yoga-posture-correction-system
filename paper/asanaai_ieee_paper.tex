@@ -1,6 +1,8 @@
 \documentclass[conference]{IEEEtran}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{mathptmx}   % Times for text AND math, so digits and symbols match the body font
+\usepackage{textcomp}
 \usepackage{microtype}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
@@ -19,9 +21,11 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{placeins}
-\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}
 
 \captionsetup{font=footnotesize,labelfont=bf}
+\captionsetup[subfigure]{labelfont=rm,textfont=rm}
 \setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
 \setlength{\floatsep}{7pt plus 2pt minus 2pt}
 \setlength{\intextsep}{7pt plus 2pt minus 2pt}
@@ -29,9 +33,9 @@
 \setlength{\belowcaptionskip}{0pt}
 \newcommand{\cmark}{\ding{51}}
 \newcommand{\xmark}{\ding{55}}
-\newcommand{\pass}{\textbf{\color{green!45!black}pass}}
-% a visible marker for numbers that are still being measured; the final build must contain none
-\newcommand{\TBD}[1]{\textbf{\color{red}[#1]}}
+% typography: bold only marks the best value in a table column; italics only for run-in headings and a term's first definition
+\newcommand{\runin}[1]{\textit{#1}}
+\newcommand{\vfour}{v4}
 
 \begin{document}
 

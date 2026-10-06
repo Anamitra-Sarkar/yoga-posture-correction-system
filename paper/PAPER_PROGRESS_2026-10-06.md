@@ -57,3 +57,9 @@ STILL TO VERIFY (known real, just confirm metadata): MediaPipe framework (Lugare
 * TO FINISH LATER (GPU quota back): `cd planning/kaggle_transfer/kernel_baselines_seq && kaggle kernels push -p .` (fixed layout bug, 10 epochs, 6000/class; ~30-60 min) -> read the log with the klog REST snippet -> replace the "What we have not yet measured" paragraph in `paper/sections/s8_results.tex` with a table + sentences, delete the limitation bullet "Sequence-model ablation missing" and future-work item (vii) wording, re-render, re-copy the PDF.
 * Nothing committed. Untracked: paper/, backup/phone_debug/capture_ui_scenes.py, planning/kaggle_transfer/kernel_baselines_*/. Consider NOT committing paper/figures/raw (4.9 MB of full-size phone PNGs) or add to .gitignore.
 * Ask the user: confirm author names/order/affiliations.
+
+## TYPOGRAPHY RULES (mentor feedback 2026-10-07: "fonts become weird, random bold/other fonts; bold only if special")
+* Cause found by auditing the PDF itself (PyMuPDF span/font audit, `pdffonts`): math-mode digits/symbols were Computer Modern (CMR/CMMI/CMBX) inside Times text, plus bold numbers/labels sprinkled in prose and tables, typewriter font for identifiers/URLs, blue hyperlink colour.
+* Fix: `\usepackage{mathptmx}` + `textcomp` (Times math), `\urlstyle{same}`, `hidelinks`; NO bold in prose; run-in headings are italic via `\runin{...}`; italics only for run-in headings, bullet lead-ins and a term's first definition; bold ONLY marks the best value per column in tables (each caption says "bold: best in column"); `v4` is roman (`\vfour`); no `\texttt` except none. IEEEtran's own bold abstract/keywords are left as the class defines them.
+* After ANY text edit re-run the PDF audit: `python3` snippet with fitz (bold runs outside caption labels/abstract must be table best-values only; CM runs must contain symbols only).
+* User asked: the line "8 of 11 poses pass" must NOT be inside the on-phone table (moved to caption/text).
