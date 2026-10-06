@@ -1,5 +1,5 @@
 \section{Models}\label{sec:models}
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \begin{minipage}[b]{0.50\textwidth}\centering
 \resizebox{\linewidth}{!}{\input{fig_resmlp}}\\[2pt]
@@ -11,7 +11,7 @@
 \end{minipage}
 \caption{The two learned models. $P$ is the number of pose classes. For $P\approx22$ the MLP has about 0.36\,M parameters; the nine-class ST-GCN has about 0.89\,M (both counted from the model definitions).}
 \label{fig:models}
-\end{figure*}
+\end{figure}
 
 \subsection{3-head residual MLP}
 The pose model takes the 15-angle vector (Section~\ref{sec:features}) and passes it through a 256-unit input layer (Linear, batch normalisation \cite{ioffe2015bn}, GELU \cite{hendrycks2016gelu}) and two residual blocks \cite{he2016resnet} of width 256 (two Linear--BN--GELU--Dropout stages with an identity skip). Three heads share this trunk (Fig.~\ref{fig:models}a): a \emph{pose head} (256$\to$128$\to P$ logits), a \emph{form head} (256$\to$64$\to1$, a correctness probability), and a \emph{deviation head} (256$\to$128$\to$15 per-joint deviations). Sharing the trunk makes one forward pass of about 0.36\,M parameters answer ``which pose, how well, which joints'' in a few milliseconds on a CPU.

@@ -1,0 +1,46 @@
+\section{Proposed Approach}\label{sec:method}
+\begin{figure*}[t]
+\centering
+\resizebox{0.98\textwidth}{!}{\input{fig_arch}}
+\caption{AsanaAI architecture. The browser turns the camera frame into 33 landmarks with an automatically chosen pose engine, masks hidden joints and sends only numbers. The server holds two small MLPs, a skeleton-graph network and a rule engine; a rule-engine port in the browser keeps a basic mode working offline (dashed).}
+\label{fig:arch}
+\end{figure*}
+\subsection{Overview}
+Fig.~\ref{fig:arch} shows the data flow. The browser runs a pose engine and obtains 33 landmarks $(x,y,z,v)$ per frame, with visibility $v$ smoothed by hysteresis so that a joint does not flicker between seen and hidden. From them it computes 15 joint angles (elbow, shoulder, hip, knee and ankle on each side, two trunk angles, the neck angle and two hip-abduction angles, from the 2-D coordinates) and a rolling 60-frame skeleton buffer resampled to 25\,fps. Only these numbers leave the device; the camera frame is never uploaded. The server answers with a pose name or an explicit ``not one of mine'', a form score, per-joint deviations, an optional flow-check answer and a coaching sentence. Three design rules follow from the open problems of Section~\ref{sec:intro}: abstain rather than guess (G1, G4), keep models small enough for a CPU (G6), and screen everything generated (G5).
+
+\subsection{Cue-verified supervision}
+Training labels come from 24 instructor-led videos (1{,}206{,}391 frames). A frame is a positive example of a pose only if (i)~the instructor names the pose in an automatic transcript \cite{radford2023whisper} (English and Hindi), (ii)~the rule engine of Section~\ref{sec:bands} agrees with the name, and (iii)~the body is held steady. About 80\,k frames qualify; about 421\,k are labelled transition and about 705\,k are excluded as ambiguous. No single source is trusted alone: an instructor may name a pose before or after the body reaches it, and labels from a rule engine alone would teach a model only to copy the rules. Training angles are computed exactly as at serving time (with $z$ set to zero): angles from raw 3-D coordinates differ from the served ones by a median of $14^\circ$, which would create a train/serve gap.
+
+\subsection{Name-and-veto cascade}\label{sec:cascade}
+\begin{figure*}[t]
+\centering
+\begin{minipage}[b]{0.50\textwidth}\centering
+\resizebox{\linewidth}{!}{\input{fig_resmlp}}\\[2pt]
+{\footnotesize (a) The 3-head residual MLP and the cascade.}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.47\textwidth}\centering
+\resizebox{\linewidth}{!}{\input{fig_stgcn}}\\[2pt]
+{\footnotesize (b) The skeleton-graph flow check.}
+\end{minipage}
+\caption{The two learned models. $P$ is the number of pose classes. For a vocabulary of 20--25 classes the MLP has about 0.36\,M parameters, and the nine-class ST-GCN about 0.89\,M (counted from the model definitions).}
+\label{fig:models}
+\end{figure*}
+The pose model maps the 15 angles through a 256-unit input layer (Linear, batch normalisation \cite{ioffe2015bn}, GELU \cite{hendrycks2016gelu}) and two residual blocks \cite{he2016resnet} to three heads (Fig.~\ref{fig:models}a): a pose head ($P$ logits), a form head (a correctness probability) and a deviation head (15 per-joint deviations). Two models of this architecture form a cascade. The \emph{namer}, trained on photos, names the pose. The \emph{gate}, trained on the cue-verified video table plus training photos and photos of other poses (labelled transition/unknown), answers ``is this one of my poses at all?'' and supplies the form score. The rule is fixed in advance: the answer is the namer's top pose unless the gate's top class is transition/unknown, in which case the system declares that it does not recognise a pose. This is a reject option in the sense of selective classification \cite{geifman2017selective} applied at the system level; it was chosen on a validation half of the held-out photos and confirmed on the untouched half (Section~\ref{sec:rq1}).
+
+\subsection{Joint-level feedback from angle bands}\label{sec:bands}
+Each of 17 poses has a table of angle bands (for Downward Dog: knee $[110^\circ,180^\circ]$, shoulder $[95^\circ,180^\circ]$, hip $[20^\circ,140^\circ]$). A joint's deviation is its distance in degrees outside its band, and the overlay colours each limb coral above $15^\circ$, amber above $7^\circ$ and sage otherwise. The cue names the joint with the largest deviation above $10^\circ$. The learned deviation head is not used for feedback because it is close to chance (Section~\ref{sec:form}); Tree and Lunge, which have no band table, therefore receive a pose-level score and neutral limbs but no per-joint cue.
+
+\subsection{Skeleton-graph flow check}\label{sec:stgcn}
+A 60-frame window (pelvis-centred, divided by hip width) is processed by three ST-GCN blocks \cite{yan2018stgcn}, each a graph convolution with the symmetric-normalised skeleton adjacency $\mathbf{A}_{\mathrm{norm}}=\mathbf{D}^{-1/2}(\mathbf{A}+\mathbf{I})\mathbf{D}^{-1/2}$ followed by a 9-tap temporal convolution, GELU and a residual connection (channels $3\to64\to128\to256$), global average pooling and a two-layer head that outputs eight target poses plus transition/unknown (Fig.~\ref{fig:models}b). The answer is shown only above a confidence of 0.70 (0.55 for child's pose); otherwise the interface reports a static check and the per-frame cascade alone names the pose and scores form. The model is trained on 60 consecutive native-rate frames ($\approx$2.4\,s at 25\,fps), so the browser fills a time-based buffer from every camera frame and resamples it to 25\,fps; Section~\ref{sec:rq2} measures why this matters.
+
+\subsection{Occlusion-aware scoring}
+Joints whose smoothed visibility is low are neither scored nor coached; the interface lists what it is not checking and draws hidden limbs faintly. The map from each hidden joint to the angle features it affects was verified against the reference angle code by perturbation (no visibility errors). Pose naming can still be influenced by a hallucinated hidden joint; only scoring and coaching are masked. The alternatives, recovering hidden joints by mirroring or by mesh recovery, are compared in Section~\ref{sec:rq3}.
+
+\subsection{Personal range-of-motion profile}\label{sec:calib}
+At camera start the user may stand comfortably for 15\,s while the 15 angles are recorded. For each joint the profile stores the observed minimum and maximum widened by $15^\circ$ (clamped to $[0^\circ,180^\circ]$) and the mean as the resting angle; it is discarded if fewer than 20 frames were captured. The profile stays in the browser's local storage and accompanies each request. On the server a joint whose angle lies inside its personal range has its deviation set to zero, and a personal form score closes the fraction of the gap to a perfect score that the forgiven deviation represents, so it is never lower than the universal score and equal to it when nothing is forgiven.
+
+\subsection{Safety-screened multilingual guidance}\label{sec:safety}
+The cue passes three stages. (1)~A symbolic stage selects the joint and a reviewed template in English, Hindi or Bengali. (2)~Optionally a hosted language model (a 27-billion-parameter Qwen model, temperature 0.2) may only rewrite the template. (3)~A post-generation screen discards the rewrite and keeps the template if it contains a forbidden term (for example ``push'', ``force'', ``pain'', ``stretch more'', ``further''). A cue that is delivered without a measured improvement escalates: it first adds how many degrees off the user is, and from the third delivery it backs off (``ease out of the shape and reset; come back only as far as feels comfortable today''). Speech uses the browser's speech synthesis.
+
+\subsection{Implementation}
+The front end is a progressive web app; the back end is a FastAPI service on a CPU host. The pose engine is chosen automatically: MediaPipe on the GPU, then MediaPipe Tasks on the CPU in a pool of Web Workers (two instances on phones with six or more cores), then TensorFlow.js with WebAssembly \cite{smilkov2019tfjs}. A TypeScript port of the rule engine and templates answers locally when the server is unreachable (``basic mode''); it matches the Python original on 10{,}000 generated frame cases and 2{,}500 coaching-text cases with no mismatch.

@@ -18,5 +18,5 @@
 \node[font=\scriptsize,text=black!70] at (0,-4.25) {form score $\in[0,1]$};
 \node[font=\scriptsize,text=black!70] at (2.55,-4.25) {per-joint deviation};
 % cascade
-\node[nb,fill=orange!12,text width=7.2cm] (cas) at (0,-5.25) {Cascade at serving time: the namer's pose head names the pose; the gate model's ``not mine'' output vetoes poses outside the vocabulary and its form head scores form; angle bands give the joint-level cues};
+\node[nb,fill=orange!12,text width=7.2cm] (cas) at (0,-5.25) {Cascade at serving time: model \vfour{}'s pose head names; a second, newer model's form/``not mine'' output vetoes poses outside the vocabulary and scores form; angle bands give the joint-level cues};
 \end{tikzpicture}

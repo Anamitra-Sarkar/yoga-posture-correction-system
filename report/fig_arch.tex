@@ -16,7 +16,7 @@
 \node[dev] (buf) at (6.8,-2.0) {Skeleton buffer\\ 60 frames, 25\,fps, pelvis-centred};
 \node[ui]  (uin) at (3.4,-4.0) {Interface: skeleton overlay (coral / amber / sage), score ring, coaching cue in English / Hindi / Bengali, optional voice};
 % ---- on the server
-\node[srv] (cas) at (11.4,0)    {Cascade: namer MLP names the pose; gate MLP vetoes ``not mine'' and scores form};
+\node[srv] (cas) at (11.4,0)    {Cascade: ResMLP \vfour{} names the pose; ResMLP gate vetoes ``not mine'' and scores form};
 \node[srv] (rul) at (15.0,0)    {Rule engine\\ angle bands $\rightarrow$ per-joint deviation};
 \node[srv] (stg) at (15.0,-2.0) {ST-GCN ``flow check''\\ second opinion on held poses};
 \node[srv] (coa) at (18.6,-1.0) {Coaching text: template $\rightarrow$ LLM paraphrase $\rightarrow$ safety screen};

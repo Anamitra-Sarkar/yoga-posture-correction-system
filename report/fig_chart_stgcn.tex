@@ -1,0 +1,10 @@
+\begin{tikzpicture}
+\begin{axis}[ybar,bar width=4.2pt,width=\linewidth,height=4.6cm,ymin=0,ymax=1.08,
+  symbolic x coords={child,corpse,dog,seated,tree,triangle,warrior2,plank},xtick=data,x tick label style={font=\tiny,rotate=40,anchor=east},y tick label style={font=\scriptsize},
+  legend style={font=\tiny,at={(0.5,1.04)},anchor=south,legend columns=2,draw=none},enlarge x limits=0.08,ymajorgrids,grid style={gray!25},
+  extra y ticks={0.7},extra y tick style={grid=major,grid style={dashed,black!60},tick label style={font=\tiny}}]
+\addplot[fill=blue!55,draw=blue!70] coordinates {(child,0.74)(corpse,1.00)(dog,0.83)(seated,0.68)(tree,0.87)(triangle,0.64)(warrior2,0.62)(plank,0.77)};
+\addplot[fill=orange!70,draw=orange!80] coordinates {(child,0.91)(corpse,0.85)(dog,0.77)(seated,0.81)(tree,0.67)(triangle,0.95)(warrior2,0.26)(plank,0.18)};
+\legend{recall,precision}
+\end{axis}
+\end{tikzpicture}

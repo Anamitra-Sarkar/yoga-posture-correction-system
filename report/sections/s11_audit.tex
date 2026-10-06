@@ -1,0 +1,31 @@
+\section{Verification, Audit and Fixes}\label{sec:audit}
+This section records what was checked before the project was written up, what was found, and what was changed. The full evidence is in \texttt{docs/REPO\_AUDIT\_2026-10-07.md}; none of this belongs in the research paper.
+
+\subsection{Method}
+All checks were read-only or black-box: tracked files, documentation, code, CI runs and deployments were inspected, and the deployed backend was queried over HTTP. Nothing was built or trained on the development machine (3.7\,GB RAM). A live smoke test (\texttt{backup/verify\_live.sh}) now makes seven assertions against production.
+
+\subsection{Findings that affect users or safety}
+\begin{table}[h]
+\centering\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.7cm}Xp{4.2cm}@{}}
+\toprule
+\# & Finding & Status \\ \midrule
+A1 & Tree and Lunge have no angle bands. With the cascade on, their per-joint deviations came from the learned deviation head, which is close to chance, so a correct Tree could show a coral standing leg and a cue could name the wrong joint. Evidence: a hand-built Tree frame returned deviations of 72--73$^\circ$ on a straight leg; screenshot in the repository. & \textbf{Fixed and live.} The cascade now returns zero deviations (\texttt{none\_no\_bands}); the web app draws neutral limbs (\texttt{NO\_BAND\_POSES}); verified against production and in the shipped JavaScript. \\
+A2 & The unsafe-word screen was a list of English words, while the language-model paraphrase is live in Hindi and Bengali. & Draft word lists with a regression test on branch \texttt{fix/safety-screen-hi-bn}; awaiting the native-speaker review (review sheet in \texttt{docs/}). Not shipped. \\
+A3 & Code defaults were the old behaviour (cascade off, old ST-GCN); production was correct only because of Space variables. & \textbf{Fixed and live.} Defaults now equal the benchmarked configuration; the variables remain for rollback. \\
+A4 & Body orientation is computed and sent but ignored while the cascade is on. & Documented. \\
+A5 & The personal profile works as designed but is unvalidated; a profile spanning $0^\circ$--$180^\circ$ forgives every deviation. & Documented; user study is future work. \\ \bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Hygiene findings}
+The live smoke test pre-dated the cascade, so two of its checks passed while testing nothing; it was rewritten with realistic frames and assertions. The README overstated the safety filter and listed orientation as a pipeline input (corrected). 15 merged remote branches, each building a preview deployment, were deleted after each was verified as an ancestor of \texttt{main}; one unmerged branch was left for the owner. Other items, not changed: ``Digital Twin'' remains the internal name in some comments and types while the interface says ``Your range of motion''; a June integration script sits outside the tests directory; a manifest shortcut opens an unused query parameter; CI does not run the backend tests; about 17\,MB of old checkpoints are tracked in git; the Expo companion still carries template scaffolding and the older six-pose vocabulary.
+
+\subsection{Verified without findings}
+No secrets or tokens in any tracked file; 114 translation keys in each of English, Hindi and Bengali with none missing or untranslated (checked by a native speaker); all relative documentation links resolve; CI green; the Vercel production deployment equals \texttt{main}; all seven model files exist on the model repository; the owner's saved app settings were restored after every automated screenshot run.
+
+\subsection{Calibration check}
+The calibration feature was exercised end to end on the deployed server (Section~\ref{sec:calib}): a profile containing a deviating joint's angle raises the personal score, a profile that does not leaves it unchanged, and the universal score never changes. The check is repeatable with the smoke test.
+
+\subsection{A measurement worth recording}
+End-to-end request latency from a residential connection in India was 0.97\,s at the median (p95 1.27\,s, 32 requests) although server compute is 7--9\,ms: the delay is the network to the hosting region. This motivates running the small MLPs on the device.

@@ -67,3 +67,8 @@ paper/*.out
 paper/*.toc
 paper/*.bbl
 paper/*.blg
+report/*.aux
+report/*.out
+report/*.toc
+report/*.bbl
+report/*.blg

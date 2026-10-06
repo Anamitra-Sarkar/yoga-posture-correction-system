@@ -34,14 +34,14 @@ Cascade (\vfour{} names, new model vetoes) & \textbf{78.9\%} & \textbf{20.8\%} &
 \end{tabular}
 \end{table}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \begin{subfigure}[t]{0.32\textwidth}\centering\input{fig_chart_policy}\caption{Decision policies (held-out public photos)}\end{subfigure}\hfill
 \begin{subfigure}[t]{0.32\textwidth}\centering\input{fig_chart_stgcn}\caption{ST-GCN, held-out videos, per pose}\end{subfigure}\hfill
 \begin{subfigure}[t]{0.32\textwidth}\centering\input{fig_chart_rate}\caption{ST-GCN input-rate contract}\end{subfigure}
 \caption{(a)~Rules-only, \vfour{}, the average of both MLPs, the veto lifted when rules agree, and the cascade. (b)~Per-pose recall and precision of the final ST-GCN on videos it never trained on (dashed: 0.70 bar; warrior~2 and plank have few held-out windows). (c)~Macro recall on held-out videos when the 60-frame buffer is filled at different rates; the new model needs training-rate windows, the previous model was partly trained on slow windows.}
 \label{fig:charts}
-\end{figure*}
+\end{figure}
 
 \subsection{Baselines: is the neural network necessary?}\label{sec:baselines}
 To answer ``compared with what?'' we trained standard methods on exactly the rows the new MLP was trained on (136{,}506 rows of 15 zero-$z$ angles: cue-verified video frames, training photos and photos of other poses labelled transition/unknown) and scored them on the same photos with the same metrics: $k$-NN ($k{=}15$, distance-weighted), an RBF SVM, logistic regression, a 300-tree random forest, and a plain MLP (256--256--128, ReLU, no residual blocks or batch normalisation). The SVM, forest and logistic regression use class-balanced weights; the SVM sees at most 20{,}000 class-balanced rows, the other methods between 64{,}000 and 115{,}000. These runs use one random seed and were executed on Kaggle. Table~\ref{tab:baseline} and Fig.~\ref{fig:baseline} report two held-out sets: the 1{,}685 public photos (same public datasets as the training photos, disjoint files) and the frozen \emph{wild} Commons-103 photos from another source, scored out-of-fold.
@@ -143,7 +143,7 @@ Plank & 3/4 & pass & & & \\ \bottomrule
 
 \subsection{The interface}
 Fig.~\ref{fig:ui} shows the deployed interface on the phone in the three languages and both themes, in free and guided mode, and the public landing page. The skeleton overlay uses the colours of Section~\ref{sec:models} and the score ring, ``For your body'' personal score and coaching cue update about every 1.5\,s.
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \begin{subfigure}[t]{0.165\textwidth}\centering\includegraphics[width=\linewidth]{figures/ui_triangle_en.jpg}\caption{Free mode, English, light}\end{subfigure}\hfill
 \begin{subfigure}[t]{0.165\textwidth}\centering\includegraphics[width=\linewidth]{figures/ui_chair_hi.jpg}\caption{Hindi: 51\% form, amber}\end{subfigure}\hfill
@@ -152,4 +152,4 @@ Fig.~\ref{fig:ui} shows the deployed interface on the phone in the three languag
 \begin{subfigure}[t]{0.165\textwidth}\centering\includegraphics[width=\linewidth]{figures/landing_light.jpg}\caption{The public landing page}\end{subfigure}
 \caption{The deployed interface on a POCO M7 Pro, a credited Wikimedia photo standing in for the camera (no live person): (a)~Trikonasana, 95\%; (b)~Utkatasana with the Hindi cue, 51\% in amber and a chip naming the joints not checked; (c)~Virabhadrasana~II in Bengali; (d)~guided mode with Vrikshasana selected while a Warrior~II photo is shown: the score is withheld and the app names the pose it sees; (e)~the public landing page (light theme). Photos by Kennguru (a, b; CC BY 3.0) and lululemon athletica (c, d; CC BY 2.0), via Wikimedia Commons.}
 \label{fig:ui}
-\end{figure*}
+\end{figure}

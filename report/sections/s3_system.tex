@@ -1,10 +1,10 @@
 \section{System Overview}\label{sec:system}
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \resizebox{0.98\textwidth}{!}{\input{fig_arch}}
 \caption{AsanaAI architecture. Everything left of the network arrow runs in the browser: the camera frame is turned into 33 landmarks by a pose engine chosen automatically (Section~\ref{sec:deploy}), hidden joints are masked, and only landmark-derived numbers are sent. The server holds three small models and a rule engine; a rule-engine port in the browser keeps a basic mode working offline. Dashed arrows show the offline path.}
 \label{fig:arch}
-\end{figure*}
+\end{figure}
 AsanaAI is a web app (a progressive web app that also installs on a phone's home screen) with a public landing page and the practice screen. Fig.~\ref{fig:arch} shows the data flow.
 
 \runin{On the device.} The browser opens the camera and a pose engine returns 33 landmarks $(x,y,z,v)$ per frame, where $v$ is the estimator's visibility. Visibility is smoothed with hysteresis so that a joint does not flicker between seen and hidden. From the landmarks the page computes 15 joint angles (Section~\ref{sec:features}) and, separately, a rolling 60-frame skeleton buffer resampled to 25\,fps. The camera frame itself is never uploaded; only numbers are sent: the 15-angle vector (with the user's calibration ranges, if any) and, for the sequence model, the buffered landmark coordinates, so the privacy promise on the landing page (``your video stays on your device'') is enforced by construction. A per-user calibration profile is kept in the browser's local storage (Section~\ref{sec:calib}).

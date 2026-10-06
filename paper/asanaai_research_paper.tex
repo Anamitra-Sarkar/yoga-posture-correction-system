@@ -1,0 +1,82 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}   % Times for text and math, so digits and symbols match the body font
+\usepackage{textcomp}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{pifont}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}
+
+\captionsetup{font=footnotesize,labelfont=bf}
+\captionsetup[subfigure]{labelfont=rm,textfont=rm}
+\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
+\setlength{\floatsep}{7pt plus 2pt minus 2pt}
+\setlength{\intextsep}{7pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{0pt}
+\newcommand{\cmark}{\ding{51}}
+% typography: bold only marks the best value in a table column; italics only for run-in headings and a term's first definition
+\newcommand{\runin}[1]{\textit{#1}}
+\newcommand{\vfour}{v4}
+
+\begin{document}
+
+\title{AsanaAI: A Privacy-Preserving, Occlusion-Aware and Safety-Screened\\
+Yoga Posture Coach for Commodity Hardware}
+
+\author{
+\IEEEauthorblockN{Anamitra Sarkar}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Debjit Deb Barman}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Adrija Ray Mondal}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Tanima Samanta}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Sujit Chakraborty \textit{(Supervisor)}}
+\IEEEauthorblockA{\textit{Assistant Professor, CSE}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+}
+
+\maketitle
+
+\input{sections/abstract}
+\input{sections/s1_intro}
+\input{sections/s2_related}
+\input{sections/s3_method}
+\input{sections/s4_setup}
+\input{sections/s5_results}
+\input{sections/s6_discussion}
+\input{references_gen}
+
+\end{document}

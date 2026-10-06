@@ -1,4 +1,7 @@
-\documentclass[conference]{IEEEtran}
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{parskip}
+\setlength{\parskip}{4pt}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{mathptmx}   % Times for text AND math, so digits and symbols match the body font
@@ -34,41 +37,23 @@
 \newcommand{\cmark}{\ding{51}}
 \newcommand{\xmark}{\ding{55}}
 % typography: bold only marks the best value in a table column; italics only for run-in headings and a term's first definition
+\newenvironment{IEEEkeywords}{\par\smallskip\noindent\textit{Keywords---}}{\par}
 \newcommand{\runin}[1]{\textit{#1}}
 \newcommand{\vfour}{v4}
 
 \begin{document}
 
-\title{AsanaAI: Privacy-Preserving Real-Time Yoga Posture Correction with a Gated MLP Cascade and an ST-GCN on Budget Phones}
-
-\author{
-\IEEEauthorblockN{Anamitra Sarkar}
-\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
-\textit{RCC Institute of Information Technology}\\
-Kolkata, West Bengal, India}
-\and
-\IEEEauthorblockN{Debjit Deb Barman}
-\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
-\textit{RCC Institute of Information Technology}\\
-Kolkata, West Bengal, India}
-\and
-\IEEEauthorblockN{Adrija Ray Mondal}
-\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
-\textit{RCC Institute of Information Technology}\\
-Kolkata, West Bengal, India}
-\and
-\IEEEauthorblockN{Tanima Samanta}
-\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
-\textit{RCC Institute of Information Technology}\\
-Kolkata, West Bengal, India}
-\and
-\IEEEauthorblockN{Sujit Chakraborty \textit{(Supervisor)}}
-\IEEEauthorblockA{\textit{Assistant Professor, CSE}\\
-\textit{RCC Institute of Information Technology}\\
-Kolkata, West Bengal, India}
-}
+\title{\textbf{AsanaAI: Project Report}\\[4pt]
+\large Design, Implementation, Deployment and Verification of a Privacy-Preserving\\
+Yoga Posture Coach on Commodity Hardware}
+\author{Anamitra Sarkar \and Debjit Deb Barman \and Adrija Ray Mondal \and Tanima Samanta\\[6pt]
+Supervisor: Mr.\ Sujit Chakraborty, Assistant Professor, Dept.\ of CSE (AI/ML)\\[2pt]
+RCC Institute of Information Technology, Kolkata, West Bengal, India}
+\date{}
 
 \maketitle
+\tableofcontents
+\clearpage
 
 \input{sections/abstract}
 
@@ -82,6 +67,8 @@ Kolkata, West Bengal, India}
 \input{sections/s8_results}
 \input{sections/s9_compare}
 \input{sections/s10_limits}
+\input{sections/s11_audit}
+\input{sections/s12_repo}
 
 \input{references_gen}
 

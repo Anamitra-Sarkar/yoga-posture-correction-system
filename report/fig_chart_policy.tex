@@ -1,0 +1,10 @@
+\begin{tikzpicture}
+\begin{axis}[ybar,bar width=5pt,width=\linewidth,height=4.6cm,ymin=0,ymax=100,ylabel={\%},ylabel style={font=\scriptsize,yshift=-4pt},
+  symbolic x coords={Rules,v4,Avg,Lifted,Cascade},xtick=data,x tick label style={font=\scriptsize},y tick label style={font=\scriptsize},
+  legend style={font=\tiny,at={(0.5,1.04)},anchor=south,legend columns=2,draw=none},enlarge x limits=0.14,ymajorgrids,grid style={gray!25},
+  nodes near coords,nodes near coords style={font=\tiny,/pgf/number format/fixed,/pgf/number format/precision=1},every node near coord/.append style={rotate=90,anchor=west}]
+\addplot[fill=blue!55,draw=blue!70] coordinates {(Rules,36.9)(v4,42.9)(Avg,65.2)(Lifted,65.9)(Cascade,78.9)};
+\addplot[fill=red!55,draw=red!70] coordinates {(Rules,78.3)(v4,81.5)(Avg,47.7)(Lifted,42.3)(Cascade,20.8)};
+\legend{overall accuracy $\uparrow$,false alarms $\downarrow$}
+\end{axis}
+\end{tikzpicture}

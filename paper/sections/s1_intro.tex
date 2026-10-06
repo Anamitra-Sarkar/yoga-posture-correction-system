@@ -1,22 +1,30 @@
-\section{Introduction}
-Yoga is practised worldwide---the United Nations proclaimed an International Day of Yoga in 2014 \cite{unga2014yoga}---and it is increasingly learned alone, from videos and phone apps, with nobody to correct the posture. A systematic review of published case reports and case series documented adverse events associated with yoga \cite{cramer2013yoga}. A camera-based coach that tells a practitioner which joint is off, in their own language and without frightening or pushing them, is therefore attractive. Real-time body-landmark estimators that run on a phone \cite{bazarevsky2020blazepose,lugaresi2019mediapipe} make it technically possible; making it trustworthy on ordinary hardware is harder, and this paper is about that gap.
+\section{Introduction}\label{sec:intro}
+Yoga is practised worldwide and is increasingly learned alone, from videos and phone apps; a systematic review of published case reports documented adverse events associated with yoga \cite{cramer2013yoga}. A camera-based coach that tells a practitioner which joint is off, in their own language, is therefore attractive, and real-time body-landmark estimators that run on a phone \cite{bazarevsky2020blazepose,lugaresi2019mediapipe} make it technically possible. A wave of 2025--2026 systems has followed: sensor-augmented and IoT designs \cite{yuan2025gtanet,sathyapriya2026posture,kamble2026yogamat,saravanapandian2025mat}, a virtual-reality coach \cite{srinivasakumar2025yogavr}, edge and hybrid pipelines \cite{gadhvi2025posepilot,haldar2026framework,vallabhaneni2026hybrid}, joint-level correction from a single image \cite{chi2026sage}, an accessibility-oriented system \cite{aggarwal2026chair}, and a clinical validation of on-device pose estimation for resistance training \cite{heo2026ondevice}.
 
-We build on three observations from developing and testing AsanaAI.
+\runin{Open problems.} Reading this literature, we identify six problems that remain open (Table~\ref{tab:related} summarises what each system reports).
+\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\topsep}{2pt}
+\item (G1) Evaluation. Reviews note heterogeneous metrics and uncertain generalisability \cite{ozsezer2025review,koroglu2026review}, and typical results are measured on a random split of a small image set (for example 96.09\% on a 256-image test split of 1{,}280 images \cite{mohiuddin2025skeleton}); random splits place near-identical frames and photos on both sides and are a known source of inflated results \cite{kapoor2023leakage}. None of the abstracts we read reports how often a pose outside the vocabulary is wrongly named.
+\item (G2) Temporal behaviour. Pose transition is described as under-explored \cite{dittakavi2025pose2pose}; recurrent models appear in several systems \cite{gadhvi2025posepilot,haldar2026framework}, but their abstracts report no evaluation on videos of unseen people.
+\item (G3) Personalisation. Where recent yoga systems personalise, they rely on extra sensors \cite{vallabhaneni2026hybrid,saravanapandian2025mat}.
+\item (G4) Hidden joints. Occlusion is a stated difficulty of the domain \cite{verma2020yoga82}, yet the yoga systems above do not describe in their abstracts how a hidden joint is scored.
+\item (G5) Safety of generated advice. Vision--language coaching still shows substantial gaps against human coaches \cite{zuo2025formcoach}, and a system that uses a language-model voice assistant \cite{srinivasakumar2025yogavr} reports no screening of its output in its abstract.
+\item (G6) Deployment. Systems need mats, headsets, robots or wearables \cite{kamble2026yogamat,saravanapandian2025mat,srinivasakumar2025yogavr,sathyapriya2026posture}, and none of the abstracts we read reports guidance beyond English.
+\end{itemize}
 
-\runin{(1) Random-split accuracy is not accuracy.} Video frames and web photos have near-duplicate neighbours, mirrored copies and repeated photographs; when these fall on both sides of a random split, validation accuracy measures memory, a form of leakage known to inflate reported results across many fields \cite{kapoor2023leakage}. The first model of this project reached 91.5\% on its random validation split; on held-out photos it passed none of the poses and raised a false alarm on 75\% of photos of poses outside its vocabulary (Section~\ref{sec:results}). We therefore report only numbers measured on data a model never trained on.
-
-\runin{(2) A coach must be deployable where its users are.} Phones differ widely in their GPU drivers. On one budget phone (MediaTek Dimensity 7025, PowerVR BXM-8-256 GPU) we found that the standard MediaPipe web engine aborts inside the driver, and we chose to send no image to a server, because a camera pointed at a person at home should not become an upload.
-
-\runin{(3) Feedback has to be honest about what is not seen.} A pose estimator happily invents joints that are hidden; a coach that scores an invented knee is worse than silent. And a generated sentence must never tell someone to push through pain.
+\runin{Approach and research questions.} We propose AsanaAI, a coach designed around these problems and evaluated only on data its models never trained on. We ask:
+\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\topsep}{2pt}
+\item RQ1: Does a name-and-veto cascade of small residual MLPs name poses accurately on held-out photos while rarely naming a pose that is not in its vocabulary, compared with standard classifiers?
+\item RQ2: Does a skeleton-graph temporal network recognise held poses and separate them from transitions on videos of unseen people, and what input rate does it need?
+\item RQ3: Is declining to score hidden joints preferable to recovering them by mirroring or by mesh recovery?
+\item RQ4: Does a personal range-of-motion profile change feedback only where intended, and can the system run on commodity hardware with acceptable latency?
+\end{itemize}
 
 \runin{Contributions.}
 \begin{enumerate}
-\item \emph{Cue-verified labels.} A labelling protocol for instructor videos---the instructor names the pose in an automatic transcript \cite{radford2023whisper}, a rule engine agrees, and the pose is held steady---that turns 1.2\,M video frames into $\sim$80\,k trustworthy positive frames, and a finding that the original training table was built with 3-D angles while the app serves 2-D angles (median gap $14^\circ$).
-\item \emph{A held-out evaluation protocol} with an explicit false-alarm metric for photos of poses outside the vocabulary, a fixed pass bar (recall and precision $\ge 0.70$), and controlled baselines trained on the same data.
-\item \emph{A gated cascade} of 3-head residual MLPs in which one model names the pose and another vetoes ``not one of mine'', plus an ST-GCN \cite{yan2018stgcn} second opinion whose input rate we show must match training.
-\item \emph{Occlusion-aware, personalised, safe coaching:} visibility-aware scoring, a comparison of left--right mirroring with a mesh-recovery model (CLIFF \cite{li2022cliff}) for hidden joints, a per-user range-of-motion calibration, and a screened, three-language coaching pipeline.
-\item \emph{Engineering for the real world:} a pose-engine fallback ladder verified over USB on a real phone whose GPU path fails, an offline rule-engine port with a parity proof, and live screenshots of the deployed interface.
+\item \emph{Cue-verified supervision:} instructor videos are turned into training labels only where a speech transcript, a biomechanical rule engine and a steadiness test all agree.
+\item \emph{A name-and-veto cascade} of two 3-head residual MLPs with an explicit ``not one of mine'' answer, and a controlled comparison with five standard classifiers on two held-out photo sets, including a result that goes against our own design (Section~\ref{sec:rq1}).
+\item \emph{A skeleton-graph flow check} that separates held poses from transitions, with its input-rate requirement measured.
+\item \emph{Occlusion-aware scoring} that abstains on hidden joints, compared with mirroring and mesh recovery.
+\item \emph{Personal calibration and safety-screened guidance} in English, Hindi and Bengali, with the image never leaving the device.
+\item \emph{Evidence on commodity hardware:} server and phone measurements and an end-to-end test on a mid-range phone, with live screenshots of the deployed interface.
 \end{enumerate}
-We also report negative results: weak poses, arm-error blindness, and a mesh-recovery model we chose not to ship.
-
-Section~\ref{sec:related} reviews related work; Sections~\ref{sec:system}--\ref{sec:models} describe the system, data and models; Sections~\ref{sec:occ} and~\ref{sec:deploy} cover occlusion, personalisation and deployment; Section~\ref{sec:results} gives results; Section~\ref{sec:compare} compares with prior work; Section~\ref{sec:limits} states limitations and future work.

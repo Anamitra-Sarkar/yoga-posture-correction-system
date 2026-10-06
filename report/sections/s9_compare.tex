@@ -1,6 +1,6 @@
 \section{Comparison with Related Work}\label{sec:compare}
 Direct numeric comparison with other groups is not possible (we could not obtain their systems; datasets, vocabularies and splits differ), so Table~\ref{tab:related} compares what each work reports, using only what the cited sources state; ``n/r'' means not reported in the sources we read, not that the feature is absent.
-\begin{table*}[t]
+\begin{table}[t]
 \centering\scriptsize
 \caption{What each work reports (qualitative; n/r = not reported in the sources we read).}\label{tab:related}
 \begin{tabularx}{\textwidth}{@{}p{2.2cm}p{3.1cm}p{3.6cm}XXX@{}}
@@ -15,7 +15,7 @@ Pose-to-Pose \cite{dittakavi2025pose2pose} & generating target poses (transition
 Liao et al.\ \cite{liao2020rehab} & scoring rehabilitation exercise quality & n/r here & n/r & quality score & n/r \\ \midrule
 AsanaAI (this work) & landmark angles + 60-frame skeleton windows; cascade + ST-GCN & held-out photos and held-out videos only; false-alarm metric; controlled baselines & abstains on hidden joints; CLIFF vs.\ mirror measured & per-joint cues, three languages, screened, escalating & \cmark\ tested on a budget phone / \cmark\ only numbers leave the device \\ \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 \runin{What we add.} To the best of our reading, the works above do not report (i)~a false-alarm rate on photos of poses outside the vocabulary, which is what matters when a user is in a pose the app does not know; (ii)~a split by video or by held-out source, as opposed to a split of a single image set (Yoga-16's test split is 256 images from the same 1{,}280); (iii)~how hidden joints are handled, or an experiment comparing recovery methods; (iv)~a deployment through a GPU driver that fails; or (v)~privacy by construction, multilingual coaching with a safety screen and an offline mode with a parity proof. We also show, on our own models, how large the random-split illusion can be: the first MLP reported 91.5\% validation accuracy and scored 26.8\% on Commons photos it had never seen, and the first ST-GCN reported 82.6\% validation accuracy but only 11.6\% macro recall on held-out videos.
 

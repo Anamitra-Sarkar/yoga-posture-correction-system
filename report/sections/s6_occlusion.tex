@@ -1,5 +1,5 @@
 \section{Occlusion, Personalisation and Safe Coaching}\label{sec:occ}
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \begin{subfigure}[t]{0.175\textwidth}\centering\includegraphics[width=\linewidth]{figures/oc_plank_hidden.jpg}\caption{Hidden joints are not judged}\end{subfigure}\hfill
 \begin{subfigure}[t]{0.175\textwidth}\centering\includegraphics[width=\linewidth]{figures/cal_countdown.jpg}\caption{Calibration: 15\,s countdown}\end{subfigure}\hfill
@@ -8,7 +8,7 @@
 \begin{subfigure}[t]{0.175\textwidth}\centering\includegraphics[width=\linewidth]{figures/fail_dog.jpg}\caption{Failure: wrong name}\end{subfigure}
 \caption{Live screenshots of the deployed app on a POCO M7 Pro over USB, with a credited Wikimedia photo standing in for the camera (no live person). (a)~Plank, guided mode: visible limbs are sage (inside their angle bands) and the chip ``Not checking: left elbow, left shoulder'' names joints the camera cannot see, which are drawn faint and neither scored nor coached. (b)~Calibration asks the user to stand comfortably for 15\,s. (c)~The learned per-joint ranges are saved on the device (the still photo yields narrow ranges). Two failures shown on purpose: (d)~a correct Tree (guided, dark theme) with a coral standing leg, captured before the fix: Tree has no angle bands, so its joint colours then came from the learned deviation head, which is unreliable; the deployed app now draws neutral limbs for Tree and Lunge (Section~\ref{sec:models}); (e)~a Downward Dog photo named Uttanasana (a forward fold), after which guided mode answers ``Wrong Pose''. Photos: Kennguru (a, d), Witold Fitz-Simon (b, c; CC BY-SA 2.5), Iveto (e); CC BY 3.0 unless noted, via Wikimedia Commons.}
 \label{fig:occ}
-\end{figure*}
+\end{figure}
 
 \subsection{Visibility-aware scoring}
 An audit of the first version showed that the server's mesh-recovery branch was never wired (nothing sent it data and no such model was deployed), and what actually ran for hidden joints was a left--right mirror: exact for symmetric stances, wrong for asymmetric ones. In Tree pose the raised foot was placed on the floor, off by 0.23 of the frame height, and still reported as ``recovered''. Meanwhile the joint angles were always computed from the raw landmarks, so a hidden joint could still produce a confident wrong score and cue.

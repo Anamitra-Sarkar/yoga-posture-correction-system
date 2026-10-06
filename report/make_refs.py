@@ -10,7 +10,7 @@ for m in re.finditer(r"@(\w+)\{([^,]+),(.*?)\n\}\n", bib, re.S):
         f[fm.group(1).lower()] = re.sub(r"\s+", " ", fm.group(2).strip())
     entries[key] = (kind.lower(), f)
 order = []
-main = open("asanaai_research_paper.tex").read()
+main = open("asanaai_project_report.tex").read()
 files = [m.group(1) + ".tex" for m in re.finditer(r"\\input\{(sections/[^}]+)\}", main)]
 text = "".join(open(f).read() for f in files)
 for m in re.finditer(r"\\cite\{([^}]+)\}", text):
@@ -34,13 +34,11 @@ def initials(first):
 def names(a):
     if a.startswith("{"): return strip(a)
     ps = [p.strip() for p in re.split(r"\s+and\s+", a)]
-    etal = ps[-1] == "others"
-    if etal: ps = ps[:-1]
     fm = []
     for p in ps:
         t = p.split()
         fm.append(strip(t[-1]) if len(t) == 1 else initials(" ".join(t[:-1])) + " " + strip(t[-1]))
-    if etal or len(fm) > 6: return fm[0] + " \\textit{et al.}"
+    if len(fm) > 6: return fm[0] + " \\textit{et al.}"
     return fm[0] if len(fm) == 1 else (" and ".join(fm) if len(fm) == 2 else ", ".join(fm[:-1]) + ", and " + fm[-1])
 def render(kind, f):
     au = names(f["author"]); ti = '``' + strip(f["title"]) + ",'' "; yr = f.get("year", "")
