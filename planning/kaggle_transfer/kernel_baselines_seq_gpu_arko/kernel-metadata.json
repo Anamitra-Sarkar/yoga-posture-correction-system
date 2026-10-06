@@ -1,0 +1,13 @@
+{
+  "id": "arkosarkarhehe/asanaai-conf-baselines-seq-gpu",
+  "title": "asanaai-conf-baselines-seq-gpu",
+  "code_file": "runner_baselines_seq_gpu_arko.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
