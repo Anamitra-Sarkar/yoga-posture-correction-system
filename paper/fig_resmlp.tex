@@ -1,0 +1,22 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\tikzset{
+  nb/.style={rectangle,rounded corners=3pt,draw=black!60,fill=blue!8,text width=7.2cm,align=center,minimum height=0.62cm,font=\scriptsize},
+  hd/.style={rectangle,rounded corners=3pt,draw=black!60,fill=green!10,text width=2.15cm,align=center,minimum height=0.95cm,font=\scriptsize},
+  ar/.style={-{Stealth[length=1.8mm]},thick,draw=black!65}
+}
+\node[nb] (in) at (0,0) {15 joint angles (z\,=\,0; hidden joints masked)};
+\node[nb] (l1) at (0,-0.95) {Linear 15$\rightarrow$256, BatchNorm, GELU};
+\node[nb,fill=blue!16] (rb) at (0,-1.9) {2 $\times$ ResBlock(256): (Linear--BN--GELU--Dropout 0.3) $\times 2$, identity skip};
+\node[hd] (h1) at (-2.55,-3.35) {\textbf{Pose head}\\ 256$\rightarrow$128$\rightarrow P$};
+\node[hd] (h2) at (0,-3.35) {\textbf{Form head}\\ 256$\rightarrow$64$\rightarrow 1$};
+\node[hd] (h3) at (2.55,-3.35) {\textbf{Deviation head}\\ 256$\rightarrow$128$\rightarrow 15$};
+\draw[ar] (in)--(l1); \draw[ar] (l1)--(rb);
+\draw[ar] (rb.south) -- ++(0,-0.28) -| (h1.north);
+\draw[ar] (rb.south) -- (h2.north |- rb.south) -- (h2.north);
+\draw[ar] (rb.south) -- ++(0,-0.28) -| (h3.north);
+\node[font=\scriptsize,text=black!70] at (-2.55,-4.25) {pose name};
+\node[font=\scriptsize,text=black!70] at (0,-4.25) {form score $\in[0,1]$};
+\node[font=\scriptsize,text=black!70] at (2.55,-4.25) {per-joint deviation};
+% cascade
+\node[nb,fill=orange!12,text width=7.2cm] (cas) at (0,-5.25) {\textbf{Cascade at serving time:} model $v4$'s pose head \textbf{names}; a second, newer model's form/``not mine'' output \textbf{vetoes} poses outside the vocabulary and scores form; angle bands give the joint-level cues};
+\end{tikzpicture}

@@ -1,0 +1,9 @@
+\begin{tikzpicture}
+\begin{axis}[ybar,bar width=4.6pt,width=\columnwidth,height=4.9cm,ymin=0,ymax=100,ylabel={overall accuracy (\%)},ylabel style={font=\scriptsize,yshift=-3pt},
+  symbolic x coords={Prod.,kNN,SVM,MLP,Forest,v4,New,Cascade},xtick=data,x tick label style={font=\scriptsize,rotate=35,anchor=east},y tick label style={font=\scriptsize},
+  legend style={font=\tiny,at={(0.5,1.03)},anchor=south,legend columns=2,draw=none},enlarge x limits=0.07,ymajorgrids,grid style={gray!25}]
+\addplot[fill=blue!55,draw=blue!70] coordinates {(Prod.,36.9)(kNN,58.6)(SVM,58.4)(MLP,80.9)(Forest,85.3)(v4,42.9)(New,79.6)(Cascade,78.9)};
+\addplot[fill=orange!75,draw=orange!85] coordinates {(Prod.,37.9)(kNN,50.5)(SVM,52.4)(MLP,47.6)(Forest,35.0)(v4,60.2)(New,49.5)(Cascade,55.3)};
+\legend{public held-out photos (1{,}685),wild Commons-103 (out-of-fold)}
+\end{axis}
+\end{tikzpicture}

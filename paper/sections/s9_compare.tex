@@ -1,0 +1,22 @@
+\section{Comparison with Related Work}\label{sec:compare}
+Direct numeric comparison with other groups is not possible (we could not obtain their systems; datasets, vocabularies and splits differ), so Table~\ref{tab:related} compares what each work reports, using only what the cited sources state; ``n/r'' means not reported in the sources we read, not that the feature is absent.
+\begin{table*}[t]
+\centering\scriptsize
+\caption{What each work reports (qualitative; n/r = not reported in the sources we read).}\label{tab:related}
+\begin{tabularx}{\textwidth}{@{}p{2.2cm}p{3.1cm}p{3.6cm}XXX@{}}
+\toprule
+Work & Task and input & Evaluation as described & Hidden joints & Feedback to the user & Runs on a phone / image stays local \\ \midrule
+Chen et al.\ \cite{chen2014yoga} & posture recognition from silhouette star skeleton & n/r & n/r & links to training information & n/r \\
+Yoga-82 \cite{verma2020yoga82} & image classification, 82 poses, 3-level labels & dataset benchmark of CNNs; motivates occlusion and viewpoint variety & dataset difficulty only & none (classification) & n/r \\
+Thoutam et al.\ \cite{thoutam2022yoga} & incorrect posture in uploaded videos & n/r & n/r & abnormal angles and advice & uploaded video; n/r \\
+Mohiuddin et al.\ \cite{mohiuddin2025skeleton} & Yoga-16 (1{,}280 images, 16 poses); MediaPipe / YOLOv8 skeletons vs.\ images & 96.09\% on a 256-image test split of a dataset split into 896/128/256 & none & none & n/r \\
+PosePilot \cite{gadhvi2025posepilot} & LSTM, BiLSTM + attention on video; new video dataset & evaluation detail n/r in the abstract & not discussed & instant corrective feedback & edge devices (design goal); n/r \\
+Pose-to-Pose \cite{dittakavi2025pose2pose} & generating target poses (transitions), counterfactuals & new benchmark (PoseHPT) & n/r & not a coach & n/r \\
+Liao et al.\ \cite{liao2020rehab} & scoring rehabilitation exercise quality & n/r here & n/r & quality score & n/r \\ \midrule
+\textbf{AsanaAI (this work)} & landmark angles + 60-frame skeleton windows; cascade + ST-GCN & held-out photos and held-out videos only; false-alarm metric; controlled baselines & abstains on hidden joints; CLIFF vs.\ mirror measured & per-joint cues, three languages, screened, escalating & \cmark\ tested on a budget phone / \cmark\ only numbers leave the device \\ \bottomrule
+\end{tabularx}
+\end{table*}
+
+\textbf{What we add.} To the best of our reading, the works above do not report (i)~a false-alarm rate on photos of poses outside the vocabulary, which is what matters when a user is in a pose the app does not know; (ii)~a split by video or by held-out source, as opposed to a split of a single image set (Yoga-16's test split is 256 images from the same 1{,}280); (iii)~how hidden joints are handled, or an experiment comparing recovery methods; (iv)~a deployment through a GPU driver that fails; or (v)~privacy by construction, multilingual coaching with a safety screen and an offline mode with a parity proof. We also show, on our own models, how large the random-split illusion can be: the first MLP reported 91.5\% validation accuracy and scored 26.8\% on Commons photos it had never seen, and the first ST-GCN reported 82.6\% validation accuracy but only 11.6\% macro recall on held-out videos.
+
+\textbf{Where others are stronger, and what we do not do.} Yoga-82 covers 82 poses with a hierarchy and thousands of images, while our guided mode covers eight poses and only three or four pass on video; PosePilot's temporal feedback is delivered at every stage of a movement, whereas ours is per-frame cues plus a flow check; Pose-to-Pose generates how to move between poses and we do not; Liao et al.\ learn a quality score whereas our form score is not validated against human labels. Accuracies such as Yoga-16's 96.09\% are measured under a different protocol and are not comparable to ours; the comparison that \emph{is} controlled is the one against standard methods trained on our own data and scored on our own held-out sets (Section~\ref{sec:results}).

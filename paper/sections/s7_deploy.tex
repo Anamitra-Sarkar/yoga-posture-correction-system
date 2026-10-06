@@ -1,0 +1,28 @@
+\section{Deployment on Real Phones}\label{sec:deploy}
+\begin{figure}[t]
+\centering
+\resizebox{0.92\columnwidth}{!}{\input{fig_ladder}}
+\caption{The pose-engine fallback ladder. The choice is automatic, remembered per browser version for up to 30 days, and invisible to the user.}
+\label{fig:ladder}
+\end{figure}
+\textbf{The failure.} On a POCO M7 Pro (MediaTek Dimensity 7025, PowerVR BXM-8-256 GPU, Android 16, Chrome 154) the web app showed a raw ``Failed to create WebGL canvas context'' alert. This is not ``no WebGL'': Chrome creates WebGL2, WebGL1 and OffscreenCanvas contexts fine. The legacy MediaPipe pose engine then aborts inside the GPU driver (a shader-uniform assertion in its image scaler) and every later frame throws; MediaPipe Tasks with the GPU delegate runs in 16\,ms per frame but returns \emph{no poses}. Driver problems of this GPU family are discussed on the vendor's developer forum,\footnote{\url{https://forums.imgtec.com/t/bxm-8-256-long-list-of-driver-issues/3891}} and the alert itself is a \texttt{window.alert} inside MediaPipe's script.\footnote{\url{https://github.com/google/mediapipe/issues/2381}} Because fixes must be automatic, we measured candidate engines over USB with the Chrome DevTools Protocol, touching only a tab we create.
+
+\textbf{The ladder.} The app tries MediaPipe on the GPU; if the renderer is the known-bad chip (recognised at page load) or the engine aborts or raises the alert, it switches to MediaPipe Tasks on the CPU inside a Web Worker (a second MediaPipe module cannot share the page with the legacy one because of a global-namespace collision, hence the worker); if no worker or WebGL is available it falls back to TensorFlow.js \cite{smilkov2019tfjs} with a WebAssembly BlazePose (Fig.~\ref{fig:ladder}). Table~\ref{tab:engines} gives what we measured.
+\begin{table}[t]
+\centering\footnotesize
+\caption{Pose engines measured on the POCO M7 Pro (lite models unless stated).}\label{tab:engines}
+\begin{tabularx}{\columnwidth}{@{}Xr@{}}
+\toprule
+Engine / configuration & Measured \\ \midrule
+Legacy MediaPipe, GPU (PowerVR BXM-8-256) & aborts in driver \\
+MediaPipe Tasks, GPU delegate & 16\,ms, no poses \\
+Tasks, CPU, image mode & $\sim$176\,ms/frame \\
+Tasks, CPU, video mode (lite / full) & $\sim$80 / $\sim$117\,ms \\
+$\ldots$ in a Web Worker, round trip & 85--95\,ms \\
+Worker pool, 1 / 2 / 3 instances & 7.3 / \textbf{19} / 24 results/s \\
+TF.js WASM BlazePose (last resort) & $\sim$95\,ms; $4.2$--$6.7^\circ$ mean angle gap \\ \bottomrule
+\end{tabularx}
+\end{table}
+A single worker gave 7.3 results/s; phones with at least six cores now run two instances and alternate frames (late answers for older frames are dropped), which raised the skeleton from about 8--10 to about 22 updates/s in the running app. The last-resort engine is lower in fidelity: against the CPU engine its mean joint-angle difference was $4.2$--$6.7^\circ$ (worst $27^\circ$) and it missed a plank. On a desktop, the GPU and CPU engines differed by $2.4^\circ$ (Tree), $2.5^\circ$ (Cobra) and $4.8^\circ$ (Warrior~II) on the same photos. The same fallback also worked in a second browser (Brave) that masks the GPU name, where recognition up front is impossible and the reactive path took over after the driver abort, then drew the skeleton and recognised Warrior~II at 98\% (one photo).
+
+\textbf{Offline and degraded operation.} When the server is unreachable, the browser falls back to \emph{basic mode}: a TypeScript port of the rule engine and coaching templates. We proved the port against the Python original with generated cases: 10{,}000 frame cases and 2{,}500 coaching-text cases over 21 poses, \textbf{0 mismatches}. Basic mode is rules only---no MLP, no gate, no ST-GCN, no language model---so its pose naming equals the ``rules only'' row of Table~\ref{tab:policy}, not the cascade; the interface says so and says why (offline, server waking, reconnecting). The first answer of a session is local so the user never waits for a sleeping server, API calls time out after 9\,s, and pose and score refresh about every 1.5\,s (they refreshed every 10\,s in the first version, so a new pose took 10--20\,s to appear).

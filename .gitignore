@@ -60,3 +60,10 @@ modal/*.out
 backup/run_logs_*/
 .pytest_cache/
 planning/kaggle_transfer/code_stage/
+
+# LaTeX build intermediates (paper/)
+paper/*.aux
+paper/*.out
+paper/*.toc
+paper/*.bbl
+paper/*.blg

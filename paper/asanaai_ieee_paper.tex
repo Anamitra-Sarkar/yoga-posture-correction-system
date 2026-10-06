@@ -1,0 +1,84 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{pifont}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\captionsetup{font=footnotesize,labelfont=bf}
+\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
+\setlength{\floatsep}{7pt plus 2pt minus 2pt}
+\setlength{\intextsep}{7pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{0pt}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+\newcommand{\pass}{\textbf{\color{green!45!black}pass}}
+% a visible marker for numbers that are still being measured; the final build must contain none
+\newcommand{\TBD}[1]{\textbf{\color{red}[#1]}}
+
+\begin{document}
+
+\title{AsanaAI: Privacy-Preserving Real-Time Yoga Posture Correction with a Gated MLP Cascade and an ST-GCN on Budget Phones}
+
+\author{
+\IEEEauthorblockN{Anamitra Sarkar}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Debjit Deb Barman}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Adrija Ray Mondal}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Tanima Samanta}
+\IEEEauthorblockA{\textit{Dept. of CSE (AI/ML)}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+\and
+\IEEEauthorblockN{Sujit Chakraborty \textit{(Supervisor)}}
+\IEEEauthorblockA{\textit{Assistant Professor, CSE}\\
+\textit{RCC Institute of Information Technology}\\
+Kolkata, West Bengal, India}
+}
+
+\maketitle
+
+\input{sections/abstract}
+
+\input{sections/s1_intro}
+\input{sections/s2_related}
+\input{sections/s3_system}
+\input{sections/s4_data}
+\input{sections/s5_models}
+\input{sections/s6_occlusion}
+\input{sections/s7_deploy}
+\input{sections/s8_results}
+\input{sections/s9_compare}
+\input{sections/s10_limits}
+
+\input{references_gen}
+
+\end{document}

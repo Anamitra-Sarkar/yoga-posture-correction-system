@@ -1,0 +1,22 @@
+\section{Introduction}
+Yoga is practised worldwide---the United Nations proclaimed an International Day of Yoga in 2014 \cite{unga2014yoga}---and it is increasingly learned alone, from videos and phone apps, with nobody to correct the posture. A systematic review of published case reports and case series documented adverse events associated with yoga \cite{cramer2013yoga}. A camera-based coach that tells a practitioner which joint is off, in their own language and without frightening or pushing them, is therefore attractive. Real-time body-landmark estimators that run on a phone \cite{bazarevsky2020blazepose,lugaresi2019mediapipe} make it technically possible; making it \emph{trustworthy} on ordinary hardware is harder, and this paper is about that gap.
+
+We build on three observations from developing and testing AsanaAI.
+
+\textbf{(1) Random-split accuracy is not accuracy.} Video frames and web photos have near-duplicate neighbours, mirrored copies and repeated photographs; when these fall on both sides of a random split, validation accuracy measures memory, a form of leakage known to inflate reported results across many fields \cite{kapoor2023leakage}. The first model of this project reached 91.5\% on its random validation split; on held-out photos it passed none of the poses and raised a false alarm on 75\% of photos of poses outside its vocabulary (Section~\ref{sec:results}). We therefore report only numbers measured on data a model never trained on.
+
+\textbf{(2) A coach must be deployable where its users are.} Phones differ widely in their GPU drivers. On one budget phone (MediaTek Dimensity 7025, PowerVR BXM-8-256 GPU) we found that the standard MediaPipe web engine aborts inside the driver, and we chose to send no image to a server, because a camera pointed at a person at home should not become an upload.
+
+\textbf{(3) Feedback has to be honest about what is not seen.} A pose estimator happily invents joints that are hidden; a coach that scores an invented knee is worse than silent. And a generated sentence must never tell someone to push through pain.
+
+\textbf{Contributions.}
+\begin{enumerate}
+\item \emph{Cue-verified labels.} A labelling protocol for instructor videos---the instructor names the pose in an automatic transcript \cite{radford2023whisper}, a rule engine agrees, and the pose is held steady---that turns 1.2\,M video frames into $\sim$80\,k trustworthy positive frames, and a finding that the original training table was built with 3-D angles while the app serves 2-D angles (median gap $14^\circ$).
+\item \emph{A held-out evaluation protocol} with an explicit false-alarm metric for photos of poses outside the vocabulary, a fixed pass bar (recall and precision $\ge 0.70$), and controlled baselines trained on the same data.
+\item \emph{A gated cascade} of 3-head residual MLPs in which one model names the pose and another vetoes ``not one of mine'', plus an ST-GCN \cite{yan2018stgcn} second opinion whose input rate we show must match training.
+\item \emph{Occlusion-aware, personalised, safe coaching:} visibility-aware scoring, a comparison of left--right mirroring with a mesh-recovery model (CLIFF \cite{li2022cliff}) for hidden joints, a per-user range-of-motion calibration, and a screened, three-language coaching pipeline.
+\item \emph{Engineering for the real world:} a pose-engine fallback ladder verified over USB on a real phone whose GPU path fails, an offline rule-engine port with a parity proof, and live screenshots of the deployed interface.
+\end{enumerate}
+We also report negative results: weak poses, arm-error blindness, and a mesh-recovery model we chose \emph{not} to ship.
+
+Section~\ref{sec:related} reviews related work; Sections~\ref{sec:system}--\ref{sec:models} describe the system, data and models; Sections~\ref{sec:occ} and~\ref{sec:deploy} cover occlusion, personalisation and deployment; Section~\ref{sec:results} gives results; Section~\ref{sec:compare} compares with prior work; Section~\ref{sec:limits} states limitations and future work.

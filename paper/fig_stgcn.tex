@@ -1,0 +1,18 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\tikzset{
+  nb/.style={rectangle,rounded corners=3pt,draw=black!60,fill=blue!8,text width=5.0cm,align=center,minimum height=0.62cm,font=\scriptsize},
+  ar/.style={-{Stealth[length=1.8mm]},thick,draw=black!65},
+  an/.style={font=\scriptsize,text=black!70,text width=2.7cm,align=left}
+}
+\node[nb] (in) at (0,0) {Window: 60 frames $\times$ 33 joints $\times$ $(x,y,z)$};
+\node[nb,fill=green!10] (b1) at (0,-1.0) {ST-GCN block 1: graph conv $3\!\rightarrow\!64$ + temporal conv (9 taps)};
+\node[nb,fill=green!10] (b2) at (0,-2.0) {Block 2: $64\!\rightarrow\!128$};
+\node[nb,fill=green!10] (b3) at (0,-3.0) {Block 3: $128\!\rightarrow\!256$};
+\node[nb] (gp) at (0,-4.0) {Global average over joints and time};
+\node[nb] (fc) at (0,-5.0) {Linear 256$\rightarrow$128, LayerNorm, GELU, Linear 128$\rightarrow$9};
+\node[nb,fill=orange!12] (out) at (0,-6.0) {8 poses + \textit{transition / unknown}};
+\foreach \a/\b in {in/b1,b1/b2,b2/b3,b3/gp,gp/fc,fc/out}{\draw[ar] (\a)--(\b);}
+\node[an] at (4.65,-0.0) {pelvis-centred, scaled by hip width, 25\,fps};
+\node[an] at (4.65,-2.0) {each block: $\mathrm{GELU}(\mathbf{A}_{\mathrm{norm}}\,W\mathbf{X})$, residual skip};
+\node[an] at (4.65,-5.0) {0.89\,M parameters};
+\end{tikzpicture}

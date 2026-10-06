@@ -1,0 +1,16 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\tikzset{
+  nb/.style={rectangle,rounded corners=3pt,draw=black!60,fill=blue!8,text width=3.55cm,align=center,minimum height=0.9cm,font=\scriptsize},
+  nd/.style={diamond,aspect=2.6,draw=black!60,fill=orange!14,text width=2.3cm,align=center,inner sep=1pt,font=\scriptsize},
+  ar/.style={-{Stealth[length=1.8mm]},thick,draw=black!65},
+  lb/.style={font=\scriptsize,text=black!70}
+}
+\node[nb,fill=green!10] (e1) at (0,0) {\textbf{1.} MediaPipe (legacy, GPU)\\ 25--30 updates/s};
+\node[nd] (d1) at (0,-1.55) {PowerVR BXM-8-256 or abort / WebGL alert?};
+\node[nb] (e2) at (0,-3.25) {\textbf{2.} MediaPipe Tasks, CPU, in a Web Worker pool\\ 1 instance 7.3/s, 2 inst.\ 19/s};
+\node[nd] (d2) at (0,-4.8) {no worker or no WebGL?};
+\node[nb,fill=red!8] (e3) at (0,-6.3) {\textbf{3.} TF.js WASM BlazePose (lowest fidelity)};
+\draw[ar] (e1)--(d1); \draw[ar] (d1)--node[right,lb]{yes}(e2); \draw[ar] (e2)--(d2); \draw[ar] (d2)--node[right,lb]{yes}(e3);
+\draw[ar] (d1.west) -- node[above,lb]{no} ++(-0.9,0) |- ($(e1.west)+(0,-0.0)$) ;
+\node[lb,text width=2.9cm,align=left] at (3.55,-3.25) {Decision is remembered per browser version for 30 days; nothing is shown to the user.};
+\end{tikzpicture}

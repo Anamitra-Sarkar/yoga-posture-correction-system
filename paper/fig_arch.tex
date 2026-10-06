@@ -1,0 +1,38 @@
+\begin{tikzpicture}[node distance=0pt, x=1cm, y=1cm]
+\tikzset{
+  dev/.style={rectangle,rounded corners=3pt,draw=black!60,fill=green!8,text width=2.7cm,align=center,minimum height=1.1cm,font=\footnotesize},
+  srv/.style={rectangle,rounded corners=3pt,draw=black!60,fill=blue!8,text width=2.9cm,align=center,minimum height=1.1cm,font=\footnotesize},
+  ui/.style={rectangle,rounded corners=3pt,draw=black!60,fill=orange!14,text width=7.6cm,align=center,minimum height=1.1cm,font=\footnotesize},
+  ar/.style={-{Stealth[length=2.2mm]},thick,draw=black!65},
+  lab/.style={font=\scriptsize,text=black!75,inner sep=1.2pt,fill=white},
+  zone/.style={rectangle,rounded corners=6pt,draw=black!40,dashed,inner sep=7pt}
+}
+% ---- in the browser
+\node[dev] (cam) at (0,0)    {Camera frame\\ \textit{never leaves the device}};
+\node[dev] (eng) at (3.4,0)  {Pose engine\\ GPU $\rightarrow$ CPU worker $\rightarrow$ WASM};
+\node[dev] (lm)  at (6.8,0)  {33 landmarks $(x,y,z,v)$\\ visibility smoothing};
+\node[dev] (loc) at (0,-2.0) {Basic mode (offline)\\ on-device rule engine};
+\node[dev] (ang) at (3.4,-2.0) {15 joint angles ($z{=}0$), hidden joints masked, range profile};
+\node[dev] (buf) at (6.8,-2.0) {Skeleton buffer\\ 60 frames, 25\,fps, pelvis-centred};
+\node[ui]  (uin) at (3.4,-4.0) {Interface: skeleton overlay (coral / amber / sage), score ring, coaching cue in English / Hindi / Bengali, optional voice};
+% ---- on the server
+\node[srv] (cas) at (11.4,0)    {\textbf{Cascade}: ResMLP $v4$ names the pose; ResMLP gate vetoes ``not mine'' and scores form};
+\node[srv] (rul) at (15.0,0)    {Rule engine\\ angle bands $\rightarrow$ per-joint deviation};
+\node[srv] (stg) at (15.0,-2.0) {ST-GCN ``flow check''\\ second opinion on held poses};
+\node[srv] (coa) at (18.6,-1.0) {Coaching text: template $\rightarrow$ LLM paraphrase $\rightarrow$ safety screen};
+% ---- arrows
+\draw[ar] (cam)--(eng); \draw[ar] (eng)--(lm);
+\draw[ar] (lm.south west)--(ang.north east);
+\draw[ar] (lm.south)--(buf.north);
+\draw[ar,dashed] (ang.west)--(loc.east);
+\draw[ar,line width=1.2pt] (lm.east)-- node[above,lab]{numbers only} (cas.west);
+\draw[ar,line width=1.2pt] (buf.east)-- node[above,lab,pos=0.35]{60-frame window} (stg.west);
+\draw[ar] (cas)--(rul);
+\draw[ar] (rul.east)--(coa.north west);
+\draw[ar] (stg.east)--(coa.south west);
+\draw[ar] (coa.south) |- node[above,lab,pos=0.78]{score, cue, joints} (uin.east);
+\draw[ar,dashed] (loc.south) |- (uin.west);
+% ---- zones
+\node[zone,fit=(cam)(eng)(lm)(loc)(ang)(buf)(uin),label={[lab,font=\footnotesize\itshape]above left:In the browser (phone or laptop)}] {};
+\node[zone,fit=(cas)(rul)(stg)(coa),label={[lab,font=\footnotesize\itshape]above left:Server (CPU: two 3-head MLPs, one ST-GCN)}] {};
+\end{tikzpicture}

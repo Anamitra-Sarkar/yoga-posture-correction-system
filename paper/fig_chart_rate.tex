@@ -1,0 +1,9 @@
+\begin{tikzpicture}
+\begin{axis}[width=\linewidth,height=4.6cm,ymin=0,ymax=1,symbolic x coords={25,12.5,6.2,3.1,2.1},xtick=data,x tick label style={font=\scriptsize},y tick label style={font=\scriptsize},
+  xlabel={frames per second into the 60-frame buffer},xlabel style={font=\scriptsize,yshift=3pt},ylabel={macro recall},ylabel style={font=\scriptsize,yshift=-4pt},
+  legend style={font=\tiny,at={(0.5,1.04)},anchor=south,legend columns=2,draw=none},ymajorgrids,grid style={gray!25},enlarge x limits=0.1]
+\addplot[blue!70,mark=*,thick] coordinates {(25,0.82)(12.5,0.81)(6.2,0.51)(3.1,0.41)(2.1,0.39)};
+\addplot[red!70,mark=square*,thick] coordinates {(25,0.19)(12.5,0.24)(6.2,0.60)(3.1,0.62)(2.1,0.48)};
+\legend{new ST-GCN,previous live ST-GCN}
+\end{axis}
+\end{tikzpicture}
