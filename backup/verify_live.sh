@@ -36,6 +36,12 @@ import json; d=json.load(open('/tmp/_f.json'))
 print('  pose', d['pose_id'], '| score', round(d['correctness_score'],3), '| motion', d['motion_state'], '| cascade', d.get('cascade'))
 assert d['pose_id']=='tree_pose' and d['motion_state']=='holding' and d['cascade']['active'] is True and d['cascade']['gated'] is False"; check $? "tree_pose, holding, cascade active and gate open"
 
+say "Tree has no angle bands  (expect NO per-joint deviations: deviations_source none_no_bands, every deviation 0)"
+python3 -c "
+import json; d=json.load(open('/tmp/_f.json'))
+print('  deviations_source', d['cascade'].get('deviations_source'), '| max deviation', max(d['deviations'].values()))
+assert d['cascade'].get('deviations_source')=='none_no_bands' and max(d['deviations'].values())==0.0"; check $? "no invented per-joint deviations for a bandless pose"
+
 say "analyse_frame, same angles at 120 deg/s  (expect motion_state transitioning)"
 post /api/analyse_frame "$MOVING" | python3 -c "import sys,json;d=json.load(sys.stdin);print('  motion',d['motion_state']);assert d['motion_state']=='transitioning'"; check $? "transitioning"
 

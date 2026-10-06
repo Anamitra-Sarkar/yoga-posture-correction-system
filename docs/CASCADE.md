@@ -1,6 +1,6 @@
 # Pose cascade (2026-10-05)
 
-**What:** an optional two-stage pose decision in `/api/analyse_frame`, behind `ENABLE_POSE_CASCADE` (default **off**).
+**What:** an optional two-stage pose decision in `/api/analyse_frame`, behind `ENABLE_POSE_CASCADE` (default **on** since 2026-10-07; it was off until then).
 Stage 1 (gate, `mlp_3head_gate_v1.pth`, a second 3-head MLP): "is this one of my poses at all?" and the form score.
 Stage 2 (the existing live MLP): names the pose. The rule engine no longer overrides either model on the pose *name*; it supplies
 per-joint deviations from each pose's angle bands.
@@ -33,5 +33,6 @@ Reproduce: `planning/kaggle_transfer/kernel_e2e`, `kernel_prod2`; data and code 
 **When the server is unreachable (added 2026-10-05):** the web app falls back to an on-device copy of the rule engine ("basic mode", `frontend/src/utils/offlineCoach.ts`): no MLP, no gate, no cascade. Its pose naming equals the "Rules only" policy in `docs/BENCHMARKS.md` section 4 (36.9% overall, 78.3% false alarms), so basic mode should be described as a fallback, not as the cascade. Joints the camera cannot see are neither scored nor coached in either mode (`docs/BENCHMARKS.md` section 9).
 
 **Two behaviours worth knowing (found 2026-10-07 while verifying the calibration feature):**
-* **Per-joint deviations come from the angle bands only where a pose has bands (17 of 19 poses).** `tree_pose` and `lunge_pose` have none, so with the cascade on their deviations come from the gate model's deviation head (`cascade.deviations_source == "gate_head"`), which is close to chance (section 3 of `BENCHMARKS.md`). Consequence: a correct Tree can show a coral/amber limb and Tree cues can name the wrong joint. Fix options: add hand-set Tree/Lunge bands (with an either-leg rule) or return zero deviations for `gate_head` poses.
+* **Per-joint deviations come from the angle bands (17 of 19 poses). Tree and Lunge have no bands**; the cascade now reports NO per-joint deviations for them (`cascade.deviations_source == "none_no_bands"`, all zeros) and the web app draws neutral limbs for them (`NO_BAND_POSES` in `frontend/src/pages/index.tsx`). Before 2026-10-07 their deviations came from the gate model's deviation head, which is close to chance (`BENCHMARKS.md` s3), so a correct Tree could show a coral standing leg and a cue could name the wrong joint. The form score still comes from the gate. Real Tree/Lunge bands (with an either-leg rule) are a future improvement.
 * **`orientation` and `world_angles` are ignored while the cascade is active** (they only feed `hybrid_classify`, the non-cascade path, and the on-device basic mode). The cascade decides from the 15 angles alone.
+* **Defaults (since 2026-10-07):** `ENABLE_POSE_CASCADE` defaults to ON and the ST-GCN to `stgcn_target_v1*`, so a fresh deploy equals production. Roll back with `ENABLE_POSE_CASCADE=0` (cascade) and `STGCN_MODEL_FILE=stgcn_transitions_v1.pth`, `STGCN_ENCODER_FILE=stgcn_transitions_v1_encoder.npy` (ST-GCN) as Space variables.

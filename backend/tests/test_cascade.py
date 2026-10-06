@@ -36,9 +36,11 @@ def test_gate_pass_returns_namer_pose_and_gate_correctness():
     assert r.candidates[0][0] == BANDED
 
 
-def test_bandless_pose_falls_back_to_gate_deviations():
-    r = cascade_decide(BANDLESS, {BANDLESS: 0.9}, {BANDLESS: 0.8, UNKNOWN: 0.2}, ANG, 0.7, DEVS)
-    assert r.pose_id == BANDLESS and r.deviations_source == "gate_head" and r.deviations["knee_l"] == 12.0
+def test_bandless_pose_reports_no_per_joint_deviations_not_the_gate_heads_guess():
+    r = cascade_decide(BANDLESS, {BANDLESS: 0.9}, {BANDLESS: 0.8, UNKNOWN: 0.2}, ANG, 0.7, DEVS)   # DEVS = 12 deg everywhere (the weak head's output)
+    assert r.pose_id == BANDLESS and r.deviations_source == "none_no_bands"
+    assert set(r.deviations) == set(FEATURE_NAMES) and all(v == 0.0 for v in r.deviations.values())
+    assert r.correctness == pytest.approx(0.7) and r.correctness_source == "gate_head"             # the form score still comes from the gate
 
 
 def test_namer_unknown_stays_unknown_without_being_counted_as_gated():

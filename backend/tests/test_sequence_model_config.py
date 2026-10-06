@@ -22,10 +22,25 @@ def _reload_settings(monkeypatch, **env):
     return importlib.reload(cfg).settings
 
 
-def test_default_checkpoint_is_the_one_already_live(monkeypatch):
+def test_default_checkpoint_is_the_benchmarked_live_one(monkeypatch):
     s = _reload_settings(monkeypatch)
-    assert s.STGCN_MODEL_FILE == "stgcn_transitions_v1.pth"
-    assert s.STGCN_ENCODER_FILE == "stgcn_transitions_v1_encoder.npy"
+    assert s.STGCN_MODEL_FILE == "stgcn_target_v1.pth"
+    assert s.STGCN_ENCODER_FILE == "stgcn_target_v1_encoder.npy"
+
+
+def test_previous_checkpoint_is_still_selectable_for_rollback(monkeypatch):
+    s = _reload_settings(monkeypatch, STGCN_MODEL_FILE="stgcn_transitions_v1.pth", STGCN_ENCODER_FILE="stgcn_transitions_v1_encoder.npy")
+    assert (s.STGCN_MODEL_FILE, s.STGCN_ENCODER_FILE) == ("stgcn_transitions_v1.pth", "stgcn_transitions_v1_encoder.npy")
+
+
+def test_cascade_is_on_by_default_and_can_be_rolled_back(monkeypatch):
+    import app.config as cfg
+    monkeypatch.delenv("ENABLE_POSE_CASCADE", raising=False)
+    assert importlib.reload(cfg).settings.ENABLE_POSE_CASCADE is True
+    monkeypatch.setenv("ENABLE_POSE_CASCADE", "0")
+    assert importlib.reload(cfg).settings.ENABLE_POSE_CASCADE is False
+    monkeypatch.delenv("ENABLE_POSE_CASCADE", raising=False)
+    importlib.reload(cfg)
 
 
 def test_env_selects_the_target_pose_checkpoint(monkeypatch):

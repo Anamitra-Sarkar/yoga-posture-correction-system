@@ -2,7 +2,7 @@
 
 **Method.** Read-only checks across the whole repo (tracked files, docs, code, CI, deployments) plus black-box requests to the deployed backend. Nothing was built, installed or trained locally (the dev machine has 3.7 GB RAM); backend tests were NOT re-run locally (see B7). Evidence for every finding is given so it can be re-checked.
 
-## A. Findings that affect users or safety (need a decision -- none of these were changed)
+## A. Findings that affect users or safety (A1, A3 fixed on branch `fix/no-band-poses-and-defaults`; A2 drafted for native-speaker review; A4, A5 documented)
 
 | # | Finding | Evidence | Options |
 |---|---|---|---|

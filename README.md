@@ -95,7 +95,7 @@ python3 backend/tools/offline_parity.py
 
 ## Deploy
 
-* **Backend:** pushing to `main` with changes under `backend/` syncs the Space (`.github/workflows/hf_sync.yml`). Behaviour switches are Space variables: `ENABLE_POSE_CASCADE`, `STGCN_MODEL_FILE`, `STGCN_ENCODER_FILE` (delete a variable to roll back). `GROQ_API_KEY` (secret) enables the optional LLM paraphrase.
+* **Backend:** pushing to `main` with changes under `backend/` syncs the Space (`.github/workflows/hf_sync.yml`). Defaults equal the benchmarked configuration (pose cascade on, `stgcn_target_v1`); roll back with the Space variables `ENABLE_POSE_CASCADE=0` and `STGCN_MODEL_FILE` / `STGCN_ENCODER_FILE` set to the `stgcn_transitions_v1*` files. `GROQ_API_KEY` (secret) enables the optional LLM paraphrase.
 * **Web:** Vercel builds `main` (production) and every other branch (preview URL).
 * **Android:** `.github/workflows/android_build.yml`.
 

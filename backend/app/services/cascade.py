@@ -68,8 +68,11 @@ def cascade_decide(
         _, devs = score_pose(pose, angles)
         dsrc = "rule_bands"
     else:
-        devs = {n: float(min(180.0, max(0.0, gate_devs.get(n, 0.0)))) for n in FEATURE_NAMES}
-        dsrc = "gate_head"
+        # No angle bands (tree_pose, lunge_pose). The only other per-joint source is the gate's deviation head, which is close to
+        # chance (docs/BENCHMARKS.md section 3: top joint correct 12.4% vs 6.7% chance) -- it painted correct Trees with a coral
+        # standing leg and named the wrong joint in cues. Say "no per-joint evidence" instead of inventing some.
+        devs = {n: 0.0 for n in FEATURE_NAMES}
+        dsrc = "none_no_bands"
     return CascadeResult(pose, float(gate_correctness), devs, False, gate_pose, other_p, cands, "gate_head", dsrc)
 
 

@@ -225,6 +225,9 @@ const POSE_LIBRARY: { id: PresetPoseId; icon: string }[] = [
 // Guide panel so users don't have to guess correct form from an emoji.
 // All CC-BY / CC-BY-SA licensed from Wikimedia Commons; attribution shown
 // inline per license terms.
+// Poses the backend rule engine has no angle bands for (backend/app/utils/rules_classifier.py `_POSE_FEATURE_BANDS`): no per-joint colouring.
+const NO_BAND_POSES = new Set<string>(["tree_pose", "lunge_pose"]);
+
 const POSE_REFERENCE_IMAGES: { [key: string]: { src: string; credit: string } } = {
   warrior_2: { src: "/pose-images/warrior_2.jpg", credit: "lululemon athletica, CC BY 2.0, via Wikimedia Commons" },
   cobra_pose: { src: "/pose-images/cobra_pose.jpg", credit: "Kennguru, CC BY 3.0, via Wikimedia Commons" },
@@ -2255,6 +2258,9 @@ export default function Dashboard() {
       // every joint would flicker red/green frame to frame.
       if (motionState === "transitioning") return "neutral";
       if (activePose === "transition/unknown") return "neutral";
+      // Tree and Lunge have no angle bands, so no per-joint check exists for them: draw neutral limbs, not an
+      // all-correct green and not a guess from the (near-chance) learned deviation head.
+      if (NO_BAND_POSES.has(activePose)) return "neutral";
 
       // Prefer the model's own per-joint deviation (degrees off the pose's
       // expected band, already adjusted for the user's calibrated range when
