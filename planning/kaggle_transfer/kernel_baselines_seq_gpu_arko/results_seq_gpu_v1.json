@@ -1,0 +1,512 @@
+{
+ "setup": {
+  "seq_epochs": 10,
+  "cap_per_class": 6000,
+  "batch": 128,
+  "seed": 0,
+  "device": "cuda",
+  "note": "GPU budget; all models share one recipe"
+ },
+ "sequence": {
+  "LSTM (2 layers)": {
+   "params": 250505,
+   "folds": {
+    "0": {
+     "overall": 0.806,
+     "seconds": 15
+    },
+    "1": {
+     "overall": 0.851,
+     "seconds": 8
+    },
+    "2": {
+     "overall": 0.828,
+     "seconds": 8
+    }
+   },
+   "overall": 0.83,
+   "n_pass": 4,
+   "pass": [
+    "child_pose",
+    "corpse",
+    "seated_easy_pose",
+    "triangle"
+   ],
+   "macro_recall_9_classes": 0.895,
+   "macro_recall_poses": 0.91,
+   "per_class": {
+    "child_pose": {
+     "n": 1045,
+     "recall": 0.887,
+     "precision": 0.864,
+     "pass": true
+    },
+    "corpse": {
+     "n": 230,
+     "recall": 1.0,
+     "precision": 0.958,
+     "pass": true
+    },
+    "downward_dog": {
+     "n": 682,
+     "recall": 0.912,
+     "precision": 0.662,
+     "pass": false
+    },
+    "plank": {
+     "n": 30,
+     "recall": 1.0,
+     "precision": 0.227,
+     "pass": false
+    },
+    "seated_easy_pose": {
+     "n": 510,
+     "recall": 0.961,
+     "precision": 0.785,
+     "pass": true
+    },
+    "transition/unknown": {
+     "n": 4801,
+     "recall": 0.777,
+     "precision": 0.932,
+     "pass": false
+    },
+    "tree_pose": {
+     "n": 87,
+     "recall": 0.782,
+     "precision": 0.531,
+     "pass": false
+    },
+    "triangle": {
+     "n": 528,
+     "recall": 0.875,
+     "precision": 0.873,
+     "pass": true
+    },
+    "warrior_2": {
+     "n": 89,
+     "recall": 0.865,
+     "precision": 0.233,
+     "pass": false
+    }
+   }
+  },
+  "BiLSTM + multi-head attention": {
+   "params": 500489,
+   "folds": {
+    "0": {
+     "overall": 0.835,
+     "seconds": 12
+    },
+    "1": {
+     "overall": 0.872,
+     "seconds": 12
+    },
+    "2": {
+     "overall": 0.903,
+     "seconds": 12
+    }
+   },
+   "overall": 0.871,
+   "n_pass": 5,
+   "pass": [
+    "child_pose",
+    "corpse",
+    "downward_dog",
+    "seated_easy_pose",
+    "triangle"
+   ],
+   "macro_recall_9_classes": 0.896,
+   "macro_recall_poses": 0.901,
+   "per_class": {
+    "child_pose": {
+     "n": 1045,
+     "recall": 0.887,
+     "precision": 0.894,
+     "pass": true
+    },
+    "corpse": {
+     "n": 230,
+     "recall": 1.0,
+     "precision": 0.958,
+     "pass": true
+    },
+    "downward_dog": {
+     "n": 682,
+     "recall": 0.89,
+     "precision": 0.774,
+     "pass": true
+    },
+    "plank": {
+     "n": 30,
+     "recall": 1.0,
+     "precision": 0.349,
+     "pass": false
+    },
+    "seated_easy_pose": {
+     "n": 510,
+     "recall": 0.894,
+     "precision": 0.872,
+     "pass": true
+    },
+    "transition/unknown": {
+     "n": 4801,
+     "recall": 0.859,
+     "precision": 0.922,
+     "pass": false
+    },
+    "tree_pose": {
+     "n": 87,
+     "recall": 0.828,
+     "precision": 0.643,
+     "pass": false
+    },
+    "triangle": {
+     "n": 528,
+     "recall": 0.841,
+     "precision": 0.912,
+     "pass": true
+    },
+    "warrior_2": {
+     "n": 89,
+     "recall": 0.865,
+     "precision": 0.301,
+     "pass": false
+    }
+   }
+  },
+  "Temporal CNN (no skeleton graph)": {
+   "params": 1003017,
+   "folds": {
+    "0": {
+     "overall": 0.795,
+     "seconds": 11
+    },
+    "1": {
+     "overall": 0.807,
+     "seconds": 10
+    },
+    "2": {
+     "overall": 0.841,
+     "seconds": 10
+    }
+   },
+   "overall": 0.815,
+   "n_pass": 4,
+   "pass": [
+    "child_pose",
+    "corpse",
+    "seated_easy_pose",
+    "triangle"
+   ],
+   "macro_recall_9_classes": 0.897,
+   "macro_recall_poses": 0.914,
+   "per_class": {
+    "child_pose": {
+     "n": 1045,
+     "recall": 0.884,
+     "precision": 0.784,
+     "pass": true
+    },
+    "corpse": {
+     "n": 230,
+     "recall": 1.0,
+     "precision": 0.927,
+     "pass": true
+    },
+    "downward_dog": {
+     "n": 682,
+     "recall": 0.909,
+     "precision": 0.667,
+     "pass": false
+    },
+    "plank": {
+     "n": 30,
+     "recall": 1.0,
+     "precision": 0.2,
+     "pass": false
+    },
+    "seated_easy_pose": {
+     "n": 510,
+     "recall": 0.961,
+     "precision": 0.801,
+     "pass": true
+    },
+    "transition/unknown": {
+     "n": 4801,
+     "recall": 0.761,
+     "precision": 0.916,
+     "pass": false
+    },
+    "tree_pose": {
+     "n": 87,
+     "recall": 0.874,
+     "precision": 0.594,
+     "pass": false
+    },
+    "triangle": {
+     "n": 528,
+     "recall": 0.782,
+     "precision": 0.868,
+     "pass": true
+    },
+    "warrior_2": {
+     "n": 89,
+     "recall": 0.899,
+     "precision": 0.274,
+     "pass": false
+    }
+   }
+  },
+  "MLP on window mean/std": {
+   "params": 85769,
+   "folds": {
+    "0": {
+     "overall": 0.832,
+     "seconds": 6
+    },
+    "1": {
+     "overall": 0.841,
+     "seconds": 6
+    },
+    "2": {
+     "overall": 0.885,
+     "seconds": 6
+    }
+   },
+   "overall": 0.853,
+   "n_pass": 5,
+   "pass": [
+    "child_pose",
+    "corpse",
+    "downward_dog",
+    "seated_easy_pose",
+    "triangle"
+   ],
+   "macro_recall_9_classes": 0.944,
+   "macro_recall_poses": 0.964,
+   "per_class": {
+    "child_pose": {
+     "n": 1045,
+     "recall": 0.956,
+     "precision": 0.785,
+     "pass": true
+    },
+    "corpse": {
+     "n": 230,
+     "recall": 1.0,
+     "precision": 0.83,
+     "pass": true
+    },
+    "downward_dog": {
+     "n": 682,
+     "recall": 0.93,
+     "precision": 0.732,
+     "pass": true
+    },
+    "plank": {
+     "n": 30,
+     "recall": 1.0,
+     "precision": 0.4,
+     "pass": false
+    },
+    "seated_easy_pose": {
+     "n": 510,
+     "recall": 0.965,
+     "precision": 0.851,
+     "pass": true
+    },
+    "transition/unknown": {
+     "n": 4801,
+     "recall": 0.785,
+     "precision": 0.964,
+     "pass": false
+    },
+    "tree_pose": {
+     "n": 87,
+     "recall": 0.92,
+     "precision": 0.656,
+     "pass": false
+    },
+    "triangle": {
+     "n": 528,
+     "recall": 0.943,
+     "precision": 0.83,
+     "pass": true
+    },
+    "warrior_2": {
+     "n": 89,
+     "recall": 1.0,
+     "precision": 0.296,
+     "pass": false
+    }
+   }
+  },
+  "ST-GCN (identity adjacency = no skeleton graph)": {
+   "params": 893897,
+   "folds": {
+    "0": {
+     "overall": 0.71,
+     "seconds": 291
+    },
+    "1": {
+     "overall": 0.774,
+     "seconds": 293
+    },
+    "2": {
+     "overall": 0.824,
+     "seconds": 291
+    }
+   },
+   "overall": 0.771,
+   "n_pass": 4,
+   "pass": [
+    "child_pose",
+    "corpse",
+    "seated_easy_pose",
+    "triangle"
+   ],
+   "macro_recall_9_classes": 0.848,
+   "macro_recall_poses": 0.864,
+   "per_class": {
+    "child_pose": {
+     "n": 1045,
+     "recall": 0.794,
+     "precision": 0.805,
+     "pass": true
+    },
+    "corpse": {
+     "n": 230,
+     "recall": 1.0,
+     "precision": 0.916,
+     "pass": true
+    },
+    "downward_dog": {
+     "n": 682,
+     "recall": 0.902,
+     "precision": 0.582,
+     "pass": false
+    },
+    "plank": {
+     "n": 30,
+     "recall": 0.7,
+     "precision": 0.097,
+     "pass": false
+    },
+    "seated_easy_pose": {
+     "n": 510,
+     "recall": 0.949,
+     "precision": 0.762,
+     "pass": true
+    },
+    "transition/unknown": {
+     "n": 4801,
+     "recall": 0.717,
+     "precision": 0.906,
+     "pass": false
+    },
+    "tree_pose": {
+     "n": 87,
+     "recall": 0.92,
+     "precision": 0.269,
+     "pass": false
+    },
+    "triangle": {
+     "n": 528,
+     "recall": 0.725,
+     "precision": 0.861,
+     "pass": true
+    },
+    "warrior_2": {
+     "n": 89,
+     "recall": 0.921,
+     "precision": 0.304,
+     "pass": false
+    }
+   }
+  },
+  "ST-GCN (ours)": {
+   "params": 893897,
+   "folds": {
+    "0": {
+     "overall": 0.746,
+     "seconds": 291
+    },
+    "1": {
+     "overall": 0.734,
+     "seconds": 293
+    },
+    "2": {
+     "overall": 0.803,
+     "seconds": 291
+    }
+   },
+   "overall": 0.76,
+   "n_pass": 4,
+   "pass": [
+    "child_pose",
+    "corpse",
+    "seated_easy_pose",
+    "triangle"
+   ],
+   "macro_recall_9_classes": 0.864,
+   "macro_recall_poses": 0.886,
+   "per_class": {
+    "child_pose": {
+     "n": 1045,
+     "recall": 0.789,
+     "precision": 0.785,
+     "pass": true
+    },
+    "corpse": {
+     "n": 230,
+     "recall": 0.991,
+     "precision": 0.919,
+     "pass": true
+    },
+    "downward_dog": {
+     "n": 682,
+     "recall": 0.903,
+     "precision": 0.475,
+     "pass": false
+    },
+    "plank": {
+     "n": 30,
+     "recall": 0.733,
+     "precision": 0.13,
+     "pass": false
+    },
+    "seated_easy_pose": {
+     "n": 510,
+     "recall": 0.945,
+     "precision": 0.814,
+     "pass": true
+    },
+    "transition/unknown": {
+     "n": 4801,
+     "recall": 0.687,
+     "precision": 0.935,
+     "pass": false
+    },
+    "tree_pose": {
+     "n": 87,
+     "recall": 0.92,
+     "precision": 0.338,
+     "pass": false
+    },
+    "triangle": {
+     "n": 528,
+     "recall": 0.841,
+     "precision": 0.849,
+     "pass": true
+    },
+    "warrior_2": {
+     "n": 89,
+     "recall": 0.966,
+     "precision": 0.24,
+     "pass": false
+    }
+   }
+  }
+ }
+}

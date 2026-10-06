@@ -14,7 +14,7 @@ Yoga is practised worldwide and is increasingly learned alone, from videos and p
 \runin{Approach and research questions.} We propose AsanaAI, a coach designed around these problems and evaluated only on data its models never trained on. We ask:
 \begin{itemize}\setlength{\itemsep}{1pt}\setlength{\topsep}{2pt}
 \item RQ1: Does a name-and-veto cascade of small residual MLPs name poses accurately on held-out photos while rarely naming a pose that is not in its vocabulary, compared with standard classifiers?
-\item RQ2: Does a skeleton-graph temporal network recognise held poses and separate them from transitions on videos of unseen people, and what input rate does it need?
+\item RQ2: Does a skeleton-graph temporal network recognise held poses and separate them from transitions on videos of unseen people, what input rate does it need, and does the skeleton graph beat simpler sequence models?
 \item RQ3: Is declining to score hidden joints preferable to recovering them by mirroring or by mesh recovery?
 \item RQ4: Does a personal range-of-motion profile change feedback only where intended, and can the system run on commodity hardware with acceptable latency?
 \end{itemize}
@@ -23,7 +23,7 @@ Yoga is practised worldwide and is increasingly learned alone, from videos and p
 \begin{enumerate}
 \item \emph{Cue-verified supervision:} instructor videos are turned into training labels only where a speech transcript, a biomechanical rule engine and a steadiness test all agree.
 \item \emph{A name-and-veto cascade} of two 3-head residual MLPs with an explicit ``not one of mine'' answer, and a controlled comparison with five standard classifiers on two held-out photo sets, including a result that goes against our own design (Section~\ref{sec:rq1}).
-\item \emph{A skeleton-graph flow check} that separates held poses from transitions, with its input-rate requirement measured.
+\item \emph{A skeleton-graph flow check} that separates held poses from transitions, with its input-rate requirement measured and a controlled comparison with four simpler sequence models and a graph-free variant, which shows parity, not superiority.
 \item \emph{Occlusion-aware scoring} that abstains on hidden joints, compared with mirroring and mesh recovery.
 \item \emph{Personal calibration and safety-screened guidance} in English, Hindi and Bengali, with the image never leaving the device.
 \item \emph{Evidence on commodity hardware:} server and phone measurements and an end-to-end test on a mid-range phone, with live screenshots of the deployed interface.

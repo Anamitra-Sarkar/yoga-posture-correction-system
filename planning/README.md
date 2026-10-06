@@ -42,5 +42,6 @@ Superseded top-level files, see `archive/README.md`.
 |---|---|
 | `kernel_baselines_frame` | k-NN, SVM, logistic regression, random forest, plain MLP on the same rows as the new MLP, scored on the 1,685 held-out public photos. DONE (`BENCHMARKS.md` s13). |
 | `kernel_baselines_frame2` | Near-duplicate audit by distance to the nearest training photo, the networks (v4, new, cascade) on the same photos, and the wild frozen Commons-103 set out-of-fold. DONE. |
-| `kernel_baselines_seq` | Sequence baselines (LSTM, BiLSTM + attention, temporal CNN, window-stat MLP, ST-GCN, ST-GCN without graph) on the cueT2 folds. GPU. NOT RUN: weekly GPU quota exhausted 2026-10-07; push it when the quota returns. |
+| `kernel_baselines_seq` | Same sequence baselines, first account (GPU quota exhausted 2026-10-07; superseded by the next row). |
+| `kernel_baselines_seq_gpu_arko` | Sequence baselines (LSTM, BiLSTM + attention, temporal CNN, window-stat MLP, ST-GCN, ST-GCN without graph) on the cueT2 folds, run on the second Kaggle account (T4 x2, 1915 s, token-free). DONE: `results_seq_gpu_v1.json`, `BENCHMARKS.md` s14. |
 | `kernel_baselines_seqcpu` | Same models at CPU scale. The ST-GCN rows will not finish (about 13 h per variant); only the cheap models' rows are usable and they are not comparable to the production ST-GCN. |

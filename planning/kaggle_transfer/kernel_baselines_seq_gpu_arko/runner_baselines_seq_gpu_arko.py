@@ -114,7 +114,13 @@ if __name__ == "__main__":
     from huggingface_hub import snapshot_download
     import numpy as np, torch
     ROOT = "/kaggle/working"; DS = "Arko007/Yoga-1M"
-    DEV = "cuda" if torch.cuda.is_available() else "cpu"; print("device", DEV, flush=True)
+    # FAIL FAST: this kernel is only meaningful on a working GPU (the ST-GCN costs ~10 GFLOP per window; on CPU it would take ~13 h per variant).
+    if not torch.cuda.is_available(): raise SystemExit("NO CUDA DEVICE: refusing to run the sequence baselines on CPU")
+    try:
+        _x = torch.randn(256, 256, device="cuda"); float((_x @ _x).sum()); print("GPU OK:", torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0), "torch", torch.__version__, flush=True)
+    except Exception as _e:
+        raise SystemExit(f"GPU PRESENT BUT UNUSABLE ({torch.cuda.get_device_name(0)}, capability {torch.cuda.get_device_capability(0)}, torch {torch.__version__}): {_e}")
+    DEV = "cuda"
     snapshot_download(DS, repo_type="dataset", local_dir=ROOT, allow_patterns=["code/**", "vol/stgcn/cueT2_f[012]/**"])
     sys.path.insert(0, f"{ROOT}/code/originals")
     spec = importlib.util.spec_from_file_location("stgcn_trainer", f"{ROOT}/code/originals/train_stgcn_gpu.py"); tr = importlib.util.module_from_spec(spec); spec.loader.exec_module(tr)
