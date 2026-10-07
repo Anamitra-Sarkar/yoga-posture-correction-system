@@ -1,9 +1,55 @@
 import os
 import logging
+import unicodedata
 import requests
 from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Stage-3 safety screen. A language-model paraphrase containing any of these words is thrown away and the reviewed template
+# is kept. Over-blocking is harmless (the template is the safe fallback); under-blocking is the risk.
+#
+# English list: unchanged since the first version. It is applied to EVERY language (a model can answer a Hindi request with an
+# English word in it).
+FORBIDDEN_EN = ["push", "force", "hurt", "pain", "stretch more", "further"]
+
+# DRAFT 2026-10-07 -- Hindi and Bengali equivalents (push / force / pain / hurt / stretch more / further). NOT YET REVIEWED by a
+# native speaker: see docs/SAFETY_SCREEN_HI_BN_REVIEW.md. Matching is a case-insensitive substring match after normalisation
+# (Devanagari nukta removed, so ज़ == ज and ड़ == ड). Words that the reviewed templates themselves use ("और" alone, "थोड़ा और",
+# "আরও বাঁকুন" = "bend a bit more", "চাপ দিন" = "press") are deliberately NOT listed (the English list has no "press"/"pressure"
+# either); tests/test_safety_screen.py checks that every reviewed template passes.
+FORBIDDEN_HI = [
+    "दर्द", "पीड़ा", "चोट",                                  # pain, suffering, injury / hurt
+    "ज़ोर", "ज़बरदस्ती", "जबरन", "धक्का", "धकेल",               # force / effort, forcibly, shove, push
+    "और खींच", "ज़्यादा खींच", "और तान", "और आगे", "और दूर",    # pull / stretch more, further ahead / away
+]
+FORBIDDEN_BN = [
+    "ব্যথা", "যন্ত্রণা", "আঘাত", "চোট",                        # pain, agony, injury / blow, hurt
+    "জোর", "জবরদস্তি", "ঠেল",                                # force, coercion, push
+    "আরও টান", "আরো টান", "আরও প্রসারিত", "আরো প্রসারিত",     # pull / stretch more
+    "আরও সামনে", "আরো সামনে", "আরও এগিয়ে", "আরো এগিয়ে", "আরও দূরে", "আরো দূরে",   # further forward / away
+]
+
+
+def _normalise(text: str) -> str:
+    t = unicodedata.normalize("NFD", text).lower().replace("\u093c", "")   # drop the Devanagari nukta
+    return " ".join(unicodedata.normalize("NFC", t).split())
+
+
+_FORBIDDEN_BY_LANGUAGE = {
+    "en": [_normalise(w) for w in FORBIDDEN_EN],
+    "hi": [_normalise(w) for w in FORBIDDEN_HI],
+    "bn": [_normalise(w) for w in FORBIDDEN_BN],
+}
+
+
+def violates_safety_screen(text: str, language: str = "en") -> bool:
+    """True if `text` contains a forbidden word: the English list always, plus the requested language's own list."""
+    t = _normalise(text)
+    words = _FORBIDDEN_BY_LANGUAGE["en"] + (_FORBIDDEN_BY_LANGUAGE.get(language, []) if language != "en" else [])
+    return any(w in t for w in words)
+
 
 # Biomechanical knowledge graph templates
 BIOMECHANICAL_TEMPLATES = {
@@ -269,8 +315,7 @@ def generate_safe_correction(
                 candidate_text = response.json()["choices"][0]["message"]["content"].strip()
                 
                 # Stage 3: Post-Generation Safety Validation
-                forbidden_words = ["push", "force", "hurt", "pain", "stretch more", "further"]
-                if not any(word in candidate_text.lower() for word in forbidden_words):
+                if not violates_safety_screen(candidate_text, language):
                     correction_text = candidate_text
                 else:
                     is_safe = False # Flag candidate as unsafe; fallback to rule-based template

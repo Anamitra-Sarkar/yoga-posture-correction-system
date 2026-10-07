@@ -17,7 +17,7 @@ Recent work often raises model complexity for marginal accuracy gains. Our desig
 \item \emph{Weak poses.} Mountain, cobra and child's pose fail the phone photo test; the flow check reliably handles three poses and is matched by far simpler sequence models; our labels name only one transition (cobra pose to downward dog) with support in three or more videos, so movement modelling is untested; named transitions and momentum scores are not implemented.
 \item \emph{Small data.} 24 videos and public photo sets; the held-out public photos share their sources with the training photos; the wild set has 103 photos; baselines use one seed.
 \item \emph{Occlusion.} Pose naming can still be influenced by a hallucinated hidden joint; the mesh-recovery study is small (141 cases, one asymmetric pose, a synthetic occluder).
-\item \emph{Personal profile and safety.} The profile is not user-tested and a poor stance could forgive real errors; a term screen cannot certify open-ended text, the Hindi and Bengali templates were checked by one native speaker of both languages on the team and have not had an independent review by instructors.
+\item \emph{Personal profile and safety.} The profile is not user-tested and a poor stance could forgive real errors; a term screen cannot certify open-ended text, the Hindi and Bengali templates and term lists were checked by one native speaker of both languages on the team and have not had an independent review by instructors.
 \item \emph{Latency and hardware.} The round trip is about 1\,s from India because it is network-dominated; one phone model was tested. The system is not a medical device and no injury outcome was studied.
 \end{itemize}
 

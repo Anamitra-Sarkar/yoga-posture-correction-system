@@ -71,5 +71,5 @@ def test_safety_screen_still_runs_on_llm_output():
     # the whole point of Stage 3: an LLM paraphrase must never reach the user
     # unscreened, so restoring the LLM path must not have removed the filter
     src = open(SRC_PATH).read()
-    assert "forbidden_words" in src
+    assert "violates_safety_screen(candidate_text, language)" in src     # the screen is applied to the paraphrase, per language
     assert "is_safe = False" in src
