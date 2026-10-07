@@ -47,4 +47,5 @@ Superseded top-level files, see `archive/README.md`.
 | `kernel_flow_stats` | What the cue-verified labels support for movement (hold pairs per video); CPU, token-free; result: no directional pair in >= 3 videos | 
 | `kernel_flow_bench` | Controlled six-model benchmark on a rule-defined 19-class movement task plus an arrow-of-time test; T4 x2, 3925 s; `results_flow_bench_v1.json` |
 | `kernel_flow_oldnew` | Previous (30-class) vs current-architecture ST-GCN on the same held-out windows; `results_flow_oldnew_v1.json` |
+| `kernel_3d_ablation` | Same models with and without the z coordinate, held poses and movement; T4 x2, 3253 s; `results_3d_ablation_v1.json` |
 | `kernel_baselines_seqcpu` | Same models at CPU scale. The ST-GCN rows will not finish (about 13 h per variant); only the cheap models' rows are usable and they are not comparable to the production ST-GCN. |
