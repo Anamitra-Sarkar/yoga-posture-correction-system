@@ -44,4 +44,7 @@ Superseded top-level files, see `archive/README.md`.
 | `kernel_baselines_frame2` | Near-duplicate audit by distance to the nearest training photo, the networks (v4, new, cascade) on the same photos, and the wild frozen Commons-103 set out-of-fold. DONE. |
 | `kernel_baselines_seq` | Same sequence baselines, first account (GPU quota exhausted 2026-10-07; superseded by the next row). |
 | `kernel_baselines_seq_gpu_arko` | Sequence baselines (LSTM, BiLSTM + attention, temporal CNN, window-stat MLP, ST-GCN, ST-GCN without graph) on the cueT2 folds, run on the second Kaggle account (T4 x2, 1915 s, token-free). DONE: `results_seq_gpu_v1.json`, `BENCHMARKS.md` s14. |
+| `kernel_flow_stats` | What the cue-verified labels support for movement (hold pairs per video); CPU, token-free; result: no directional pair in >= 3 videos | 
+| `kernel_flow_bench` | Controlled six-model benchmark on a rule-defined 19-class movement task plus an arrow-of-time test; T4 x2, 3925 s; `results_flow_bench_v1.json` |
+| `kernel_flow_oldnew` | Previous (30-class) vs current-architecture ST-GCN on the same held-out windows; `results_flow_oldnew_v1.json` |
 | `kernel_baselines_seqcpu` | Same models at CPU scale. The ST-GCN rows will not finish (about 13 h per variant); only the cheap models' rows are usable and they are not comparable to the production ST-GCN. |

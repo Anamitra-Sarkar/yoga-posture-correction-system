@@ -1,0 +1,827 @@
+{
+ "setup": {
+  "epochs": 12,
+  "batch": 128,
+  "seed": 0,
+  "aot_cap_windows_per_fold": 12000,
+  "flow24_cap_per_class": 3000,
+  "window": 60,
+  "stride": 12,
+  "fps": 25.0,
+  "motion_hold_deg_per_s": 15.0,
+  "aot_min_net_change_deg": 15.0,
+  "min_videos_per_class": 3,
+  "note": "one recipe for all models; last epoch scored; single seed"
+ },
+ "flow24_classes": {
+  "hold:child_pose": {
+   "windows": 1962,
+   "videos": 19
+  },
+  "hold:cobra_pose": {
+   "windows": 338,
+   "videos": 18
+  },
+  "hold:corpse": {
+   "windows": 236,
+   "videos": 5
+  },
+  "hold:downward_dog": {
+   "windows": 1870,
+   "videos": 22
+  },
+  "hold:lunge_pose": {
+   "windows": 1277,
+   "videos": 22
+  },
+  "hold:mountain_pose": {
+   "windows": 900,
+   "videos": 18
+  },
+  "hold:plank": {
+   "windows": 136,
+   "videos": 10
+  },
+  "hold:seated_easy_pose": {
+   "windows": 981,
+   "videos": 22
+  },
+  "hold:standing_forward_fold": {
+   "windows": 1005,
+   "videos": 19
+  },
+  "hold:standing_pose": {
+   "windows": 105,
+   "videos": 11
+  },
+  "hold:table_top": {
+   "windows": 355,
+   "videos": 12
+  },
+  "hold:tree_pose": {
+   "windows": 291,
+   "videos": 18
+  },
+  "hold:triangle": {
+   "windows": 651,
+   "videos": 9
+  },
+  "hold:upward_salute": {
+   "windows": 197,
+   "videos": 15
+  },
+  "hold:warrior_1": {
+   "windows": 126,
+   "videos": 11
+  },
+  "hold:warrior_2": {
+   "windows": 293,
+   "videos": 14
+  },
+  "transition:cobra_pose->downward_dog": {
+   "windows": 144,
+   "videos": 15
+  },
+  "transition:other": {
+   "windows": 5145,
+   "videos": 24
+  },
+  "unrecognized": {
+   "windows": 12344,
+   "videos": 24
+  }
+ },
+ "flow24_dropped": {
+  "hold:chair_pose": {
+   "windows": 29,
+   "videos": 2
+  },
+  "hold:halfway_lift": {
+   "windows": 86,
+   "videos": 13
+  },
+  "hold:seated_staff": {
+   "windows": 36,
+   "videos": 5
+  },
+  "hold:upward_dog": {
+   "windows": 37,
+   "videos": 4
+  }
+ },
+ "fold_of_video": {
+  "QiebZSlTw_U": 0,
+  "L-z1HLkS_-Y": 1,
+  "RQMtwbhXD7A": 2,
+  "8ibxmzJziHU": 2,
+  "SZU7Sbgu57o": 1,
+  "JHjV-wFTwSw": 0,
+  "7ciS93shMNQ": 1,
+  "HmZFwoUU3WQ": 0,
+  "hHhxKkskHDg": 2,
+  "s-1vMbAgYWU": 1,
+  "dAqQqmaI9vY": 0,
+  "Eml2xnoLpYE": 2,
+  "4ORRiN2_aVI": 1,
+  "v7AYKMP6rOE": 0,
+  "i6TzP2COtow": 1,
+  "P8uHMMmWMHQ": 2,
+  "4K2xTVRDJgA": 0,
+  "O2EY79Ys_qg": 0,
+  "EvMTrP8eRvM": 2,
+  "149Iac5fmoE": 1,
+  "ZiQh8jA5tVM": 0,
+  "4ZBUDd4bsyA": 1,
+  "6CueZ4zujMk": 1,
+  "oUgpXY7QhpQ": 0
+ },
+ "aot_windows": {
+  "n": 12424,
+  "videos": 24,
+  "per_fold": [
+   4473,
+   4466,
+   3485
+  ]
+ },
+ "previous_model_classes": [
+  "hold:chair_pose",
+  "hold:child_pose",
+  "hold:cobra_pose",
+  "hold:corpse",
+  "hold:downward_dog",
+  "hold:halfway_lift",
+  "hold:lunge_pose",
+  "hold:mountain_pose",
+  "hold:plank",
+  "hold:seated_easy_pose",
+  "hold:seated_forward",
+  "hold:seated_staff",
+  "hold:standing_forward_fold",
+  "hold:standing_pose",
+  "hold:table_top",
+  "hold:tree_pose",
+  "hold:triangle",
+  "hold:upward_dog",
+  "hold:upward_salute",
+  "hold:warrior_1",
+  "hold:warrior_2",
+  "transition:cobra_pose->standing_pose",
+  "transition:downward_dog->standing_forward_fold",
+  "transition:lunge_pose->tree_pose",
+  "transition:lunge_pose->warrior_2",
+  "transition:other",
+  "transition:standing_forward_fold->downward_dog",
+  "transition:tree_pose->lunge_pose",
+  "transition:warrior_2->lunge_pose",
+  "unrecognized"
+ ],
+ "compare": {
+  "new_videos_only (clean for the previous model)": {
+   "MLP on window mean/std (order-blind)": {
+    "overall": 0.656,
+    "macro_all": 0.667,
+    "macro_holds": 0.658,
+    "macro_named_transitions": 0.87,
+    "n_named_transition_classes": 1,
+    "direction_confusion": null,
+    "n_reversible_pairs": 0,
+    "per_class": {
+     "hold:child_pose": {
+      "n": 626,
+      "recall": 0.939,
+      "precision": 0.76
+     },
+     "hold:cobra_pose": {
+      "n": 201,
+      "recall": 0.274,
+      "precision": 0.285
+     },
+     "hold:corpse": {
+      "n": 70,
+      "recall": 0.986,
+      "precision": 0.651
+     },
+     "hold:downward_dog": {
+      "n": 207,
+      "recall": 0.816,
+      "precision": 0.585
+     },
+     "hold:lunge_pose": {
+      "n": 231,
+      "recall": 0.407,
+      "precision": 0.195
+     },
+     "hold:mountain_pose": {
+      "n": 644,
+      "recall": 0.882,
+      "precision": 0.763
+     },
+     "hold:plank": {
+      "n": 24,
+      "recall": 0.542,
+      "precision": 0.255
+     },
+     "hold:seated_easy_pose": {
+      "n": 695,
+      "recall": 0.682,
+      "precision": 0.608
+     },
+     "hold:standing_forward_fold": {
+      "n": 213,
+      "recall": 0.728,
+      "precision": 0.405
+     },
+     "hold:standing_pose": {
+      "n": 62,
+      "recall": 0.323,
+      "precision": 0.333
+     },
+     "hold:table_top": {
+      "n": 159,
+      "recall": 0.956,
+      "precision": 0.688
+     },
+     "hold:tree_pose": {
+      "n": 127,
+      "recall": 0.638,
+      "precision": 0.372
+     },
+     "hold:triangle": {
+      "n": 63,
+      "recall": 0.889,
+      "precision": 0.767
+     },
+     "hold:upward_salute": {
+      "n": 111,
+      "recall": 0.667,
+      "precision": 0.418
+     },
+     "hold:warrior_1": {
+      "n": 26,
+      "recall": 0.615,
+      "precision": 0.239
+     },
+     "hold:warrior_2": {
+      "n": 21,
+      "recall": 0.19,
+      "precision": 0.105
+     },
+     "transition:cobra_pose->downward_dog": {
+      "n": 23,
+      "recall": 0.87,
+      "precision": 0.526
+     },
+     "transition:other": {
+      "n": 2042,
+      "recall": 0.725,
+      "precision": 0.647
+     },
+     "unrecognized": {
+      "n": 3913,
+      "recall": 0.541,
+      "precision": 0.855
+     }
+    },
+    "n_windows": 9458
+   },
+   "ST-GCN (production architecture)": {
+    "overall": 0.567,
+    "macro_all": 0.531,
+    "macro_holds": 0.521,
+    "macro_named_transitions": 0.783,
+    "n_named_transition_classes": 1,
+    "direction_confusion": null,
+    "n_reversible_pairs": 0,
+    "per_class": {
+     "hold:child_pose": {
+      "n": 626,
+      "recall": 0.685,
+      "precision": 0.649
+     },
+     "hold:cobra_pose": {
+      "n": 201,
+      "recall": 0.264,
+      "precision": 0.31
+     },
+     "hold:corpse": {
+      "n": 70,
+      "recall": 0.714,
+      "precision": 0.203
+     },
+     "hold:downward_dog": {
+      "n": 207,
+      "recall": 0.618,
+      "precision": 0.348
+     },
+     "hold:lunge_pose": {
+      "n": 231,
+      "recall": 0.221,
+      "precision": 0.107
+     },
+     "hold:mountain_pose": {
+      "n": 644,
+      "recall": 0.812,
+      "precision": 0.613
+     },
+     "hold:plank": {
+      "n": 24,
+      "recall": 0.375,
+      "precision": 0.281
+     },
+     "hold:seated_easy_pose": {
+      "n": 695,
+      "recall": 0.742,
+      "precision": 0.721
+     },
+     "hold:standing_forward_fold": {
+      "n": 213,
+      "recall": 0.526,
+      "precision": 0.285
+     },
+     "hold:standing_pose": {
+      "n": 62,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "hold:table_top": {
+      "n": 159,
+      "recall": 0.893,
+      "precision": 0.66
+     },
+     "hold:tree_pose": {
+      "n": 127,
+      "recall": 0.441,
+      "precision": 0.289
+     },
+     "hold:triangle": {
+      "n": 63,
+      "recall": 0.571,
+      "precision": 0.462
+     },
+     "hold:upward_salute": {
+      "n": 111,
+      "recall": 0.856,
+      "precision": 0.397
+     },
+     "hold:warrior_1": {
+      "n": 26,
+      "recall": 0.615,
+      "precision": 0.271
+     },
+     "hold:warrior_2": {
+      "n": 21,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "transition:cobra_pose->downward_dog": {
+      "n": 23,
+      "recall": 0.783,
+      "precision": 0.783
+     },
+     "transition:other": {
+      "n": 2042,
+      "recall": 0.377,
+      "precision": 0.474
+     },
+     "unrecognized": {
+      "n": 3913,
+      "recall": 0.604,
+      "precision": 0.769
+     }
+    },
+    "n_windows": 9458
+   },
+   "PREVIOUS ST-GCN stgcn_transitions_v1 (24 classes)": {
+    "overall": 0.231,
+    "macro_all": 0.142,
+    "macro_holds": 0.144,
+    "macro_named_transitions": 0.0,
+    "n_named_transition_classes": 1,
+    "direction_confusion": null,
+    "n_reversible_pairs": 0,
+    "per_class": {
+     "hold:child_pose": {
+      "n": 626,
+      "recall": 0.3,
+      "precision": 0.974
+     },
+     "hold:cobra_pose": {
+      "n": 201,
+      "recall": 0.01,
+      "precision": 0.019
+     },
+     "hold:corpse": {
+      "n": 70,
+      "recall": 0.014,
+      "precision": 0.032
+     },
+     "hold:downward_dog": {
+      "n": 207,
+      "recall": 0.024,
+      "precision": 0.06
+     },
+     "hold:lunge_pose": {
+      "n": 231,
+      "recall": 0.208,
+      "precision": 0.063
+     },
+     "hold:mountain_pose": {
+      "n": 644,
+      "recall": 0.514,
+      "precision": 0.427
+     },
+     "hold:plank": {
+      "n": 24,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "hold:seated_easy_pose": {
+      "n": 695,
+      "recall": 0.612,
+      "precision": 0.616
+     },
+     "hold:standing_forward_fold": {
+      "n": 213,
+      "recall": 0.469,
+      "precision": 0.347
+     },
+     "hold:standing_pose": {
+      "n": 62,
+      "recall": 0.032,
+      "precision": 0.024
+     },
+     "hold:table_top": {
+      "n": 159,
+      "recall": 0.031,
+      "precision": 0.143
+     },
+     "hold:tree_pose": {
+      "n": 127,
+      "recall": 0.055,
+      "precision": 0.054
+     },
+     "hold:triangle": {
+      "n": 63,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "hold:upward_salute": {
+      "n": 111,
+      "recall": 0.036,
+      "precision": 0.014
+     },
+     "hold:warrior_1": {
+      "n": 26,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "hold:warrior_2": {
+      "n": 21,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "transition:cobra_pose->downward_dog": {
+      "n": 23,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "transition:other": {
+      "n": 2042,
+      "recall": 0.26,
+      "precision": 0.465
+     },
+     "unrecognized": {
+      "n": 3913,
+      "recall": 0.137,
+      "precision": 0.81
+     }
+    },
+    "n_windows": 9458
+   }
+  },
+  "all_24_videos (previous model may be in-sample)": {
+   "MLP on window mean/std (order-blind)": {
+    "overall": 0.635,
+    "macro_all": 0.586,
+    "macro_holds": 0.573,
+    "macro_named_transitions": 0.681,
+    "n_named_transition_classes": 1,
+    "direction_confusion": null,
+    "n_reversible_pairs": 0,
+    "per_class": {
+     "hold:child_pose": {
+      "n": 1962,
+      "recall": 0.921,
+      "precision": 0.835
+     },
+     "hold:cobra_pose": {
+      "n": 338,
+      "recall": 0.388,
+      "precision": 0.238
+     },
+     "hold:corpse": {
+      "n": 236,
+      "recall": 0.852,
+      "precision": 0.827
+     },
+     "hold:downward_dog": {
+      "n": 1870,
+      "recall": 0.825,
+      "precision": 0.689
+     },
+     "hold:lunge_pose": {
+      "n": 1277,
+      "recall": 0.207,
+      "precision": 0.202
+     },
+     "hold:mountain_pose": {
+      "n": 900,
+      "recall": 0.878,
+      "precision": 0.783
+     },
+     "hold:plank": {
+      "n": 136,
+      "recall": 0.522,
+      "precision": 0.34
+     },
+     "hold:seated_easy_pose": {
+      "n": 981,
+      "recall": 0.667,
+      "precision": 0.469
+     },
+     "hold:standing_forward_fold": {
+      "n": 1005,
+      "recall": 0.733,
+      "precision": 0.562
+     },
+     "hold:standing_pose": {
+      "n": 105,
+      "recall": 0.21,
+      "precision": 0.133
+     },
+     "hold:table_top": {
+      "n": 355,
+      "recall": 0.772,
+      "precision": 0.537
+     },
+     "hold:tree_pose": {
+      "n": 291,
+      "recall": 0.423,
+      "precision": 0.299
+     },
+     "hold:triangle": {
+      "n": 651,
+      "recall": 0.693,
+      "precision": 0.638
+     },
+     "hold:upward_salute": {
+      "n": 197,
+      "recall": 0.655,
+      "precision": 0.369
+     },
+     "hold:warrior_1": {
+      "n": 126,
+      "recall": 0.286,
+      "precision": 0.137
+     },
+     "hold:warrior_2": {
+      "n": 293,
+      "recall": 0.143,
+      "precision": 0.062
+     },
+     "transition:cobra_pose->downward_dog": {
+      "n": 144,
+      "recall": 0.681,
+      "precision": 0.513
+     },
+     "transition:other": {
+      "n": 5145,
+      "recall": 0.716,
+      "precision": 0.61
+     },
+     "unrecognized": {
+      "n": 12344,
+      "recall": 0.564,
+      "precision": 0.808
+     }
+    },
+    "n_windows": 28356
+   },
+   "ST-GCN (production architecture)": {
+    "overall": 0.546,
+    "macro_all": 0.477,
+    "macro_holds": 0.476,
+    "macro_named_transitions": 0.507,
+    "n_named_transition_classes": 1,
+    "direction_confusion": null,
+    "n_reversible_pairs": 0,
+    "per_class": {
+     "hold:child_pose": {
+      "n": 1962,
+      "recall": 0.83,
+      "precision": 0.701
+     },
+     "hold:cobra_pose": {
+      "n": 338,
+      "recall": 0.266,
+      "precision": 0.192
+     },
+     "hold:corpse": {
+      "n": 236,
+      "recall": 0.386,
+      "precision": 0.234
+     },
+     "hold:downward_dog": {
+      "n": 1870,
+      "recall": 0.725,
+      "precision": 0.514
+     },
+     "hold:lunge_pose": {
+      "n": 1277,
+      "recall": 0.219,
+      "precision": 0.203
+     },
+     "hold:mountain_pose": {
+      "n": 900,
+      "recall": 0.757,
+      "precision": 0.611
+     },
+     "hold:plank": {
+      "n": 136,
+      "recall": 0.574,
+      "precision": 0.299
+     },
+     "hold:seated_easy_pose": {
+      "n": 981,
+      "recall": 0.697,
+      "precision": 0.642
+     },
+     "hold:standing_forward_fold": {
+      "n": 1005,
+      "recall": 0.669,
+      "precision": 0.455
+     },
+     "hold:standing_pose": {
+      "n": 105,
+      "recall": 0.01,
+      "precision": 0.004
+     },
+     "hold:table_top": {
+      "n": 355,
+      "recall": 0.569,
+      "precision": 0.415
+     },
+     "hold:tree_pose": {
+      "n": 291,
+      "recall": 0.33,
+      "precision": 0.217
+     },
+     "hold:triangle": {
+      "n": 651,
+      "recall": 0.413,
+      "precision": 0.478
+     },
+     "hold:upward_salute": {
+      "n": 197,
+      "recall": 0.782,
+      "precision": 0.454
+     },
+     "hold:warrior_1": {
+      "n": 126,
+      "recall": 0.27,
+      "precision": 0.106
+     },
+     "hold:warrior_2": {
+      "n": 293,
+      "recall": 0.113,
+      "precision": 0.09
+     },
+     "transition:cobra_pose->downward_dog": {
+      "n": 144,
+      "recall": 0.507,
+      "precision": 0.716
+     },
+     "transition:other": {
+      "n": 5145,
+      "recall": 0.353,
+      "precision": 0.407
+     },
+     "unrecognized": {
+      "n": 12344,
+      "recall": 0.588,
+      "precision": 0.732
+     }
+    },
+    "n_windows": 28356
+   },
+   "PREVIOUS ST-GCN stgcn_transitions_v1 (24 classes)": {
+    "overall": 0.311,
+    "macro_all": 0.209,
+    "macro_holds": 0.21,
+    "macro_named_transitions": 0.0,
+    "n_named_transition_classes": 1,
+    "direction_confusion": null,
+    "n_reversible_pairs": 0,
+    "per_class": {
+     "hold:child_pose": {
+      "n": 1962,
+      "recall": 0.577,
+      "precision": 0.957
+     },
+     "hold:cobra_pose": {
+      "n": 338,
+      "recall": 0.006,
+      "precision": 0.002
+     },
+     "hold:corpse": {
+      "n": 236,
+      "recall": 0.004,
+      "precision": 0.009
+     },
+     "hold:downward_dog": {
+      "n": 1870,
+      "recall": 0.094,
+      "precision": 0.388
+     },
+     "hold:lunge_pose": {
+      "n": 1277,
+      "recall": 0.359,
+      "precision": 0.257
+     },
+     "hold:mountain_pose": {
+      "n": 900,
+      "recall": 0.602,
+      "precision": 0.42
+     },
+     "hold:plank": {
+      "n": 136,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "hold:seated_easy_pose": {
+      "n": 981,
+      "recall": 0.603,
+      "precision": 0.536
+     },
+     "hold:standing_forward_fold": {
+      "n": 1005,
+      "recall": 0.602,
+      "precision": 0.358
+     },
+     "hold:standing_pose": {
+      "n": 105,
+      "recall": 0.057,
+      "precision": 0.036
+     },
+     "hold:table_top": {
+      "n": 355,
+      "recall": 0.079,
+      "precision": 0.212
+     },
+     "hold:tree_pose": {
+      "n": 291,
+      "recall": 0.107,
+      "precision": 0.05
+     },
+     "hold:triangle": {
+      "n": 651,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "hold:upward_salute": {
+      "n": 197,
+      "recall": 0.025,
+      "precision": 0.01
+     },
+     "hold:warrior_1": {
+      "n": 126,
+      "recall": 0.19,
+      "precision": 0.04
+     },
+     "hold:warrior_2": {
+      "n": 293,
+      "recall": 0.048,
+      "precision": 0.077
+     },
+     "transition:cobra_pose->downward_dog": {
+      "n": 144,
+      "recall": 0.0,
+      "precision": 0.0
+     },
+     "transition:other": {
+      "n": 5145,
+      "recall": 0.342,
+      "precision": 0.472
+     },
+     "unrecognized": {
+      "n": 12344,
+      "recall": 0.278,
+      "precision": 0.809
+     }
+    },
+    "n_windows": 28356
+   }
+  }
+ }
+}
