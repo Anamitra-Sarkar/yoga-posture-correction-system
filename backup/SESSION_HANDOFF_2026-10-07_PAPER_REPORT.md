@@ -15,6 +15,7 @@ Read this first if you are resuming the paper/report work. Numbers live in `docs
 ## 2. The split rule (user's, do not mix)
 * **Paper = research**: problem + gaps vs 2025-2026 literature, our approach, held-out evidence, comparisons with standard methods, proof screenshots, limitations, future work, brief deployment (hardware, latency). **No** dates, bug history, audits, fixes, repo/branch/CI/quota notes, no mention of the proposal slides, **no previous-vs-current comparisons**.
 * **Report = everything else** (engineering, audit, repo ops, previous-vs-current comparisons, rationale).
+* Table I (`paper/sections/s2_related.tex`) uses the preamble column types `L{width}` / `Y` (left-aligned, `\hyphenpenalty=5000`) because justified narrow `p{}` columns produced stretched word gaps; check table layout in the rendered PDF (not just LaTeX) after any edit.
 * Typography: bold ONLY for best-in-column table values (and the IEEE abstract/keywords style); "8 of 11 poses pass" stays in the text, not a table row. Audit with `pdftohtml -xml` (bold = NimbusRomNo9L-Medi).
 
 ## 3. Verified facts (corrections to earlier notes included)
