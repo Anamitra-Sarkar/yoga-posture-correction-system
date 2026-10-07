@@ -11,6 +11,8 @@
 \usepackage{multirow}
 \usepackage{tabularx}
 \usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash\hyphenpenalty=5000 }p{#1}}   % left-aligned text cells: no stretched word gaps in narrow columns
+\newcolumntype{Y}{>{\raggedright\arraybackslash\hyphenpenalty=5000 }X}
 \usepackage{url}
 \usepackage{cite}
 \usepackage{pifont}

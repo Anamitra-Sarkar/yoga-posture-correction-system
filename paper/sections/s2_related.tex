@@ -10,7 +10,7 @@
 \begin{table*}[t]
 \centering\scriptsize\setlength{\tabcolsep}{3pt}
 \caption{What recent systems report (from their abstracts or full text as cited; n/r = not reported in the sources we read). The last row is this work.}\label{tab:related}
-\begin{tabularx}{\textwidth}{@{}p{2.3cm}p{3.2cm}p{2.3cm}p{2.3cm}p{2.0cm}p{2.0cm}X@{}}
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}L{3.2cm}L{2.3cm}L{2.3cm}L{2.0cm}L{2.0cm}Y@{}}
 \toprule
 System & Sensing and hardware & Temporal modelling & Personalisation & Hidden joints & Safety of generated advice & Reported evaluation \\ \midrule
 GTA-Net \cite{yuan2025gtanet} & camera + IoT, 3-D pose; sports, not yoga & GCN + TCN & n/r & robustness to occlusion reported & n/a & MPJPE on Human3.6M, HumanEva-I, MPI-INF-3DHP \\
@@ -24,6 +24,6 @@ Vallabhaneni \cite{vallabhaneni2026hybrid} & vision + IMU; GCN, LSTM, attention 
 SAGE-Yoga \cite{chi2026sage} & single RGB image & none & n/r & n/r & n/r & 90.7\% top-1 on Yoga-82 \\
 Aggarwal \cite{aggarwal2026chair} & MoveNet Thunder; chair yoga & n/r & lower-body disability & n/r & n/r & n/r \\
 FormCoach \cite{zuo2025formcoach} & vision--language model; 22 exercises & n/r & personalised corrections & n/r & substantial gaps vs.\ humans & rubric-based benchmark \\ \midrule
-AsanaAI (this work) & browser landmarks only, CPU server; commodity phone or laptop & skeleton-graph flow check on 60 frames & personal range profile & abstains on hidden joints & term-screened templates, English/Hindi/Bengali & held-out photos and videos, false-alarm rate, standard baselines \\ \bottomrule
+AsanaAI (this work) & browser landmarks only, CPU server; commodity phone or laptop & skeleton-graph flow check on 60 frames & personal range profile & abstains on hidden joints & term-screened templates, \mbox{English}/\allowbreak Hindi/\allowbreak Bengali & held-out photos and videos, false-alarm rate, standard baselines \\ \bottomrule
 \end{tabularx}
 \end{table*}
