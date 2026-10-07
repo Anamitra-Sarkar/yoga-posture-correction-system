@@ -37,23 +37,25 @@ Cascade (ours) & 78.9\% & 20.8\% & \textbf{7} & 55.3\% \\ \bottomrule
 \label{fig:charts}
 \end{figure*}
 
-\subsection{RQ2: the skeleton-graph flow check}\label{sec:rq2}
+\subsection{RQ2: the skeleton-graph temporal network}\label{sec:rq2}
 On three folds split by video, the network reaches 82.2\% overall; because 60\% of the 8{,}002 windows are transition/unknown this flatters it, so we also report 78.0\% macro recall over the nine classes (76.9\% over the eight poses). Three poses clear the bar: child's pose (recall/precision $.74/.91$), corpse ($1.00/.85$) and downward dog ($.83/.77$); seated easy, tree and triangle are within about 0.07 of it (Fig.~\ref{fig:charts}b). The network is conservative: its misses go to transition/unknown, not to another pose. Warrior~II and plank fail on precision ($.26$, $.18$): 158 transition windows are called Warrior~II, and plank has only 30 windows. A less conservative threshold chosen without leakage (an offset on the transition logit, picked on two folds and applied to the third) raises the passing poses to four with 81.9\% overall; no offset reaches six. At the production confidence the network answers on 60.8\% of true-pose windows with 86.8\% precision.
 
 \runin{Input rate.} Re-scoring the same videos while subsampling every $k$-th frame shows that the network needs windows at the rate it was trained on: macro recall is 0.82 at 25\,fps and 0.81 at 12.5\,fps, then falls to 0.51, 0.41 and 0.39 at 6.2, 3.1 and 2.1\,fps (Fig.~\ref{fig:charts}c). Feeding it one frame per server round trip would therefore silently destroy its accuracy, which is why the browser buffers every camera frame and resamples to 25\,fps.
 \runin{Is the skeleton graph needed?} Table~\ref{tab:seq} trains six sequence models under one recipe and scores them on the same held-out folds. Three findings. First, the skeleton graph helps only a little over the same network without it (macro recall 86.4\% against 84.8\%, while overall accuracy is 76.0\% against 77.1\%); differences of one or two points are smaller than the seed-to-seed variation we did not measure. Second, simpler models match or exceed the ST-GCN: the LSTM, BiLSTM and temporal CNN reach 89.5--89.7\% macro recall, and an 86\,k-parameter MLP on the window's mean and standard deviation, which has no temporal modelling at all, is best (94.4\%). Held-pose recognition is therefore largely a static-shape problem, and we do not claim that the graph is necessary for it. Third, every model shares one weakness: Warrior~II (precision 0.24--0.30) and plank (0.10--0.40, 30 windows) are over-called because transition windows are labelled as poses, while transition/unknown itself has high precision (0.91--0.96). An ST-GCN fold takes about 290\,s to train on a T4, against 6--15\,s for the others. The absolute numbers differ from the production figures above (macro recall 86.4\% against 78.0\%, overall 76.0\% against 82.2\%) because this recipe uses fewer windows, fixed epochs and class weights, which trade overall accuracy for recall; the comparison within the table is what matters. We keep the ST-GCN as a second opinion and as the basis for flow scores (smoothness, balance, momentum) that static statistics cannot provide, but the evidence for it today is parity, not superiority.
+\runin{Does the network model movement?} Held-pose recognition is a static task, and the network is meant to capture how the body moves between poses, so we also tried to test movement. Our labels do not allow a named-transition benchmark: of the 568 consecutive hold pairs in the 24 videos, 205 are between different poses, and within 500 frames (70 transitions in 33 directional pairs) no pair occurs in three or more videos. We therefore built a rule-defined movement task: a window is a transition when its net angle change exceeds 15\textdegree/s and is named by the dominant pose of its first and last third, otherwise a hold or unrecognised, which gives 19 classes after dropping those with fewer than 100 windows or fewer than three videos (16 holds, generic transition, unrecognised, and one named transition, cobra pose to downward dog). The labels are defined by rules, so the task measures whether a model recovers rule-defined flow from the raw skeleton, not agreement with an annotator. The last column of Table~\ref{tab:seq} shows the same ordering as for held poses: the window-statistics MLP is best (58.6\% macro recall), the ST-GCN last (47.7\%), and removing the skeleton graph changes nothing measurable (48.4\%). A time-reversal test (every moving window shown forward and reversed, chance 50\%) is at chance for every model (49.9--51.1\%), so under this recipe no model, including the ST-GCN, is shown to use the direction of time; the test is uninformative, not evidence either way. We therefore make no claim that the network models movement; labelled transition data is the missing ingredient (Section~\ref{sec:discussion}).
+
 \begin{table}[t]
 \centering\footnotesize\setlength{\tabcolsep}{3pt}
-\caption{Sequence models under one recipe on the held-out video folds (bold: best in column; for parameters, fewest). MR9: macro recall over the nine classes; MR8: over the eight poses; Pass: poses at recall and precision $\ge0.70$.}\label{tab:seq}
-\begin{tabular}{@{}lrrrrr@{}}
+\caption{Sequence models under one recipe on the held-out video folds (bold: best in column; for parameters, fewest). MR9: macro recall over the nine classes; MR8: over the eight poses; Pass: poses at recall and precision $\ge0.70$; Flow: macro recall over the 19 classes of the rule-defined movement task (24 videos, 3 folds by video).}\label{tab:seq}
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-Model & Params & Overall & MR9 & MR8 & Pass \\ \midrule
-LSTM (2 layers) & 0.25\,M & 83.0\% & 89.5\% & 91.0\% & 4 \\
-BiLSTM + attention & 0.50\,M & \textbf{87.1\%} & 89.6\% & 90.1\% & \textbf{5} \\
-Temporal CNN & 1.00\,M & 81.5\% & 89.7\% & 91.4\% & 4 \\
-MLP on window mean/std & \textbf{0.09\,M} & 85.3\% & \textbf{94.4\%} & \textbf{96.4\%} & \textbf{5} \\
-ST-GCN, no skeleton graph & 0.89\,M & 77.1\% & 84.8\% & 86.4\% & 4 \\
-ST-GCN (ours) & 0.89\,M & 76.0\% & 86.4\% & 88.6\% & 4 \\ \bottomrule
+Model & Params & Overall & MR9 & MR8 & Pass & Flow \\ \midrule
+LSTM (2 layers) & 0.25\,M & 83.0\% & 89.5\% & 91.0\% & 4 & 53.1\% \\
+BiLSTM + attention & 0.50\,M & \textbf{87.1\%} & 89.6\% & 90.1\% & \textbf{5} & 56.8\% \\
+Temporal CNN & 1.00\,M & 81.5\% & 89.7\% & 91.4\% & 4 & 55.6\% \\
+MLP on window mean/std & \textbf{0.09\,M} & 85.3\% & \textbf{94.4\%} & \textbf{96.4\%} & \textbf{5} & \textbf{58.6\%} \\
+ST-GCN, no skeleton graph & 0.89\,M & 77.1\% & 84.8\% & 86.4\% & 4 & 48.4\% \\
+ST-GCN (ours) & 0.89\,M & 76.0\% & 86.4\% & 88.6\% & 4 & 47.7\% \\ \bottomrule
 \end{tabular}
 \end{table}
 
