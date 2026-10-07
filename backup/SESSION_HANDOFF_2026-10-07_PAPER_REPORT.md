@@ -1,0 +1,46 @@
+# Session handoff — research paper, project report, ST-GCN/3D benchmarks (2026-10-07)
+
+Read this first if you are resuming the paper/report work. Numbers live in `docs/BENCHMARKS.md` (sections 13-16); this file is the map, the decisions and the open items.
+
+## 1. Where everything is
+| What | Path |
+|---|---|
+| Research paper (IEEEtran conference, **10 pages**) | `paper/asanaai_research_paper.tex` + `paper/sections/{abstract,s1_intro,s2_related,s3_method,s4_setup,s5_results,s6_discussion}.tex`, charts `paper/fig_*.tex`, proof screenshots `paper/figures/`, bibliography `paper/references.bib` (41 verified entries) + `paper/make_refs.py` -> `references_gen.tex` |
+| Project report (article, A4, **24 pages**) | `report/asanaai_project_report.tex` + `report/sections/s1..s12` and **`s8b_before_after.tex`** (new: previous-vs-current, MLP generations, genuine-ST-GCN evidence, movement benchmark, 3D) |
+| Delivered PDFs | `/home/anamitra/yoga research/AsanaAI_Research_Paper.pdf`, `AsanaAI_Project_Report.pdf` (old `ieee_research_paper.pdf` there is untouched, stale) |
+| Rebuild | `cd paper && python3 make_refs.py && pdflatex asanaai_research_paper.tex` (x2); same in `report/` with `asanaai_project_report.tex`. (No IEEEtran.bst installed, hence `make_refs.py`.) Then copy the PDFs to `yoga research/`. |
+| Kaggle kernels written this session | `planning/kaggle_transfer/kernel_{baselines_seq_gpu_arko, flow_stats, flow_bench, flow_oldnew, 3d_ablation}` (+ `klog_arko.py` log reader). Raw results: `results_seq_gpu_v1.json`, `results_flow_bench_v1.json`, `results_flow_oldnew_v1.json`, `results_3d_ablation_v1.json` |
+| Notes written earlier | `report/REPORT_AND_PAPER_PROGRESS_NOTES.md` (the 2026-10-06 paper progress file was folded into it when the paper and report were split) |
+
+## 2. The split rule (user's, do not mix)
+* **Paper = research**: problem + gaps vs 2025-2026 literature, our approach, held-out evidence, comparisons with standard methods, proof screenshots, limitations, future work, brief deployment (hardware, latency). **No** dates, bug history, audits, fixes, repo/branch/CI/quota notes, no mention of the proposal slides, **no previous-vs-current comparisons**.
+* **Report = everything else** (engineering, audit, repo ops, previous-vs-current comparisons, rationale).
+* Typography: bold ONLY for best-in-column table values (and the IEEE abstract/keywords style); "8 of 11 poses pass" stays in the text, not a table row. Audit with `pdftohtml -xml` (bold = NimbusRomNo9L-Medi).
+
+## 3. Verified facts (corrections to earlier notes included)
+* **ST-GCN is genuine.** Graph conv (`einsum('vw,ncwt->ncvt')` with the symmetric-normalised 33x33 adjacency) + 9-tap temporal conv, 3 blocks 3->64->128->256, head 256->128->C. Hand count 893,897 params (C=9) = the benchmark's printed count; every checkpoint loads strictly. **History:** the repo's first commit (2026-06-10) had a Conv1d + ResGRU + attention model under the class name `YogaSequenceLSTM`; real ST-GCN since commit `018a7ba` (2026-07-17); class name kept for checkpoint loading.
+* **Class counts.** Shipped `stgcn_target_v1` = **9** (8 poses + transition/unknown; trained on all 24 videos). Previous live `stgcn_transitions_v1` = **30** (21 holds, 7 directional transitions, transition:other, unrecognized) — read from its encoder in `kernel_flow_oldnew`. Comments saying "24 classes" (`backend/app/services/hf_loader.py:67`, `backend/tests/test_sequence_labels.py:4`) and "24/25" in `docs/TRAINING_LESSONS.md`, and its "63.0% macro" (2 held-out videos, rule-defined labels), are stale. Other ST-GCN runs used 16 (`cue`) and 22 (`cue2`) classes.
+* **Why MLP + ST-GCN** (design notes + user): MLP = single-frame form check (pose, correctness, 15-joint deviation, zero-z angles); ST-GCN = temporal flow + skeleton graph + **3D (x,y,z) input**. The proposal text itself is not in the repo.
+* **Previous vs current ST-GCN** (held-out videos the old one never saw): held poses macro recall 18.8% -> 82.1%; movement task 14.2% -> 53.1%; cobra->downward-dog transition 0.0% -> 78.3%. MLP generations: see report Table `tab:posehead` / `tab:policy` / `tab:form` (cascade: 36.9% -> 78.9% overall, false alarms 78.3% -> 20.8%, poses passing 0 -> 7).
+* **ST-GCN vs simpler models:** no task shows the ST-GCN (or the skeleton graph, or frame order) beating a window mean/std MLP: held poses MR9 94.4% (MLP) vs 86.4% (ST-GCN); movement 58.6% vs 47.7%. Paper says "parity, not superiority".
+* **Movement is untestable with our labels:** within 150 frames 40 transitions in 14 directional pairs, within 500 frames 70 in 33 pairs, **none in >= 3 videos**. Rule-defined 19-class flow task keeps ONE named transition (cobra->downward dog). **Arrow-of-time test: chance (50%) for every model -> uninformative** (do not cite as evidence either way).
+* **3D ablation (z zeroed vs xyz, macro recall):** held poses MLP-stats 94.2->59.3, TCN 90.5->70.1, ST-GCN 88.7->28.6; movement 59.5->46.3, 56.2->52.1, 47.5->35.9. z is the largest effect measured. z is MediaPipe monocular relative depth; live phone z may differ from the training videos. Earlier failed 3D fixes: world landmarks 42.9% (vs 45.7% 2-D), pretrained 2D->3D lifter 10%, bone-length correction 49.7% vs 54.6% raw z (`planning/CHECKPOINT_2026-09-03_FINAL.md`). z reaches the model end to end (`frontend/src/utils/sequenceBuffer.ts` -> 60x99 -> backend normalisation); the MLPs use zero-z angles on purpose (train/serve fix).
+* **Plain MLP vs 3-head ResMLP** (frame baselines): 80.9% vs 79.6% public, FA 19.1% vs 22.6%, wild 47.6% vs 49.5% -> a tie (within noise); the plain one is sklearn `MLPClassifier(256,256,128)`, pose head only, baseline only. The 3-head model's value is the form/deviation outputs. Cascade gain comes from namer + veto (3 -> 7 poses passing), not architecture.
+* **Random forest** beats the cascade on same-source public photos (85.3% / 9.8% FA vs 78.9% / 20.8%) and is worst on wild photos (35.0% vs 55.3%); the cascade is the only method with wild >= 55% AND FA <= 21%, but the wild set is 103 photos (gaps < ~10 points are noise).
+* **Safety screen:** Hindi/Bengali word lists reviewed by the user (native speaker of both), merged to main, 39 backend tests pass, Space synced and `/api/generate_correction` verified live in en/hi/bn (2026-10-07). Sheet: `docs/SAFETY_SCREEN_HI_BN_REVIEW.md`.
+
+## 4. Working rules that apply here
+* **No heavy compute on the user's PC** (3.7 GB RAM): training/benchmarks go to Kaggle (account `arkosarkarhehe` for GPU; token-free kernels: public HF `Arko007/Yoga-1M`, `Arko007/yoga-posture-models`; `asanaai-conference-runs` is private -> 401), Codespaces, or old-account Modal only.
+* Read kernel logs via the REST `log` field (`python3 planning/kaggle_transfer/klog_arko.py <slug> <width>`, needs `/home/anamitra/kaggle.json`) or the Kaggle web page through Claude-in-Chrome; **never `kaggle kernels output`** (downloads files). The API shows no log while a kernel is RUNNING; the web page does.
+* Arko007 HF account only; never overwrite/delete existing model files (new names only); do not download datasets/checkpoints locally; keep the creds dataset `asanaai-conf-creds`.
+* Backend edits redeploy the Space (`hf_sync.yml` on `backend/**`, `README.md`, the workflow). Docs/paper/report/planning/backup changes do not.
+* Git: work on a branch, merge `--no-ff` into main, delete the branch; commits end with the Co-Authored-By line.
+
+## 5. Open items
+**User:** (1) confirm the five authors and their order (Anamitra Sarkar, Debjit Deb Barman, Adrija Ray Mondal, Tanima Samanta, Sujit Chakraborty (Supervisor)); (2) decide the fate of the old remote branch `compat-engine` (never merged); (3) the user will review the paper later and send changes.
+**Optional experiments (not run):** plain MLP in the gate/namer slot of the cascade; a tree-network ensemble (random forest names, gate vetoes); a per-frame naming model fed a 3-D window (z helps the sequence models by 20-60 points); labelled transition data (needed before any claim about movement); a live-person study with instructor ratings; retrain the form/deviation heads with arm perturbations.
+**Optional hygiene:** fix the stale "24 classes" comments in `backend/` (redeploys the Space) and the 24/25 mentions in `docs/TRAINING_LESSONS.md`.
+**Not implemented but in the original proposal** (listed in the paper as limitations/future work): flow/balance/momentum scores, a hyperextension flag, a session dashboard.
+
+## 6. Known weak spots a reviewer may probe (all stated in the paper)
+Single seed throughout; 12 clean videos for the previous-vs-current test; overlapping windows (stride 12 of 60), so the effective sample is holds/videos; rule-defined movement labels (favour the previous model's scheme); wild set n=103; no live-person study; round-trip latency ~1 s (network-dominated; server 7-9 ms); form score blind to arm errors; weak mountain/cobra/child's pose on the phone photo test.

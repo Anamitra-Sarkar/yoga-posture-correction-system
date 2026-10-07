@@ -3,6 +3,7 @@
 The scratchpad gets wiped; anything worth keeping lives here. Newest first.
 
 ## Read in this order
+0. `SESSION_HANDOFF_2026-10-07_PAPER_REPORT.md` — **paper/report/ST-GCN/3D work (latest).** Map of the research paper and project report, verified facts and corrections, working rules, open items. Read this before touching `paper/` or `report/`.
 1. `RESUME_HERE_2026-10-05.md` — **START HERE.** The "CURRENT STATE" block at the top is authoritative; older blocks below it are kept for history and are tagged where they are superseded.
 2. `SESSION_HANDOFF_2026-10-04_CONFERENCE.md` — depth on the conference pivot (cue-verified relabelling, retraining the original MLP/ST-GCN on the extended data, Modal scripts in `../modal/`).
 3. `../docs/BENCHMARKS.md` — every number for the report (held-out only). Sections 9-10: visibility-aware scoring, on-device coach, CLIFF experiment.
