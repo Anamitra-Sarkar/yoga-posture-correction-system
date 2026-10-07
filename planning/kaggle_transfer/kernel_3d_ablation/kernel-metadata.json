@@ -1,0 +1,13 @@
+{
+  "id": "arkosarkarhehe/asanaai-3d-ablation",
+  "title": "asanaai-3d-ablation",
+  "code_file": "runner_3d_ablation.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}

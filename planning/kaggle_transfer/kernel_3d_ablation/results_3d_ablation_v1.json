@@ -1,0 +1,216 @@
+{
+ "setup": {
+  "epochs": 12,
+  "batch": 128,
+  "seed": 0,
+  "aot_cap_windows_per_fold": 12000,
+  "flow24_cap_per_class": 3000,
+  "window": 60,
+  "stride": 12,
+  "fps": 25.0,
+  "motion_hold_deg_per_s": 15.0,
+  "aot_min_net_change_deg": 15.0,
+  "min_videos_per_class": 3,
+  "note": "one recipe for all models; last epoch scored; single seed"
+ },
+ "flow24_classes": {
+  "hold:child_pose": {
+   "windows": 1962,
+   "videos": 19
+  },
+  "hold:cobra_pose": {
+   "windows": 338,
+   "videos": 18
+  },
+  "hold:corpse": {
+   "windows": 236,
+   "videos": 5
+  },
+  "hold:downward_dog": {
+   "windows": 1870,
+   "videos": 22
+  },
+  "hold:lunge_pose": {
+   "windows": 1277,
+   "videos": 22
+  },
+  "hold:mountain_pose": {
+   "windows": 900,
+   "videos": 18
+  },
+  "hold:plank": {
+   "windows": 136,
+   "videos": 10
+  },
+  "hold:seated_easy_pose": {
+   "windows": 981,
+   "videos": 22
+  },
+  "hold:standing_forward_fold": {
+   "windows": 1005,
+   "videos": 19
+  },
+  "hold:standing_pose": {
+   "windows": 105,
+   "videos": 11
+  },
+  "hold:table_top": {
+   "windows": 355,
+   "videos": 12
+  },
+  "hold:tree_pose": {
+   "windows": 291,
+   "videos": 18
+  },
+  "hold:triangle": {
+   "windows": 651,
+   "videos": 9
+  },
+  "hold:upward_salute": {
+   "windows": 197,
+   "videos": 15
+  },
+  "hold:warrior_1": {
+   "windows": 126,
+   "videos": 11
+  },
+  "hold:warrior_2": {
+   "windows": 293,
+   "videos": 14
+  },
+  "transition:cobra_pose->downward_dog": {
+   "windows": 144,
+   "videos": 15
+  },
+  "transition:other": {
+   "windows": 5145,
+   "videos": 24
+  },
+  "unrecognized": {
+   "windows": 12344,
+   "videos": 24
+  }
+ },
+ "flow24_dropped": {
+  "hold:chair_pose": {
+   "windows": 29,
+   "videos": 2
+  },
+  "hold:halfway_lift": {
+   "windows": 86,
+   "videos": 13
+  },
+  "hold:seated_staff": {
+   "windows": 36,
+   "videos": 5
+  },
+  "hold:upward_dog": {
+   "windows": 37,
+   "videos": 4
+  }
+ },
+ "fold_of_video": {
+  "QiebZSlTw_U": 0,
+  "L-z1HLkS_-Y": 1,
+  "RQMtwbhXD7A": 2,
+  "8ibxmzJziHU": 2,
+  "SZU7Sbgu57o": 1,
+  "JHjV-wFTwSw": 0,
+  "7ciS93shMNQ": 1,
+  "HmZFwoUU3WQ": 0,
+  "hHhxKkskHDg": 2,
+  "s-1vMbAgYWU": 1,
+  "dAqQqmaI9vY": 0,
+  "Eml2xnoLpYE": 2,
+  "4ORRiN2_aVI": 1,
+  "v7AYKMP6rOE": 0,
+  "i6TzP2COtow": 1,
+  "P8uHMMmWMHQ": 2,
+  "4K2xTVRDJgA": 0,
+  "O2EY79Ys_qg": 0,
+  "EvMTrP8eRvM": 2,
+  "149Iac5fmoE": 1,
+  "ZiQh8jA5tVM": 0,
+  "4ZBUDd4bsyA": 1,
+  "6CueZ4zujMk": 1,
+  "oUgpXY7QhpQ": 0
+ },
+ "ablation_3d": {
+  "taskA_held_pose_9cls": {
+   "MLP on window mean/std (order-blind)": {
+    "xyz": {
+     "macro_recall": 0.942,
+     "overall": 0.825,
+     "seconds": 23
+    },
+    "z_zeroed": {
+     "macro_recall": 0.593,
+     "overall": 0.583,
+     "seconds": 18
+    }
+   },
+   "Temporal CNN (no skeleton graph)": {
+    "xyz": {
+     "macro_recall": 0.905,
+     "overall": 0.796,
+     "seconds": 27
+    },
+    "z_zeroed": {
+     "macro_recall": 0.701,
+     "overall": 0.604,
+     "seconds": 27
+    }
+   },
+   "ST-GCN (production architecture)": {
+    "xyz": {
+     "macro_recall": 0.887,
+     "overall": 0.722,
+     "seconds": 776
+    },
+    "z_zeroed": {
+     "macro_recall": 0.286,
+     "overall": 0.587,
+     "seconds": 776
+    }
+   }
+  },
+  "taskB_flow_19cls": {
+   "MLP on window mean/std (order-blind)": {
+    "xyz": {
+     "macro_recall": 0.595,
+     "overall": 0.626,
+     "seconds": 16
+    },
+    "z_zeroed": {
+     "macro_recall": 0.463,
+     "overall": 0.5,
+     "seconds": 18
+    }
+   },
+   "Temporal CNN (no skeleton graph)": {
+    "xyz": {
+     "macro_recall": 0.562,
+     "overall": 0.581,
+     "seconds": 25
+    },
+    "z_zeroed": {
+     "macro_recall": 0.521,
+     "overall": 0.506,
+     "seconds": 26
+    }
+   },
+   "ST-GCN (production architecture)": {
+    "xyz": {
+     "macro_recall": 0.475,
+     "overall": 0.541,
+     "seconds": 738
+    },
+    "z_zeroed": {
+     "macro_recall": 0.359,
+     "overall": 0.496,
+     "seconds": 738
+    }
+   }
+  }
+ }
+}
