@@ -91,6 +91,79 @@ y   = np.load(hf_hub_download("Arko007/Yoga-1M", "vol/stgcn/cueT2_f0/test_labels
 | Evaluate on photos | `vol/eval/photo_corpus.npz` (Commons-422), `vol/photos/public_corpus.npz` (6,616 public photos, fixed split) |
 | Re-run the pipeline | `code/` |
 
+## Which data trained which shipped model
+
+The live system has three trained models. This is exactly what each one was trained on, checked against the training scripts.
+
+| Shipped model (in `Arko007/yoga-posture-models`) | Role | Trained on | In this dataset? |
+|---|---|---|---|
+| `mlp_3head_gate_v1.pth` | Gate: vetoes "not one of my poses" and gives the form score | `vol/csv/cue2/vH/mlp_all.csv` (cue-verified video frames from all 24 videos, out-of-vocabulary negatives, public training photos repeated twice) | **Yes** |
+| `stgcn_target_v1.pth` | Sequence model (ST-GCN, "Flow check") | `vol/stgcn/cueT2_all/` (39,416 windows from all 24 videos, 9 classes) | **Yes** |
+| `mlp_3head_v4_photos_x2000.pth` | Namer: names the pose (stage 2 of the per-frame cascade) | The **original 12-video rule-labelled table** (`master_mlp_dataset_fully_classified.csv`) plus the photo sets of that time (Commons-422 training split, the Commons/Openverse harvest, public photos from four public datasets). Photo rows are repeated 2,000 times so photos dominate pose learning; video rows supervise the form head | **Partly.** The photo landmark sets here are later, cleaned versions of those sets. The original video table is **not** in this repository (`code/originals/compile_master_dataset.py` builds it) |
+
+Because the namer predates the cue-verified labels, its video component uses the older labelling, while the gate and the ST-GCN use the cue-verified data described below.
+
+### Data that was evaluated on, never trained on
+
+| Data | Use |
+|---|---|
+| `vol/eval/photo_corpus.npz`, test split (103 photos) | Frozen "wild photo" test |
+| `vol/photos/public_corpus.npz`, test split (1,685 photos) | Held-out public photos |
+| `vol/stgcn/cueT2_f0, _f1, _f2` `test_*.npy` | Held-out-video windows for the ST-GCN |
+| `vol/stgcn/cueT2_f0, _f1, _f2` `stgcn_master_*` | Training windows of the three fold models used only for honest evaluation; these fold models were not shipped |
+
+### Data that was prepared but not used for a shipped model
+
+| Data | Status |
+|---|---|
+| `vol/csv/cue2/vA, vB, vC, vM, vN, vT` | Assembly ablations; not used for any reported result |
+| `vol/csv/cue/mlp_*.csv` | First cue-verified training tables (21 classes); superseded by `cue2/vH` |
+| `vol/labelsrc/` | Legacy rule-derived tables, kept for provenance; superseded by the cue-verified labels |
+| `vol/photos/harvest/`, `harvest_kept.npz` | Filtered Commons/Openverse harvest; not part of the gate's `vH` table |
+| `vol/cue/`, `vol/landmarks*/`, `vol/csv/cue/cue_full.csv` | Source material: labels and landmarks from which the tables above were assembled |
+
+Older checkpoints (`stgcn_transitions_v1`, `stgcn_sequence_model*`, `mlp_model`, `mlp_3head_model*`, `mlp_3head_photodomain_v1`) were replaced by the models above. Their training data is not part of this repository.
+
+## What happened to the 1,206,391 frames
+
+| Group of frames | Count | Gate / pose MLP (`cue2/vH`) | ST-GCN (`cueT2`) |
+|---|---:|---|---|
+| Cue-verified poses (instructor named it, rules agree, held steady) | ~80k | **Used as the positive examples.** Every second frame is kept (`VIDEO_STRIDE = 2`), for poses with at least 300 frames: 39,962 video rows across 14 poses | **Used.** Windows labelled with a pose become the pose classes |
+| Transitions (body moving, or steady with no recognised pose) | ~421k | **Mostly unused.** A random sample of 11,988 rows (0.3 times the positives) serves as the "none of my poses" class | **Sampled.** Transition windows form the `transition/unknown` class, randomly subsampled to 1.5 times the number of pose windows |
+| Ambiguous (`__ignore__`) | ~705k | **Never used** | **Dropped.** A 60-frame window with more than 15% ignored frames is discarded; the rest are labelled from their non-ignored frames |
+
+The remaining rows of the gate's 136,506-row table (about 84,600) are photo rows, not video: public training photos (repeated twice), 2,945 out-of-vocabulary photos, and Commons photos (repeated). So the gate saw roughly 52k video rows (about 40k poses plus 12k transitions) and photos, not all 1.2M frames.
+The ST-GCN is the model that reads consecutive frames, so it is the one that uses the transition video; the MLP only ever sees single frames.
+
+## Directory map
+
+```
+Yoga-1M/
+|-- README.md                          this card
+|-- code/                              the exact pipeline (assembly, labelling, training, backend classes)
+|-- vol/
+|   |-- csv/
+|   |   |-- cue/
+|   |   |   |-- cue_full.csv           ALL 1,206,391 frames, 15 angles + label     [source / viewer: "frames"]
+|   |   |   `-- mlp_*.csv              first-generation training tables (21 cls)   [superseded]
+|   |   `-- cue2/
+|   |       |-- vH/                    GATE TRAINING SET (mlp_all.csv + 5 folds)   [SHIPPED: gate] [viewer: "mlp_vH"]
+|   |       `-- vA vB vC vM vN vT/     assembly ablations                           [not used]
+|   |-- cue/                           per-video label arrays (labels, rule, stable) [source]
+|   |-- landmarks/                     raw landmarks, 12 original videos            [source]
+|   |-- landmarks_new/                 raw landmarks, 12 added videos               [source]
+|   |-- stgcn/
+|   |   |-- cueT2_all/                 ST-GCN TRAINING WINDOWS, all 24 videos       [SHIPPED: ST-GCN]
+|   |   `-- cueT2_f0 f1 f2/            3 folds split by video (train + held-out test) [evaluation only]
+|   |-- eval/photo_corpus.npz          Commons-422 benchmark (103-photo frozen test) [evaluation]
+|   |-- folds/photo_folds.json         out-of-fold assignment for Commons-422        [evaluation]
+|   |-- photos/
+|   |   |-- public_corpus.npz          6,616 public photos (4,931 train / 1,685 test) [gate photos + evaluation]
+|   |   |-- harvest/, harvest_kept.npz Commons/Openverse harvest                     [not in gate table]
+|   |   `-- shards/                    extraction shards of the public photo sets
+|   `-- labelsrc/                      legacy rule-derived tables                    [do not use]
+```
+
 ## How the video labels were made
 
 A frame receives a pose label only when all three conditions hold:
