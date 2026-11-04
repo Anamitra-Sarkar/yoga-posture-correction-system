@@ -98,7 +98,7 @@ The live system has three trained models. This is exactly what each one was trai
 | Shipped model (in `Arko007/yoga-posture-models`) | Role | Trained on | In this dataset? |
 |---|---|---|---|
 | `mlp_3head_gate_v1.pth` | Gate: vetoes "not one of my poses" and gives the form score | `vol/csv/cue2/vH/mlp_all.csv` (cue-verified video frames from all 24 videos, out-of-vocabulary negatives, public training photos repeated twice) | **Yes** |
-| `stgcn_target_v1.pth` | Sequence model (ST-GCN, "Flow check") | `vol/stgcn/cueT2_all/` (39,416 windows from all 24 videos, 9 classes) | **Yes** |
+| `stgcn_target_v1.pth` | Sequence model (ST-GCN, "Flow check") | `vol/stgcn/cueT2_all/` (39,416 windows, 9 classes): real 60-frame windows from all 24 videos, plus their left-right mirrors, plus synthetic "photo-hold" clips (see below) | **Yes** |
 | `mlp_3head_v4_photos_x2000.pth` | Namer: names the pose (stage 2 of the per-frame cascade) | The **original 12-video rule-labelled table** (`master_mlp_dataset_fully_classified.csv`) plus the photo sets of that time (Commons-422 training split, the Commons/Openverse harvest, public photos from four public datasets). Photo rows are repeated 2,000 times so photos dominate pose learning; video rows supervise the form head | **Partly.** The photo landmark sets here are later, cleaned versions of those sets. The original video table is **not** in this repository (`code/originals/compile_master_dataset.py` builds it) |
 
 Because the namer predates the cue-verified labels, its video component uses the older labelling, while the gate and the ST-GCN use the cue-verified data described below.
@@ -134,6 +134,8 @@ Older checkpoints (`stgcn_transitions_v1`, `stgcn_sequence_model*`, `mlp_model`,
 
 The remaining rows of the gate's 136,506-row table (about 84,600) are photo rows, not video: public training photos (repeated twice), 2,945 out-of-vocabulary photos, and Commons photos (repeated). So the gate saw roughly 52k video rows (about 40k poses plus 12k transitions) and photos, not all 1.2M frames.
 The ST-GCN is the model that reads consecutive frames, so it is the one that uses the transition video; the MLP only ever sees single frames.
+
+**ST-GCN training windows in detail.** The 8,002 real windows (60 frames, stride 12) from the 24 videos are doubled by left-right mirroring. The remaining windows are synthetic "photo-hold" clips: the 33 landmarks of a real photo (public training photos and Commons-422) held for 60 frames, with natural body sway taken from real, stable video holds and rescaled by hip width; out-of-vocabulary photos become `transition/unknown`. Each photo clip is also mirrored. All of this is training data only: the held-out test windows are real video windows from videos the fold model never trained on.
 
 ## Directory map
 
@@ -240,7 +242,7 @@ Columns: `video_id, frame_num, difficulty, elbow_l, elbow_r, shoulder_l, shoulde
 <summary><b>ST-GCN windows</b></summary>
 
 * `vol/stgcn/cueT2_f0`, `_f1`, `_f2`: 3 folds split **by video** (a video never appears on both sides). Each has `stgcn_master_feats.npy` + `stgcn_master_labels.npy` (training windows) and `test_feats.npy` + `test_labels.npy` (windows from the held-out videos).
-* `vol/stgcn/cueT2_all`: every video, used to train the shipped model: 39,416 windows, 9 classes (8 poses + `transition/unknown`).
+* `vol/stgcn/cueT2_all`: every video, used to train the shipped model: 39,416 windows, 9 classes (8 poses + `transition/unknown`). Besides the real video windows (8,002 in total across the three folds) it contains their left-right mirrors and synthetic photo-hold clips; the test windows of the fold folders (`test_*.npy`) are real video windows only, never augmented.
 * Windows are float32 `(N, 60, 99)`: 60 frames x 33 joints x (x, y, z). They overlap (stride 12 of 60), so the effective sample size is the number of holds, not the number of windows.
 
 </details>
