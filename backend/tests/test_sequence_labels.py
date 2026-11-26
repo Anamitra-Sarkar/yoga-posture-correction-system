@@ -1,10 +1,11 @@
 """The sequence endpoint must behave identically under both label vocabularies.
 
 The original 15-class checkpoint emits plain pose names plus one catch-all
-"transition/unknown". The transition-aware checkpoint (63.0% macro, 24 classes)
-emits "hold:<pose>", "transition:<A>-><B>" and "unrecognized". Loading the
-better checkpoint should therefore be a one-line change in hf_loader, with no
-client breakage -- these tests are what makes that claim checkable.
+"transition/unknown". The superseded transition-aware checkpoint stgcn_transitions_v1 (24 classes,
+63.0% macro on 2 held-out videos) emits "hold:<pose>", "transition:<A>-><B>" and
+"unrecognized"; the current stgcn_target_v1 (9 classes) uses plain pose names
+plus "transition/unknown". Swapping checkpoints is therefore a settings change
+with no client breakage -- these tests are what makes that claim checkable.
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

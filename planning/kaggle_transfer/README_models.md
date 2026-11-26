@@ -206,7 +206,8 @@ stgcn.load_state_dict(torch.load(hf_hub_download(R, "stgcn_target_v1.pth"), map_
 | `mlp_3head_photodomain_v1.pth` | Photo-trained, pose head only | Superseded |
 | `stgcn_sequence_model.pth`, `stgcn_sequence_model_v2.pth` (+ `stgcn_label_encoder*.npy`) | Earlier sequence models | Superseded |
 | `stgcn_transitions_v1.pth` | Previous live ST-GCN (30 classes: holds and named transitions) | Superseded by `stgcn_target_v1` |
-| `ieee_research_paper.pdf` | Early draft of the paper | Outdated; the current paper is in the code repository |
+| `ieee_research_paper.pdf` | Early draft of the paper | Outdated; use `asanaai_research_paper.pdf` below |
+| `asanaai_research_paper.pdf` | The current research paper | Current |
 
 The accuracy figures printed in the earlier version of this card (92.84%, 93.38%, 96.81%, 75.25%) came from random validation splits and are not valid measures of generalisation; they have been removed.
 
@@ -215,3 +216,5 @@ The accuracy figures printed in the earlier version of this card (92.84%, 93.38%
 CC BY-NC-SA 4.0 (non-commercial, share-alike). Please credit the project.
 
 Sarkar, A., Barman, D. D., Mondal, A. R., Samanta, T., and Chakraborty, S. (supervisor). *AsanaAI: A Privacy-Preserving, Occlusion-Aware and Safety-Screened Yoga Posture Coach for Commodity Hardware.* RCC Institute of Information Technology, Kolkata.
+
+The paper is included in this repository as `asanaai_research_paper.pdf` (LaTeX source in the code repository under `paper/`).
