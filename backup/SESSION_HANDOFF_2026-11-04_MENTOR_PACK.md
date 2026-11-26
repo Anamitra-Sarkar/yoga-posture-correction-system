@@ -44,3 +44,7 @@ Gmail limit is 25 MB: the code zip must go by Drive link or a separate email.
 
 ## 7. Tool gotchas hit this session
 `sleep N` followed by another command is blocked (use a background until-loop); the command classifier occasionally returned "no verdict" (retry once); multi-line raw strings in a `python3 - <<EOF` heredoc broke (write the edit script to a file); `pdftoppm -r 62` is too low to judge text overlap (use 75+ and crop); pdftotext shows sloped TikZ labels split letter by letter (an artefact, not a bug).
+
+## 8. Addendum 2026-11-26: plagiarism check and README refresh
+* Plagiarism check (no Turnitin access): 8 distinctive sentences searched as exact phrases on the web, none found; 8-gram overlap of the report with our own files = 10.6% (paper 8.2%, public repo docs/HF cards 2.6%, architecture PDF 0.6%). Nothing changed. The mentor will run the official check. Do NOT upload the report to free online checkers (they store submissions). AI-assistance disclosure is the user's/college's call.
+* READMEs refreshed (user allowed "a few professional emojis" in READMEs only, headings): root `README.md` (= Space README via hf_sync), HF cards for Yoga-1M, yoga-posture-models, yoga-skeleton-rebuilt (status note), and NEW/rewritten cards for Yoga-650k, yoga-dataset-raw (licence changed from creativeml-openrail-m to research-only note), asanaai-conference-runs (private). Sources in `planning/hf_cards/` and `planning/kaggle_transfer/README_{dataset,models}.md`. Merged to main (83af6f1); Space synced and verified live (verify_live.sh 0 failed, cascade active).
