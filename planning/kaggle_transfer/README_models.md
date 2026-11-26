@@ -44,13 +44,15 @@ model-index:
       name: Macro recall over 9 classes (fold models)
 ---
 
-# AsanaAI model weights
+# 🧘 AsanaAI model weights
 
 The trained models behind **AsanaAI**, a yoga posture coach that names the pose you are in, scores your form and tells you what to adjust in English, Hindi or Bengali. Final-year project P05, Department of CSE-AIML, RCC Institute of Information Technology, Kolkata.
 
 [Live app](https://yoga-posture-correction-system.vercel.app) · [API](https://arko007-yoga-pose.hf.space) · [Code](https://github.com/Anamitra-Sarkar/yoga-posture-correction-system) · [Training data (Yoga-1M)](https://huggingface.co/datasets/Arko007/Yoga-1M)
 
-## Models in production
+🔗 **Related datasets:** [Yoga-1M](https://huggingface.co/datasets/Arko007/Yoga-1M) (cue-verified, trained the gate and ST-GCN) · [Yoga-650k](https://huggingface.co/datasets/Arko007/Yoga-650k) (historical table, trained the namer) · [yoga-skeleton-rebuilt](https://huggingface.co/datasets/Arko007/yoga-skeleton-rebuilt) · [yoga-dataset-raw](https://huggingface.co/datasets/Arko007/yoga-dataset-raw)
+
+## 🚀 Models in production
 
 These three checkpoints are the ones the deployed API loads. Everything else in this repository is an earlier version, kept so that results can be reproduced and a deployment can be rolled back.
 
@@ -71,7 +73,7 @@ These three checkpoints are the ones the deployed API loads. Everything else in 
 3. Per-joint corrections come from each pose's angle bands (17 of 19 poses have bands; tree and lunge do not).
 4. About every 10 s the **ST-GCN** looks at the last 60 frames and is shown as a second opinion ("Flow check"), only when confident.
 
-## Benchmarks
+## 📊 Benchmarks
 
 Every number below was measured on data the model never trained on. The validation accuracy printed by a trainer comes from a random split of neighbouring video frames and is not reported. A pose **passes** when recall and precision are both at least 0.70 on at least 10 held-out items (20 windows for the ST-GCN). A **false alarm** is a photo of a pose that is *not* one of the app's poses that the system names as one of them (lower is better).
 
@@ -138,7 +140,7 @@ The model is conservative: when it misses, it answers `transition/unknown` ("not
 
 **Frame-rate contract.** The network expects 60 consecutive frames at about 25 fps (2.4 s). Fed at 12.5 fps it keeps a macro recall of 0.81; at 6 fps or slower it falls to about 0.5 and below. The web app therefore buffers every camera frame with a timestamp and resamples to 25 fps before calling the model.
 
-### How it compares with standard methods
+### ⚖️ How it compares with standard methods
 
 Same 15 angles, same training rows, same metric code (held-out public photos, then the 103-photo wild set).
 
@@ -152,11 +154,11 @@ Same 15 angles, same training rows, same metric code (held-out public photos, th
 
 A random forest is better than the cascade on photos from the same sources as the training photos and the weakest method on the wild photos; the cascade is the only method with both a wild-photo score of at least 55% and false alarms at or below about 21%. The wild set has 103 photos, so gaps under about 10 points are within noise. For sequences, a plain MLP on the window mean and standard deviation matches or exceeds the ST-GCN on held poses (macro recall 94.4% against 86.4%), so we describe the ST-GCN as at parity with simpler models, not superior; its input also carries the depth coordinate, whose removal costs the ST-GCN the most accuracy of any model tested. Full tables are in the research paper and `docs/BENCHMARKS.md` in the code repository.
 
-### Speed and size
+### ⏱️ Speed and size
 
 Server compute per request: 7 to 9 ms median, 8 to 11 ms at the 95th percentile, with all three models loaded (324 MB peak memory, CPU only). Total weights: 6.6 MB.
 
-## Training data
+## 📚 Training data
 
 | Model | Trained on |
 |---|---|
@@ -166,7 +168,7 @@ Server compute per request: 7 to 9 ms median, 8 to 11 ms at the 95th percentile,
 
 "Cue-verified" means a frame is labelled with a pose only if the instructor named it (Whisper transcript), the rule engine agrees, and the body is held steady. Details, file guide and cautions are on the dataset card.
 
-## Usage
+## 💻 Usage
 
 The models are used through the backend in the code repository (`backend/app/models/mlp.py`, `backend/app/models/sequence.py`), which also applies the input preparation: angles in the fixed order of `FEATURE_NAMES`, and for the ST-GCN pelvis centring and hip-width scaling of a 60 x 99 window.
 
@@ -186,7 +188,7 @@ stgcn = YogaSequenceLSTM(99, 128, 2, len(seq_classes))
 stgcn.load_state_dict(torch.load(hf_hub_download(R, "stgcn_target_v1.pth"), map_location="cpu")); stgcn.eval()
 ```
 
-## Limitations
+## ⚠️ Limitations
 
 * **Single seed and small test sets.** Every model was trained once; the wild photo set has 103 photos and some per-pose test sets have fewer than 30 items.
 * **Photos, not live people.** The benchmarks use photographs and recorded videos; a study with live users and instructor ratings has not been run.
@@ -195,7 +197,7 @@ stgcn.load_state_dict(torch.load(hf_hub_download(R, "stgcn_target_v1.pth"), map_
 * **Sequence model.** It recognises held poses; it does not model movement, because no labelled transition data exist. Its depth input is MediaPipe's monocular relative z, which can differ between cameras.
 * **Not medical advice.** AsanaAI is a practice aid, not a physiotherapy tool.
 
-## Earlier versions (superseded; kept for reproducibility and rollback)
+## 🕰️ Earlier versions (superseded; kept for reproducibility and rollback)
 
 | Weights | What it was | Status |
 |---|---|---|
@@ -208,7 +210,7 @@ stgcn.load_state_dict(torch.load(hf_hub_download(R, "stgcn_target_v1.pth"), map_
 
 The accuracy figures printed in the earlier version of this card (92.84%, 93.38%, 96.81%, 75.25%) came from random validation splits and are not valid measures of generalisation; they have been removed.
 
-## Licence and citation
+## 📜 Licence and citation
 
 CC BY-NC-SA 4.0 (non-commercial, share-alike). Please credit the project.
 
