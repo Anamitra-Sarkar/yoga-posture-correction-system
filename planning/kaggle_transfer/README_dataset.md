@@ -26,7 +26,7 @@ configs:
 
 <div align="center">
 
-# Yoga-1M
+# 🧘 Yoga-1M
 
 ### The AsanaAI skeleton dataset: 1.2 million labelled yoga frames as landmarks and joint angles
 
@@ -36,11 +36,13 @@ configs:
 
 *Final-year project P05 · Department of CSE-AIML · RCC Institute of Information Technology, Kolkata*
 
+🔗 **Related repositories:** [Yoga-650k](https://huggingface.co/datasets/Arko007/Yoga-650k) (historical 12-video table the namer MLP was trained on) · [yoga-skeleton-rebuilt](https://huggingface.co/datasets/Arko007/yoga-skeleton-rebuilt) (forensic rebuild of that table) · [yoga-dataset-raw](https://huggingface.co/datasets/Arko007/yoga-dataset-raw) (the 24 source videos)
+
 </div>
 
 ---
 
-## At a glance
+## 🔎 At a glance
 
 | | |
 |---|---|
@@ -51,7 +53,7 @@ configs:
 | **Size** | 5.19 GB in 242 files (most of it the ST-GCN windows, which you can regenerate) |
 | **Evaluation** | Held-out videos and held-out photos only. Random-split accuracy is *not* a result |
 
-## Browse it in the viewer
+## 👀 Browse it in the viewer
 
 The viewer above shows two tables (pick one in the config menu):
 
@@ -60,7 +62,7 @@ The viewer above shows two tables (pick one in the config menu):
 
 The landmark arrays, ST-GCN windows and photo corpora are NumPy files, which the viewer cannot display; load them as shown below.
 
-## Quick start
+## ⚡ Quick start
 
 ```python
 from datasets import load_dataset
@@ -80,7 +82,7 @@ X   = np.load(hf_hub_download("Arko007/Yoga-1M", "vol/stgcn/cueT2_f0/test_feats.
 y   = np.load(hf_hub_download("Arko007/Yoga-1M", "vol/stgcn/cueT2_f0/test_labels.npy", repo_type="dataset"), allow_pickle=True)
 ```
 
-## Which file do I need?
+## 🧭 Which file do I need?
 
 | I want to... | Use |
 |---|---|
@@ -91,7 +93,7 @@ y   = np.load(hf_hub_download("Arko007/Yoga-1M", "vol/stgcn/cueT2_f0/test_labels
 | Evaluate on photos | `vol/eval/photo_corpus.npz` (Commons-422), `vol/photos/public_corpus.npz` (6,616 public photos, fixed split) |
 | Re-run the pipeline | `code/` |
 
-## Which data trained which shipped model
+## 🤖 Which data trained which shipped model
 
 The live system has three trained models. This is exactly what each one was trained on, checked against the training scripts.
 
@@ -124,7 +126,7 @@ Because the namer predates the cue-verified labels, its video component uses the
 
 Older checkpoints (`stgcn_transitions_v1`, `stgcn_sequence_model*`, `mlp_model`, `mlp_3head_model*`, `mlp_3head_photodomain_v1`) were replaced by the models above. Their training data is not part of this repository.
 
-## What happened to the 1,206,391 frames
+## 🔀 What happened to the 1,206,391 frames
 
 | Group of frames | Count | Gate / pose MLP (`cue2/vH`) | ST-GCN (`cueT2`) |
 |---|---:|---|---|
@@ -137,7 +139,7 @@ The ST-GCN is the model that reads consecutive frames, so it is the one that use
 
 **ST-GCN training windows in detail.** The 8,002 real windows (60 frames, stride 12) from the 24 videos are doubled by left-right mirroring. The remaining windows are synthetic "photo-hold" clips: the 33 landmarks of a real photo (public training photos and Commons-422) held for 60 frames, with natural body sway taken from real, stable video holds and rescaled by hip width; out-of-vocabulary photos become `transition/unknown`. Each photo clip is also mirrored. All of this is training data only: the held-out test windows are real video windows from videos the fold model never trained on.
 
-## Directory map
+## 🗂️ Directory map
 
 ```
 Yoga-1M/
@@ -166,7 +168,7 @@ Yoga-1M/
 |   `-- labelsrc/                      legacy rule-derived tables                    [do not use]
 ```
 
-## How the video labels were made
+## 🏷️ How the video labels were made
 
 A frame receives a pose label only when all three conditions hold:
 
@@ -204,7 +206,7 @@ Poses backed by only a few videos (tree_pose, warrior_1, corpse, warrior_2) are 
 
 </details>
 
-## File guide and schemas
+## 📦 File guide and schemas
 
 | Folder | Size | Contents |
 |---|---:|---|
@@ -263,7 +265,7 @@ Columns: `video_id, frame_num, difficulty, elbow_l, elbow_r, shoulder_l, shoulde
 
 </details>
 
-## What NOT to use, and cautions
+## ⚠️ What NOT to use, and cautions
 
 | | |
 |---|---|
@@ -275,14 +277,14 @@ Columns: `video_id, frame_num, difficulty, elbow_l, elbow_r, shoulder_l, shoulde
 | **Caution: Small sample** | 24 videos with a limited number of instructors; a few poses have 2-5 supporting videos; some per-pose test sets have fewer than 30 items |
 | **Caution: Movement is not labelled** | Transitions are marked only as `transition/unknown`; named transitions (for example cobra to downward dog) are not annotated, so the data cannot support claims about movement quality |
 
-## Evaluation protocol (what counts as a result)
+## 📏 Evaluation protocol (what counts as a result)
 
 Results are only: out-of-fold on the Commons-422 photos, held-out public photos (including out-of-vocabulary poses), and held-out *videos* for the ST-GCN. Pass bar per pose: **recall ≥ 0.70 and precision ≥ 0.70**, with n ≥ 10 (n ≥ 20 for video windows). Numbers and the full protocol are in `docs/BENCHMARKS.md` in the code repository.
 
-## Licence and use
+## 📜 Licence and use
 
 The 24 source videos are third-party instructor videos and are **not** redistributed; this dataset contains only landmarks and angles derived from them, plus landmarks derived from public photographs. The source photo datasets do not declare a licence on their dataset cards, and the harvested photos carry Creative Commons licences that include non-commercial (BY-NC) and share-alike (BY-SA) terms. Please treat the dataset as **for research and education, non-commercial use**, and credit the project when you use it. If you are a rights holder and want something removed, contact the authors through the code repository.
 
-## Citation
+## 📝 Citation
 
 Sarkar, A., Barman, D. D., Mondal, A. R., Samanta, T., and Chakraborty, S. (supervisor). *AsanaAI: A Privacy-Preserving, Occlusion-Aware and Safety-Screened Yoga Posture Coach for Commodity Hardware.* RCC Institute of Information Technology, Kolkata. Code and models: see the links at the top.
