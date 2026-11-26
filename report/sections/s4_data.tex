@@ -1,6 +1,21 @@
 \section{Data and Labels}\label{sec:data}
 \subsection{Video corpus and cue-verified labels}
-We collected 24 instructor-led yoga videos (12 original and 12 added later), 1{,}206{,}391 frames in total, and ran MediaPipe on every frame. Frame labels are \emph{cue-verified}: a frame is a positive example of a pose only if (i)~the instructor names that pose in the speech transcript (Whisper-large-v3 \cite{radford2023whisper}, English and Hindi), and (ii)~the app's own rule engine agrees with the name, and (iii)~the body is held steady. This yields about 80\,k positive frames; about 421\,k frames are labelled transition (the body is moving between poses) and about 705\,k are excluded as ambiguous. The point of the triple check is that no one of the three sources is trusted alone: an instructor may name a pose before or after the body reaches it, and labels from a rule engine alone would only teach a model to copy the rules.
+We collected 24 instructor-led yoga videos (12 original and 12 added later), 1{,}206{,}391 frames in total, and ran MediaPipe on every frame. Frame labels are \emph{cue-verified}: a frame is a positive example of a pose only if (i)~the instructor names that pose in the speech transcript (Whisper-large-v3 \cite{radford2023whisper}, English and Hindi), and (ii)~the app's own rule engine agrees with the name, and (iii)~the body is held steady. This yields 80{,}136 positive frames (15 poses); 420{,}722 frames are labelled transition (the body is moving between poses) and 705{,}533 are excluded as ambiguous. The point of the triple check is that no one of the three sources is trusted alone: an instructor may name a pose before or after the body reaches it, and labels from a rule engine alone would only teach a model to copy the rules.
+
+\subsection{How each model used the frames}\label{sec:frameuse}
+The three label classes are used differently, and excluded frames are never used. Table~\ref{tab:frameuse} lists what each shipped model was trained on; the frame counts above are the pool the second and third rows draw from.
+\begin{table}[t]
+\centering\footnotesize
+\caption{Training data of the three shipped models.}\label{tab:frameuse}
+\begin{tabularx}{\columnwidth}{@{}p{1.2cm}X@{}}
+\toprule
+Model & Training data \\ \midrule
+Namer & The pose-naming MLP. Not drawn from the 24-video pool. An earlier table of 654{,}488 per-frame rows from the 12 original videos, labelled by the rule engine alone, plus the photo sets with photographs weighted $2000\times$. \\
+Gate & The veto and form-score MLP. 136{,}506 rows: 39{,}962 positive video rows (every second frame of the 14 poses with at least 300 positive frames), 11{,}988 transition rows (0.3 transition rows per positive row, drawn at random), and 84{,}556 photo rows (public training photos repeated twice, 2{,}945 photos of poses outside the vocabulary labelled transition, and Commons photos repeated). \\
+ST-GCN & 39{,}416 windows: 8{,}002 real 60-frame windows (stride 12; a window with more than 15\,\% excluded frames is dropped; transition windows are subsampled to 1.5$\times$ the number of pose windows), their left--right mirrors, and synthetic windows made by holding a photo's landmarks for 60 frames with sway measured on real holds. \\ \bottomrule
+\end{tabularx}
+\end{table}
+Excluded frames (705{,}533) are never used by any model. The 8{,}002 real windows are also the evaluation windows of the three video-split folds, where each fold model is trained without the videos it is scored on; the shipped ST-GCN is trained on all of them and therefore cannot itself be scored on held-out videos.
 
 \subsection{Features, and a train/serve mismatch}\label{sec:features}
 The models see 15 joint angles computed from the 2-D landmarks (the $z$ coordinate is set to zero): left/right elbow, shoulder, hip, knee and ankle angles; left/right trunk angles; the neck angle; and left/right hip abduction. This is exactly what the browser can compute cheaply and what is sent. An audit showed that the original training table had been built with raw 3-D angles while the app serves zero-$z$ angles: the median per-feature gap was $14^\circ$, a pure train/serve skew \cite{sculley2015debt}. All training tables used here are rebuilt with the served recipe.
@@ -13,7 +28,7 @@ Photos supply the variety that 24 videos cannot. Commons-422 is a set of 422 fre
 \begin{tabularx}{\columnwidth}{@{}lX@{}}
 \toprule
 Item & Size / detail \\ \midrule
-Training videos & 24, 1{,}206{,}391 frames; $\sim$80\,k positive / $\sim$421\,k transition / $\sim$705\,k excluded \\
+Training videos & 24, 1{,}206{,}391 frames; 80{,}136 positive / 420{,}722 transition / 705{,}533 excluded \\
 Features & 15 zero-$z$ joint angles per frame (MLP); 60$\times$33$\times$3 landmark windows (ST-GCN) \\
 Commons-422 & 422 photos; frozen test split 103 \\
 Public photos & 6{,}616 (4{,}931 train / 1{,}685 held out, of which 1{,}037 are ``other poses'') \\

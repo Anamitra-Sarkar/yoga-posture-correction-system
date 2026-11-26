@@ -212,7 +212,7 @@ did it.
 * Change one thing at a time from a working baseline, or the result is
   uninterpretable even when it is dramatic.
 * An incumbent that survives a challenge is the correct outcome, not a wasted
-  run — `stgcn_transitions_v1` (63.0%) stays live.
+  run — `stgcn_transitions_v1` (63.0%) stayed live at that time (it has since been replaced by `stgcn_target_v1`, see `docs/BENCHMARKS.md`).
 
 ---
 
@@ -264,10 +264,10 @@ AdamW lr=1e-3 wd=1e-4, cosine over 40 epochs.
 
 | thing | number | measured on |
 |---|---|---|
-| MLP pose (live) | 35.5% macro | frozen 103 real photos, 23 classes |
+| MLP pose (live then) | 35.5% macro | frozen 103 real photos, 23 classes |
 | MLP pose (best measured) | 47.5% macro | same set, photos-only recipe |
 | old live MLP | 10.5% macro | same set |
-| ST-GCN transitions (live) | 63.0% macro | 2 held-out **videos**, 24 classes |
+| ST-GCN transitions (live then; superseded by `stgcn_target_v1`) | 63.0% macro | 2 held-out **videos**, 24 classes |
 | rule engine | 36.3% recall | 422 real photos |
 | poses with correctness bands | 19 of 23 | — |
 

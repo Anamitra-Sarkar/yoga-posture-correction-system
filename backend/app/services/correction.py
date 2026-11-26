@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 # English word in it).
 FORBIDDEN_EN = ["push", "force", "hurt", "pain", "stretch more", "further"]
 
-# DRAFT 2026-10-07 -- Hindi and Bengali equivalents (push / force / pain / hurt / stretch more / further). NOT YET REVIEWED by a
-# native speaker: see docs/SAFETY_SCREEN_HI_BN_REVIEW.md. Matching is a case-insensitive substring match after normalisation
+# Hindi and Bengali equivalents (push / force / pain / hurt / stretch more / further), reviewed by the team's native speaker of
+# Hindi and Bengali and shipped 2026-10-07: see docs/SAFETY_SCREEN_HI_BN_REVIEW.md. Matching is a case-insensitive substring match after normalisation
 # (Devanagari nukta removed, so ज़ == ज and ड़ == ड). Words that the reviewed templates themselves use ("और" alone, "थोड़ा और",
 # "আরও বাঁকুন" = "bend a bit more", "চাপ দিন" = "press") are deliberately NOT listed (the English list has no "press"/"pressure"
 # either); tests/test_safety_screen.py checks that every reviewed template passes.

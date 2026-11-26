@@ -60,11 +60,14 @@ def initialize_models():
         mlp_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_v4_photos_x2000.pth", token=settings.HF_TOKEN)
         mlp_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename="mlp_3head_v4_encoder.npy", token=settings.HF_TOKEN)
 
+        # CURRENT DEFAULT: stgcn_target_v1.pth (9 classes: 8 poses + transition/unknown; settings.STGCN_MODEL_FILE). The note below
+        # is the history of the SUPERSEDED stgcn_transitions_v1.pth, which stays on HF as the rollback checkpoint.
+        #
         # stgcn_transitions_v1.pth (2026-09-20). The previous stgcn_sequence_model.pth
         # was the original 15-class checkpoint that had NEVER been shown a
         # transition -- confirmed live, /api/analyse_sequence always answered
         # "transition/unknown". This one is trained on relabelled hold/transition
-        # windows (24 classes: "hold:<pose>" / "transition:<A>-><B>" / "unrecognized"),
+        # windows (that superseded checkpoint had 24 classes: "hold:<pose>" / "transition:<A>-><B>" / "unrecognized"),
         # measured 63.0% macro with all 8 transition classes learned (72.7-100%
         # accuracy on the named ones), vs 54.6% for the old 15-class scheme with
         # zero transition coverage. Its residual-block keys were originally named
@@ -75,9 +78,9 @@ def initialize_models():
         # (parse_sequence_label in routers/pose.py) shipped and was tested BEFORE
         # this swap, so this line is the only behavioural change.
         #
-        # The filenames now come from settings (env STGCN_MODEL_FILE / STGCN_ENCODER_FILE) and default to
-        # the checkpoint described above, so this is still the live behaviour unless a variable is set.
-        # parse_sequence_label also accepts the plain-pose-name vocabulary of stgcn_target_v1.pth.
+        # The filenames come from settings (env STGCN_MODEL_FILE / STGCN_ENCODER_FILE) and default to stgcn_target_v1.pth
+        # (see backend/app/config.py). Set them to the stgcn_transitions_v1 files to roll back; parse_sequence_label
+        # accepts both label vocabularies.
         stgcn_path = hf_hub_download(repo_id=settings.HF_REPO, filename=settings.STGCN_MODEL_FILE, token=settings.HF_TOKEN)
         stgcn_enc_path = hf_hub_download(repo_id=settings.HF_REPO, filename=settings.STGCN_ENCODER_FILE, token=settings.HF_TOKEN)
         print(f"ST-GCN checkpoint: {settings.STGCN_MODEL_FILE}", flush=True)
